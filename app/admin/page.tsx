@@ -15,6 +15,7 @@ import ManageTruk from './components/ManageTruk';
 import PetaSampah from './components/PetaSampah';
 import ManageWilayah from './components/ManageWilayah';
 import ManagePenugasan from './components/ManagePenugasan';
+import ManageLaporan from './components/ManageLaporan';
 
 // --- API Instance ---
 const api = axios.create({ baseURL: 'http://localhost:5000/api' });
@@ -29,6 +30,7 @@ export default function AdminPage() {
   // --- States ---
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeMenu, setActiveMenu] = useState('dashboard');
+  
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [data, setData] = useState({ laporan: [], posts: [], galleries: [] });
   const [loading, setLoading] = useState({ login: false, data: false });
@@ -94,14 +96,12 @@ export default function AdminPage() {
     switch (activeMenu) {
       case 'dashboard': return <Dashboard laporanList={data.laporan} posts={data.posts} galleries={data.galleries} />;
       case 'peta-sampah': return <PetaSampah />;
-      case 'penugasan': return <ManagePenugasan />;
-      case 'daftar': return (
-        <div className="grid gap-6">
-          {data.laporan.filter((l: any) => l.status !== 'SELESAI').map((item: any) => (
-            <LaporanCard key={item.id} item={item} onUpdate={fetchAllData} />
-          ))}
-        </div>
-      );
+      
+      // 🔥 PERUBAHAN UTAMA: Memisahkan penugasan dengan mengirimkan 'taskType'
+      case 'tugas-harian': return <ManagePenugasan taskType="RUTIN" />;
+      case 'tugas-aduan': return <ManagePenugasan taskType="ADUAN" />;
+      
+      case 'daftar': return <ManageLaporan />; 
       case 'data-supir': return <ManageSupir />;
       case 'data-truk': return <ManageTruk />;
       case 'data-wilayah': return <ManageWilayah />;
@@ -113,18 +113,17 @@ export default function AdminPage() {
 
   if (!isLoggedIn) return <LoginForm credentials={credentials} setCredentials={setCredentials} onLogin={handleLogin} loading={loading.login} />;
 
+  // 🔥 Update array header
+  const menuWithOwnHeader = ['daftar', 'data-supir', 'data-truk', 'data-wilayah', 'tugas-harian', 'tugas-aduan'];
+
   return (
     <div className="min-h-screen bg-[#F8FAFB] flex">
       {/* Sidebar tetap di kiri */}
       <Sidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} onLogout={handleLogout} />
 
       <main className="flex-1 md:ml-72 transition-all duration-300">
-        
-        {/* Header Section (Banner Sambutan) */}
         <header className="p-8">
           <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-[24px] p-8 shadow-sm border border-white/50 flex flex-col lg:flex-row justify-between items-center gap-6">
-            
-            {/* Left: Branding & Welcome */}
             <div className="flex-1">
               <span className="bg-white/60 text-[#4A6D55] px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase inline-block mb-3">
                 Overview Panel
@@ -137,10 +136,7 @@ export default function AdminPage() {
               </p>
             </div>
 
-            {/* Right: Actions & Profile */}
             <div className="flex flex-wrap items-center justify-center gap-4">
-              
-              {/* Date Widget */}
               <div className="bg-white px-5 py-2.5 rounded-2xl flex items-center shadow-sm space-x-3 border border-gray-100">
                 <div className="p-1.5 bg-green-50 rounded-lg">
                   <Calendar className="text-green-600 w-4 h-4" />
@@ -148,7 +144,6 @@ export default function AdminPage() {
                 <span className="font-bold text-[#344854] text-sm">{formattedDate}</span>
               </div>
 
-              {/* Quick Actions */}
               <div className="flex items-center bg-white/40 p-1.5 rounded-2xl border border-white/60">
                 <button className="p-2.5 text-[#5B7078] hover:bg-white rounded-xl transition-all shadow-none hover:shadow-sm">
                   <Bell className="w-5 h-5" />
@@ -158,10 +153,8 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* Vertical Divider */}
               <div className="hidden lg:block h-12 w-[1.5px] bg-[#C5D7CC]/50 mx-2"></div>
 
-              {/* Profile Card */}
               <div className="flex items-center bg-white pl-4 pr-2 py-2 rounded-2xl shadow-sm border border-gray-100">
                 <div className="text-right mr-3">
                   <p className="text-sm font-bold text-[#1A2E35]">Admin Toba</p>
@@ -171,33 +164,30 @@ export default function AdminPage() {
                   <User className="w-5 h-5" />
                 </div>
               </div>
-
             </div>
           </div>
         </header>
 
-        {/* Content Section */}
         <section className="px-8 pb-12">
-          <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 p-8 min-h-[60vh]">
-             {/* Sub-header inside content */}
-             <div className="mb-8 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-[#1A2E35] capitalize">
-                  {activeMenu.replace('-', ' ')}
-                </h2>
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input 
-                    type="text" 
-                    placeholder="Cari data..." 
-                    className="pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-green-100 w-64"
-                  />
-                </div>
-             </div>
-             
+          <div className={menuWithOwnHeader.includes(activeMenu) ? "" : "bg-white rounded-[24px] shadow-sm border border-gray-100 p-8 min-h-[60vh]"}>
+             {!menuWithOwnHeader.includes(activeMenu) && (
+               <div className="mb-8 flex justify-between items-center">
+                  <h2 className="text-xl font-bold text-[#1A2E35] capitalize">
+                    {activeMenu.replace('-', ' ')}
+                  </h2>
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Cari data..." 
+                      className="pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-green-100 w-64"
+                    />
+                  </div>
+               </div>
+             )}
              {renderActiveContent()}
           </div>
         </section>
-
       </main>
     </div>
   );

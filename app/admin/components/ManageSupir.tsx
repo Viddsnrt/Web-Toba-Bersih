@@ -18,6 +18,8 @@ import {
   UserPlus,
   UserCog,
   Lock,
+  Eye,
+  BadgeCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
@@ -29,7 +31,7 @@ interface Supir {
   email: string;
   phoneNumber: string | null;
   isActive: boolean;
-  createdAt: string;
+  createdAt?: string;
 }
 
 interface FormData {
@@ -62,7 +64,10 @@ export default function ManageSupir() {
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  
+  // Modal States
   const [showModal, setShowModal] = useState<boolean>(false);
+  const [viewingSupir, setViewingSupir] = useState<Supir | null>(null);
   const [editingSupir, setEditingSupir] = useState<Supir | null>(null);
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
 
@@ -71,10 +76,12 @@ export default function ManageSupir() {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
-      const response = await axios.get(`${API_BASE_URL}/supir`, {
+      
+      const response = await axios.get(`${API_BASE_URL}/supir-list`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setSupirList(response.data);
+      
+      setSupirList(response.data.data || []);
     } catch (error) {
       toast.error("Gagal memuat data supir");
       console.error("Fetch error:", error);
@@ -115,25 +122,24 @@ export default function ManageSupir() {
     try {
       const token = localStorage.getItem("token");
       const config = { headers: { Authorization: `Bearer ${token}` } };
+      
       const url = editingSupir
-        ? `${API_BASE_URL}/supir/${editingSupir.id}`
-        : `${API_BASE_URL}/supir`;
+        ? `${API_BASE_URL}/supir/${editingSupir.id}` 
+        : `${API_BASE_URL}/add-operator`;
 
       if (editingSupir) {
         await axios.put(url, formData, config);
         toast.success("Data supir berhasil diperbarui");
       } else {
         await axios.post(url, formData, config);
-        toast.success("Supir baru berhasil ditambahkan");
+        toast.success("Supir baru berhasil ditambahkan! Akun login telah dibuat.");
       }
 
       setShowModal(false);
       fetchSupir();
-    } catch (error) {
+    } catch (error: any) {
       toast.error(
-        editingSupir
-          ? "Gagal memperbarui data supir"
-          : "Gagal menambahkan supir baru"
+        error.response?.data?.message || (editingSupir ? "Gagal memperbarui data" : "Gagal menambahkan supir")
       );
       console.error("Submit error:", error);
     } finally {
@@ -152,8 +158,8 @@ export default function ManageSupir() {
       });
       toast.success("Supir berhasil dihapus");
       fetchSupir();
-    } catch (error) {
-      toast.error("Gagal menghapus supir");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Gagal menghapus supir");
       console.error("Delete error:", error);
     }
   };
@@ -161,6 +167,7 @@ export default function ManageSupir() {
   const toggleStatus = async (supir: Supir): Promise<void> => {
     try {
       const token = localStorage.getItem("token");
+      // Menggunakan rute PUT yang sama untuk update status cepat
       await axios.put(
         `${API_BASE_URL}/supir/${supir.id}`,
         { ...supir, isActive: !supir.isActive },
@@ -171,7 +178,7 @@ export default function ManageSupir() {
       );
       fetchSupir();
     } catch (error) {
-      toast.error("Gagal mengubah status supir");
+      toast.error("Gagal mengubah status");
       console.error("Status toggle error:", error);
     }
   };
@@ -182,7 +189,7 @@ export default function ManageSupir() {
       setFormData({
         fullName: supir.fullName,
         email: supir.email,
-        password: "",
+        password: "", // Dikosongkan agar admin tidak melihat password lama
         phoneNumber: supir.phoneNumber || "",
         isActive: supir.isActive,
       });
@@ -199,7 +206,7 @@ export default function ManageSupir() {
     setFormData(INITIAL_FORM_DATA);
   };
 
-  // Render Helpers - Compact Version
+  // Render Helpers
   const renderStatsCard = (
     label: string,
     value: number,
@@ -272,6 +279,13 @@ export default function ManageSupir() {
       <td className="px-4 py-3 text-right">
         <div className="flex justify-end gap-2">
           <button
+            onClick={() => setViewingSupir(supir)}
+            className="p-1.5 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+            title="Lihat detail supir"
+          >
+            <Eye size={14} />
+          </button>
+          <button
             onClick={() => openModal(supir)}
             className="p-1.5 bg-slate-50 text-slate-400 hover:text-[#064E3B] hover:bg-emerald-50 rounded-lg transition-all"
             title="Edit supir"
@@ -290,6 +304,75 @@ export default function ManageSupir() {
     </tr>
   );
 
+  const renderViewModal = () => (
+    <AnimatePresence>
+      {viewingSupir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-emerald-100 overflow-hidden"
+          >
+            <div className="bg-[#064E3B] px-5 py-4 flex justify-between items-center text-white">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <BadgeCheck size={18} />
+                Detail Akun Supir
+              </h3>
+              <button
+                onClick={() => setViewingSupir(null)}
+                className="p-1 hover:bg-white/10 rounded-full transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 text-[#064E3B] flex items-center justify-center font-black text-2xl shadow-inner">
+                  {viewingSupir.fullName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-slate-800">{viewingSupir.fullName}</h4>
+                  <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                    viewingSupir.isActive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                  }`}>
+                    {viewingSupir.isActive ? "Status: Aktif" : "Status: Nonaktif"}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-xl space-y-3 border border-slate-100">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">ID Sistem</p>
+                  <p className="text-sm font-mono text-slate-700 mt-0.5">{viewingSupir.id}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">Email (Untuk Login Mobile)</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <Mail size={14} className="text-emerald-600" />
+                    <p className="text-sm font-medium text-slate-700">{viewingSupir.email}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">Nomor Telepon</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <Phone size={14} className="text-emerald-600" />
+                    <p className="text-sm font-medium text-slate-700">{viewingSupir.phoneNumber || "Tidak ada nomor"}</p>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingSupir(null)}
+                className="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-200 transition-all"
+              >
+                Tutup
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+
   const renderModal = () => (
     <AnimatePresence>
       {showModal && (
@@ -300,17 +383,16 @@ export default function ManageSupir() {
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-emerald-100 overflow-hidden"
           >
-            {/* Modal Header - Compact */}
             <div className="bg-[#064E3B] px-5 py-4 flex justify-between items-center text-white">
               <div>
                 <h3 className="text-base font-bold flex items-center gap-2">
                   {editingSupir ? <UserCog size={18} /> : <UserPlus size={18} />}
-                  {editingSupir ? "Edit Supir" : "Tambah Supir"}
+                  {editingSupir ? "Edit Supir" : "Tambah Supir & Buat Akun"}
                 </h3>
                 <p className="text-emerald-200/80 text-[10px] mt-0.5">
                   {editingSupir
                     ? "Perbarui informasi supir"
-                    : "Isi form untuk menambahkan supir"}
+                    : "Akun ini akan digunakan supir untuk login ke aplikasi"}
                 </p>
               </div>
               <button
@@ -321,7 +403,6 @@ export default function ManageSupir() {
               </button>
             </div>
 
-            {/* Modal Form - Compact */}
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 ml-1 uppercase tracking-wider">
@@ -387,29 +468,28 @@ export default function ManageSupir() {
                 </div>
               </div>
 
-              {!editingSupir && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 ml-1 uppercase tracking-wider">
-                    Password <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <Lock size={14} />
-                    </div>
-                    <input
-                      type="password"
-                      required
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
-                      className="w-full pl-9 pr-3 py-2.5 bg-slate-50 rounded-xl text-xs border border-slate-200 focus:border-[#064E3B] focus:bg-white focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all font-medium text-slate-700"
-                      placeholder="Min. 6 karakter"
-                      minLength={6}
-                    />
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 ml-1 uppercase tracking-wider">
+                  {editingSupir ? "Password Baru (Opsional)" : "Password Aplikasi"} 
+                  {!editingSupir && <span className="text-rose-500"> *</span>}
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Lock size={14} />
                   </div>
+                  <input
+                    type="password"
+                    required={!editingSupir}
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 rounded-xl text-xs border border-slate-200 focus:border-[#064E3B] focus:bg-white focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all font-medium text-slate-700"
+                    placeholder={editingSupir ? "Kosongkan jika tidak ingin mengubah sandi" : "Buat sandi login (Min. 6 karakter)"}
+                    minLength={editingSupir && formData.password === "" ? 0 : 6}
+                  />
                 </div>
-              )}
+              </div>
 
               {editingSupir && (
                 <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
@@ -439,7 +519,7 @@ export default function ManageSupir() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-[2] py-2.5 bg-[#064E3B] text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-900/20 hover:bg-[#053f30] disabled:opacity-70 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 bg-[#064E3B] text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-900/20 hover:bg-[#053f30] disabled:opacity-70 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5"
                 >
                   {submitting ? (
                     <>
@@ -449,7 +529,7 @@ export default function ManageSupir() {
                   ) : (
                     <>
                       <CheckCircle2 size={14} />
-                      <span>{editingSupir ? "Simpan" : "Tambah"}</span>
+                      <span>{editingSupir ? "Simpan Perubahan" : "Tambah & Buat Akun"}</span>
                     </>
                   )}
                 </button>
@@ -461,7 +541,6 @@ export default function ManageSupir() {
     </AnimatePresence>
   );
 
-  // Main Render - Compact Version
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-teal-50/20">
       <Toaster
@@ -480,7 +559,6 @@ export default function ManageSupir() {
       />
 
       <div className="max-w-7xl mx-auto p-3 md:p-4 space-y-4">
-        {/* Header - Compact */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -498,7 +576,7 @@ export default function ManageSupir() {
                   Manajemen Supir
                 </h1>
                 <p className="text-xs text-slate-500 font-medium">
-                  Kelola data dan status supir armada Anda
+                  Kelola data dan akun akses supir armada Anda
                 </p>
               </div>
             </div>
@@ -515,14 +593,12 @@ export default function ManageSupir() {
           </div>
         </motion.div>
 
-        {/* Stats Cards - Compact */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {renderStatsCard("Total", stats.total, Users, "bg-[#064E3B]", 0.1)}
           {renderStatsCard("Aktif", stats.active, Activity, "bg-emerald-600", 0.2)}
           {renderStatsCard("Nonaktif", stats.inactive, XCircle, "bg-rose-500", 0.3)}
         </div>
 
-        {/* Table Section - Compact */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -555,7 +631,7 @@ export default function ManageSupir() {
                     Informasi
                   </th>
                   <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Kontak
+                    Kontak Login
                   </th>
                   <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Status
@@ -592,8 +668,8 @@ export default function ManageSupir() {
         </motion.div>
       </div>
 
-      {/* Modal */}
       {renderModal()}
+      {renderViewModal()}
     </div>
   );
 }

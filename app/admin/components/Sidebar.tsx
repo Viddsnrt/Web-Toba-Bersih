@@ -50,11 +50,12 @@ export default function Sidebar({ activeMenu, setActiveMenu, onLogout }: Sidebar
     },
     {
       group: "Manajemen Tugas",
-      id: 'penugasan',
+      id: 'penugasan', // id group tetap penugasan untuk accordion
       icon: Calendar,
       items: [
-        { id: 'penugasan', label: 'Tugas Harian', icon: ClipboardList, color: 'from-violet-400 to-purple-700' },
-        { id: 'penugasan', label: 'Tugas Aduan', icon: AlertCircle, color: 'from-rose-400 to-red-700' },
+        // 🔥 PERBAIKAN: id disesuaikan dengan yang ada di page.tsx
+        { id: 'tugas-harian', label: 'Tugas Harian', icon: ClipboardList, color: 'from-violet-400 to-purple-700' },
+        { id: 'tugas-aduan', label: 'Tugas Aduan', icon: AlertCircle, color: 'from-rose-400 to-red-700' },
       ]
     },
     {

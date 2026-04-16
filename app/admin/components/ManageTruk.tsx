@@ -56,7 +56,8 @@ export default function ManageTruk() {
       const res = await axios.get('http://localhost:5000/api/admin/truks', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setTrukList(res.data);
+      // ⚠️ PERBAIKAN: Gunakan .data.data sesuai standar backend kita
+      setTrukList(res.data.data || []);
     } catch (error) {
       console.error('Error fetching truk:', error);
     } finally {
@@ -67,10 +68,13 @@ export default function ManageTruk() {
   const fetchSupir = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/admin/supir', {
+      // ⚠️ PERBAIKAN: URL diganti menjadi /supir-list
+      const res = await axios.get('http://localhost:5000/api/admin/supir-list', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setSupirList(res.data.filter((s: any) => s.isActive));
+      // ⚠️ PERBAIKAN: Gunakan .data.data
+      const supirData = res.data.data || [];
+      setSupirList(supirData.filter((s: any) => s.isActive));
     } catch (error) {
       console.error('Error fetching supir:', error);
     }
@@ -118,7 +122,7 @@ export default function ManageTruk() {
       setShowModal(false);
       fetchTruk();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Gagal menyimpan data');
+      alert(error.response?.data?.message || 'Gagal menyimpan data');
     }
   };
 
@@ -130,8 +134,8 @@ export default function ManageTruk() {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchTruk();
-    } catch (error) {
-      alert('Gagal menghapus');
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Gagal menghapus');
     }
   };
 
@@ -326,7 +330,7 @@ export default function ManageTruk() {
 
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-6 py-3 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition-all">Batal</button>
-                <button type="submit" className="flex-[2] bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition-all active:scale-95">
+                <button type="submit" className="flex- bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition-all active:scale-95">
                   {editingTruk ? 'Simpan Perubahan' : 'Daftarkan Truk'}
                 </button>
               </div>

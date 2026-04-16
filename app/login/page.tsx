@@ -21,18 +21,31 @@ export default function LoginPage() {
 
     try {
       const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
-      if (res.data.success && res.data.token) {
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
-        Cookies.set('token', res.data.token, { expires: 1, path: '/', sameSite: 'lax' });
+      
+      // Hapus pengecekan token untuk sementara karena backend belum pakai JWT
+      if (res.data.success) { 
         
-        const role = res.data.user.role;
-        if (role === 'ADMIN') router.push('/admin');
-        else if (role === 'OPERATOR') router.push('/Supir');
-        else if (role === 'WARGA') router.push('/Warga');
-        else router.push('/');
+        // Simpan data user ke localStorage (Data dari backend ada di res.data.data)
+        localStorage.setItem('user', JSON.stringify(res.data.data));
+        
+        // Opsional: Buat token dummy sementara agar Cookies tidak error
+        Cookies.set('token', 'dummy-token-123', { expires: 1, path: '/', sameSite: 'lax' });
+        
+        // Ambil role dari backend (di backend kita set huruf kecil: 'admin', 'supir', 'masyarakat')
+        const role = res.data.role; 
+        
+        if (role === 'admin') {
+          router.push('/admin');
+        } else if (role === 'supir') {
+          router.push('/Supir');
+        } else if (role === 'masyarakat' || role === 'warga') {
+          router.push('/Warga');
+        } else {
+          router.push('/');
+        }
       }
     } catch (err: any) {
+      // Menangkap pesan error dari backend
       setError(err.response?.data?.message || "Login gagal.");
     } finally {
       setLoading(false);
