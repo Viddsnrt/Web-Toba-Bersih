@@ -135,7 +135,7 @@ export default function Sidebar({ activeMenu, setActiveMenu, onLogout }: Sidebar
             {isExpanded && (
               <div className="min-w-0 animate-in fade-in slide-in-from-left-2 duration-500">
                 <h1 className="text-xs font-black text-white leading-tight uppercase">Dinas Lingkungan <span className="text-green-500">Hidup</span></h1>
-                <p className="text-[8px] font-bold text-gray-500 tracking-tighter uppercase">Kabupaten Toba</p>
+                <p className="text-[8px] font-bold text-gray-500 tracking-tighter uppercase">Kota Medan</p>
               </div>
             )}
           </div>

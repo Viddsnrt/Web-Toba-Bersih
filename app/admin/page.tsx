@@ -132,7 +132,7 @@ export default function AdminPage() {
                 Selamat Datang, Admin!
               </h1>
               <p className="text-[#5B7078] mt-2 font-medium">
-                Sistem Manajemen Kebersihan Terintegrasi Kabupaten Toba.
+                Sistem Manajemen Kebersihan Terintegrasi Kota Medan.
               </p>
             </div>
 
@@ -157,7 +157,7 @@ export default function AdminPage() {
 
               <div className="flex items-center bg-white pl-4 pr-2 py-2 rounded-2xl shadow-sm border border-gray-100">
                 <div className="text-right mr-3">
-                  <p className="text-sm font-bold text-[#1A2E35]">Admin Toba</p>
+                  <p className="text-sm font-bold text-[#1A2E35]">Admin </p>
                   <p className="text-[10px] font-bold text-green-600 uppercase">Supervisor</p>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#2D4A53] flex items-center justify-center text-white shadow-inner">
