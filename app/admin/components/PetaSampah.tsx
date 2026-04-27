@@ -72,31 +72,58 @@ export default function PetaSampah() {
   }, []);
 
   const fetchLaporan = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/laporan', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setLaporanList(res.data);
-      
-      // Ambil daftar kecamatan unik dari data
-      const kecamatan = res.data
-        .map((l: any) => l.lokasi?.split(',')[0].trim())
-        .filter((k: string, i: number, arr: string[]) => k && arr.indexOf(k) === i);
-      setKecamatanList(kecamatan);
-      
-    } catch (error) {
-      console.error('Error fetching laporan:', error);
+  try {
+    const token = localStorage.getItem('token');
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const res = await axios.get(`${apiUrl}/api/laporan`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: 5000
+    });
+
+    // ✅ PERBAIKAN: Handle format { success, data: [...] }
+    let dataArray = [];
+    if (res.data?.success && Array.isArray(res.data?.data)) {
+      dataArray = res.data.data;
+    } else if (Array.isArray(res.data)) {
+      dataArray = res.data;
     }
-  };
+
+    // Serialisasi BigInt agar tidak error di frontend
+    const serialized = dataArray.map((item: any) => ({
+      ...item,
+      id: item.id?.toString(),
+      userId: item.userId?.toString(),
+      locationId: item.locationId?.toString() || null,
+    }));
+
+    setLaporanList(serialized);
+
+    // ✅ PERBAIKAN: Ambil nama kecamatan dari location.name (sesuai schema)
+    const kecamatan = serialized
+      .map((l: any) => l.location?.name)
+      .filter((k: string, i: number, arr: string[]) => k && arr.indexOf(k) === i);
+    setKecamatanList(kecamatan);
+
+  } catch (error) {
+    console.warn('Error fetching laporan:', error);
+    setLaporanList([]);
+  }
+};
 
   const fetchPolygons = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/wilayah/polygons');
-      setPolygons(res.data);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const res = await axios.get(`${apiUrl}/api/wilayah/polygons`, {
+        timeout: 5000
+      }).catch(err => {
+        console.warn('Failed to fetch polygons:', err.message);
+        return { data: [] };
+      });
+      
+      setPolygons(res.data || []);
     } catch (error) {
-      console.error('Error fetching polygons:', error);
+      console.warn('Error fetching polygons, using empty fallback:', error);
+      setPolygons([]);
     } finally {
       setLoading(false);
     }

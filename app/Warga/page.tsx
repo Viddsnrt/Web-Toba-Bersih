@@ -1,10 +1,10 @@
-
 "use client";
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Trash2 } from 'lucide-react';
 import LaporanForm from '@/app/Warga/components/LaporanForm';
 import LaporanList from '@/app/Warga/components/LaporanList';
+
 export default function Home() {
   const [form, setForm] = useState({ pelapor: '', lokasi: '', deskripsi: '', latitude: 0, longitude: 0 });
   const [laporanList, setLaporanList] = useState([]);
@@ -12,6 +12,7 @@ export default function Home() {
   const [gpsStatus, setGpsStatus] = useState("Mencari lokasi...");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string>('2'); // Temporary: hardcode userId
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -38,8 +39,23 @@ export default function Home() {
   const fetchLaporan = async () => {
     try {
       const res = await axios.get('http://localhost:5000/api/laporan');
-      setLaporanList(res.data);
-    } catch (err) { console.error("Gagal ambil data"); }
+      console.log('📦 Response API:', res.data);
+      
+      let dataArray = [];
+      if (res.data && res.data.success && Array.isArray(res.data.data)) {
+        dataArray = res.data.data;
+      } else if (Array.isArray(res.data)) {
+        dataArray = res.data;
+      } else {
+        console.warn('Format tidak dikenal:', res.data);
+        dataArray = [];
+      }
+      
+      setLaporanList(dataArray);
+    } catch (err) { 
+      console.error("Gagal ambil data", err);
+      setLaporanList([]);
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,25 +68,72 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.latitude === 0) return alert("Harap tunggu lokasi GPS!");
+    
+    // Validasi
+    if (form.latitude === 0) {
+      return alert("Harap tunggu lokasi GPS!");
+    }
+    if (!form.deskripsi) {
+      return alert("Harap isi deskripsi laporan!");
+    }
+    
     setLoading(true);
 
     const formData = new FormData();
-    Object.entries(form).forEach(([key, value]) => formData.append(key, value.toString()));
-    if (selectedImage) formData.append('photo', selectedImage);
+    
+    // ✅ Kirim sesuai format backend
+    formData.append('userId', userId);
+    formData.append('latitude', form.latitude.toString());
+    formData.append('longitude', form.longitude.toString());
+    formData.append('description', form.deskripsi);
+    formData.append('jenisSampah', 'CAMPURAN');
+    
+    // Optional: tambahkan lokasi jika backend mendukung
+    if (form.lokasi) {
+      formData.append('lokasi', form.lokasi);
+    }
+    
+    if (selectedImage) {
+      formData.append('photo', selectedImage);
+    }
+
+    // Debug: Log FormData
+    console.log('📡 Mengirim data:');
+    for (let pair of formData.entries()) {
+      console.log(pair[0], ':', pair[1] instanceof File ? `File: ${pair[1].name}` : pair[1]);
+    }
 
     try {
-      await axios.post('http://localhost:5000/api/laporan', formData, {
+      const response = await axios.post('http://localhost:5000/api/laporan/create', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      
+      console.log('✅ Response:', response.data);
+      
+      // Reset form
       setForm({ pelapor: '', lokasi: '', deskripsi: '', latitude: 0, longitude: 0 });
       setSelectedImage(null);
       setPreviewUrl(null);
-      fetchLaporan();
-      alert("✅ Laporan dikirim!");
-    } catch (err) {
-      alert("❌ Gagal kirim");
-    } finally { setLoading(false); }
+      
+      // Refresh data
+      await fetchLaporan();
+      
+      alert("✅ Laporan berhasil dikirim!");
+    } catch (err: any) {
+      console.error("❌ Error:", err);
+      console.error("Response data:", err.response?.data);
+      
+      let errorMessage = "Gagal mengirim laporan";
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      }
+      
+      alert(`❌ ${errorMessage}`);
+    } finally { 
+      setLoading(false);
+    }
   };
 
   return (

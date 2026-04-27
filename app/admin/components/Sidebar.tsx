@@ -72,7 +72,7 @@ export default function Sidebar({ activeMenu, setActiveMenu, onLogout }: Sidebar
       group: "Konten",
       items: [
         { id: 'berita', label: 'Kelola Berita', icon: Newspaper, color: 'from-green-500 to-green-600' },
-        { id: 'galeri', label: 'Kelola Galeri', icon: ImageIcon, color: 'from-pink-500 to-pink-600' },
+        // { id: 'galeri', label: 'Kelola Galeri', icon: ImageIcon, color: 'from-pink-500 to-pink-600' }, // COMMENTED OUT
       ]
     }
   ], []);
