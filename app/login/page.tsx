@@ -6,6 +6,16 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import { Mail, Lock, LogIn, Eye, EyeOff, Leaf } from 'lucide-react';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+const normalizeRole = (role?: string) => {
+  const safeRole = (role || '').toLowerCase();
+  if (safeRole.includes('admin')) return 'admin';
+  if (safeRole.includes('operator') || safeRole.includes('supir')) return 'supir';
+  if (safeRole.includes('warga') || safeRole.includes('masyarakat')) return 'warga';
+  return '';
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -20,29 +30,36 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
-      
-      // Hapus pengecekan token untuk sementara karena backend belum pakai JWT
-      if (res.data.success) { 
-        
-        // Simpan data user ke localStorage (Data dari backend ada di res.data.data)
-        localStorage.setItem('user', JSON.stringify(res.data.data));
-        
-        // Opsional: Buat token dummy sementara agar Cookies tidak error
-        Cookies.set('token', 'dummy-token-123', { expires: 1, path: '/', sameSite: 'lax' });
-        
-        // Ambil role dari backend (di backend kita set huruf kecil: 'admin', 'supir', 'masyarakat')
-        const role = res.data.role; 
-        
+      const res = await axios.post(`${API_BASE_URL}/auth/login`, { email, password });
+
+      if (res.data?.success) {
+        const user = res.data.user || res.data.data?.user || res.data.data || null;
+        const token =
+          res.data.token ||
+          res.data.data?.token ||
+          res.data.accessToken ||
+          res.data.data?.accessToken ||
+          'session-login';
+        const role = normalizeRole(res.data.role || user?.role || res.data.data?.role);
+
+        if (user) {
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+
+        localStorage.setItem('token', token);
+        Cookies.set('token', token, { expires: 1, path: '/', sameSite: 'lax' });
+
         if (role === 'admin') {
           router.push('/admin');
         } else if (role === 'supir') {
           router.push('/Supir');
-        } else if (role === 'masyarakat' || role === 'warga') {
+        } else if (role === 'warga') {
           router.push('/Warga');
         } else {
           router.push('/');
         }
+      } else {
+        setError(res.data?.message || 'Login gagal.');
       }
     } catch (err: any) {
       // Menangkap pesan error dari backend

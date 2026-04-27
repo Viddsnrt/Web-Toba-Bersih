@@ -8,10 +8,12 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
 
   // Halaman yang bisa diakses tanpa login
-  const isPublicPage = 
-    path === '/' || 
-    path === '/login' || 
-    path === '/register';
+  const isPublicPage =
+    path === '/' ||
+    path === '/login' ||
+    path === '/register' ||
+    path === '/Warga/login' ||
+    path === '/Warga/register';
 
   // File statis (gambar, icon, dll)
   const isStaticFile = 
