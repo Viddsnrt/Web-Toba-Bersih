@@ -1,11 +1,14 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
 import { 
   Plus, Edit, Trash2, Search, Truck, MapPin,
   Phone, User, X, ChevronDown, RefreshCw, 
   CheckCircle2, AlertCircle, LayoutGrid
 } from 'lucide-react';
+import ConfirmDialog from '../components/ConfirmDialog';
+import AlertDialog from '../components/AlertDialog';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Truk {
   id: string;
@@ -47,6 +50,12 @@ export default function ManageTruk() {
     status: 'AVAILABLE',
     lastLocation: ''
   });
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successTitle, setSuccessTitle] = useState('');
+  const [successDescription, setSuccessDescription] = useState('');
+  const [successIcon, setSuccessIcon] = useState<ReactNode>(<CheckCircle2 size={24} />);
 
   // --- LOGIC: FETCHING DATA ---
   const fetchTruk = async () => {
@@ -115,29 +124,70 @@ export default function ManageTruk() {
 
       if (editingTruk) {
         await axios.put(`http://localhost:5000/api/admin/truks/${editingTruk.id}`, formData, config);
+        toast.success('Data berhasil diedit', { icon: '✏️' });
+        setSuccessTitle('Data berhasil diedit');
+        setSuccessDescription('Perubahan armada berhasil disimpan.');
+        setSuccessIcon(<Edit size={24} />);
       } else {
         await axios.post('http://localhost:5000/api/admin/truks', formData, config);
+        toast.success('Data berhasil diperbaharui', { icon: '✅' });
+        setSuccessTitle('Data berhasil ditambahkan');
+        setSuccessDescription('Unit armada baru berhasil ditambahkan.');
+        setSuccessIcon(<CheckCircle2 size={24} />);
       }
 
       setShowModal(false);
+      setShowSuccessDialog(true);
       fetchTruk();
     } catch (error: any) {
       alert(error.response?.data?.message || 'Gagal menyimpan data');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Hapus unit truk ini?')) return;
+  const openDeleteConfirm = (id: string) => {
+    setPendingDeleteId(id);
+    setShowConfirmDialog(true);
+  };
+
+  const handleDelete = async () => {
+    if (!pendingDeleteId) return;
+
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/admin/truks/${id}`, {
+      await axios.delete(`http://localhost:5000/api/admin/truks/${pendingDeleteId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+        toast.success('Data berhasil dihapus', { icon: '🗑️' });
+
+        setSuccessTitle('Data berhasil dihapus');
+        setSuccessDescription('Unit armada telah dihapus dari sistem.');
+        setSuccessIcon(<Trash2 size={24} />); // pakai icon delete
+        setShowSuccessDialog(true);
+
       fetchTruk();
     } catch (error: any) {
       alert(error.response?.data?.message || 'Gagal menghapus');
+    } finally {
+      setShowConfirmDialog(false);
+      setPendingDeleteId(null);
     }
   };
+
+  const renderConfirmDialog = () => (
+    <ConfirmDialog
+      open={showConfirmDialog}
+      title="Yakin Hapus Armada?"
+      description="Aksi ini akan menghapus data armada secara permanen."
+      confirmText="Ya, Hapus"
+      cancelText="Batal"
+      onConfirm={handleDelete}
+      onCancel={() => {
+        setShowConfirmDialog(false);
+        setPendingDeleteId(null);
+      }}
+    />
+  );
 
   const getStatusBadge = (status: string) => {
     switch(status) {
@@ -156,6 +206,15 @@ export default function ManageTruk() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 p-4">
+      <Toaster position="top-right" />
+      <AlertDialog
+        open={showSuccessDialog}
+        title={successTitle}
+        description={successDescription}
+        buttonText="OK"
+        icon={successIcon}
+        onClose={() => setShowSuccessDialog(false)}
+      />
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-end gap-6">
         <div className="space-y-1">
@@ -164,13 +223,6 @@ export default function ManageTruk() {
             <LayoutGrid size={16} /> Pantau unit truk pengangkut sampah secara real-time.
           </p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-green-200 active:scale-95"
-        >
-          <Plus size={20} />
-          <span>Tambah Unit Baru</span>
-        </button>
       </div>
 
       {/* STATS */}
@@ -191,6 +243,15 @@ export default function ManageTruk() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="flex justify-end mt-4">
+        <button
+          onClick={openCreateModal}
+          className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#064E3B] text-white text-sm font-bold transition-all duration-200 shadow-lg shadow-slate-200 hover:bg-[#053f30] active:scale-95"
+        >
+          <Plus size={18} /> Tambah Unit Baru
+        </button>
       </div>
 
       {/* SEARCH & TABLE */}
@@ -274,8 +335,8 @@ export default function ManageTruk() {
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => openEditModal(truk)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Edit size={18} /></button>
-                          <button onClick={() => handleDelete(truk.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={18} /></button>
+                          <button onClick={() => openEditModal(truk)} className="p-2 text-white-300 bg-yellow-400 rounded-lg transition-all"><Edit size={18} /></button>
+                          <button onClick={() => openDeleteConfirm(truk.id)} className="p-2 text-white-300 bg-red-600 rounded-lg transition-all"><Trash2 size={18} /></button>
                         </div>
                       </td>
                     </tr>
@@ -286,6 +347,8 @@ export default function ManageTruk() {
           </div>
         )}
       </div>
+
+      {renderConfirmDialog()}
 
       {/* MODAL FORM */}
       {showModal && (
@@ -330,9 +393,8 @@ export default function ManageTruk() {
 
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-6 py-3 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition-all">Batal</button>
-                <button type="submit" className="flex- bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition-all active:scale-95">
-                  {editingTruk ? 'Simpan Perubahan' : 'Daftarkan Truk'}
-                </button>
+              <button type="submit" className="flex- bg-[#064E3B] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#065F46] shadow-lg shadow-green-200 transition-all active:scale-95"> {editingTruk ? 'Simpan Perubahan' : 'Daftarkan Truk'}
+              </button>
               </div>
             </form>
           </div>

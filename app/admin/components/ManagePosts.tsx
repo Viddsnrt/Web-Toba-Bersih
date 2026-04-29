@@ -1,7 +1,10 @@
 "use client";
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import toast, { Toaster } from 'react-hot-toast';
 import { Edit, Trash2, Plus, Search, Calendar, User } from 'lucide-react';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 interface ManagePostsProps {
   posts: any[];
@@ -140,23 +143,24 @@ export default function ManagePosts({ posts, onPostsUpdate }: ManagePostsProps) 
       let response;
       if (editingPost) {
         response = await axios.put(
-          `http://localhost:5000/api/posts/${editingPost.id}`, 
+          `${API_BASE_URL}/posts/${editingPost.id}`, 
           dataToSend, 
           config
         );
         console.log('Update response:', response.data);
-        alert('Berita berhasil diperbarui!');
+        toast.success('Berita berhasil diperbarui!');
       } else {
         response = await axios.post(
-          'http://localhost:5000/api/posts', 
+          `${API_BASE_URL}/posts`, 
           dataToSend, 
           config
         );
         console.log('Create response:', response.data);
-        alert('Berita berhasil ditambahkan!');
+        toast.success('Berita berhasil ditambahkan!');
       }
       
       setShowModal(false);
+      setEditingPost(null);
       onPostsUpdate();
       
     } catch (error: any) {
@@ -193,10 +197,10 @@ export default function ManagePosts({ posts, onPostsUpdate }: ManagePostsProps) 
     }
 
     try {
-      await axios.delete(`http://localhost:5000/api/posts/${id}`, {
+      await axios.delete(`${API_BASE_URL}/posts/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert('Berita berhasil dihapus!');
+      toast.success('Berita berhasil dihapus!');
       onPostsUpdate();
     } catch (error: any) {
       console.error('Error deleting post:', error);
@@ -207,7 +211,8 @@ export default function ManagePosts({ posts, onPostsUpdate }: ManagePostsProps) 
           window.location.href = '/admin/login';
         }, 2000);
       } else {
-        alert(error.response?.data?.message || 'Gagal menghapus berita');
+        const deleteMessage = error.response?.data?.message || 'Gagal menghapus berita';
+        toast.error(deleteMessage);
       }
     }
   };
@@ -254,7 +259,7 @@ export default function ManagePosts({ posts, onPostsUpdate }: ManagePostsProps) 
           {/* Add Button */}
           <button
             onClick={() => openModal()}
-            className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all flex items-center justify-center gap-2"
+            className="bg-[#064E3B] hover:bg-[#053f30] text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
           >
             <Plus size={18} />
             <span>Tambah Berita</span>
@@ -318,13 +323,13 @@ export default function ManagePosts({ posts, onPostsUpdate }: ManagePostsProps) 
                     <div className="flex gap-2">
                       <button
                         onClick={() => openModal(post)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-2 text-white-300 bg-blue-500 rounded-lg transition-all"
                       >
                         <Edit size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(post.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-white-300 bg-red-600 rounded-lg transition-all"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -337,12 +342,121 @@ export default function ManagePosts({ posts, onPostsUpdate }: ManagePostsProps) 
         </div>
       )}
 
-      {/* Modal Form - Sama seperti sebelumnya */}
+      {/* Modal Form */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          {/* ... konten modal tetap sama ... */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-[32px] bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">
+                  {editingPost ? 'Edit Berita' : 'Tambah Berita'}
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  Isi formulir untuk {editingPost ? 'memperbarui' : 'menambahkan'} berita.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowModal(false); setError(null); setEditingPost(null); }}
+                className="text-slate-400 hover:text-slate-700 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6">
+              {error && (
+                <div className="rounded-2xl bg-red-50 border border-red-200 p-4 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2 text-sm font-semibold text-slate-700">
+                  Judul Berita
+                  <input
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    placeholder="Masukkan judul berita"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:bg-white"
+                    required
+                  />
+                </label>
+
+                <label className="space-y-2 text-sm font-semibold text-slate-700">
+                  Slug (opsional)
+                  <input
+                    name="slug"
+                    value={formData.slug}
+                    onChange={handleInputChange}
+                    placeholder="slug-berita"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:bg-white"
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2 text-sm font-semibold text-slate-700">
+                  Kategori
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:bg-white"
+                  >
+                    <option value="BERITA">BERITA</option>
+                    <option value="PENGUMUMAN">PENGUMUMAN</option>
+                    <option value="UPDATE">UPDATE</option>
+                  </select>
+                </label>
+
+                <label className="space-y-2 text-sm font-semibold text-slate-700">
+                  Gambar (URL)
+                  <input
+                    name="imageUrl"
+                    value={formData.imageUrl}
+                    onChange={handleInputChange}
+                    placeholder="https://example.com/image.jpg"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-green-500 focus:bg-white"
+                  />
+                </label>
+              </div>
+
+              <label className="space-y-2 text-sm font-semibold text-slate-700">
+                Konten Berita
+                <textarea
+                  name="content"
+                  value={formData.content}
+                  onChange={handleInputChange}
+                  rows={8}
+                  placeholder="Tulis isi berita di sini..."
+                  className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-relaxed outline-none transition focus:border-green-500 focus:bg-white"
+                  required
+                />
+              </label>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setShowModal(false); setError(null); setEditingPost(null); }}
+                  className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="rounded-2xl bg-[#064E3B] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#053f30] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? (editingPost ? 'Menyimpan...' : 'Menyimpan...') : (editingPost ? 'Perbarui Berita' : 'Simpan Berita')}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
+      <Toaster position="top-right" />
     </div>
   );
 }

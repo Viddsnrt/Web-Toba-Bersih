@@ -11,6 +11,23 @@ import {
 import toast, { Toaster } from 'react-hot-toast';
 import PenugasanDetail from './PenugasanDetail';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 15000,
+});
+
+api.interceptors.request.use((config) => {
+  if (!config.headers) config.headers = {};
+  if (typeof window === 'undefined') return config;
+  const token = localStorage.getItem('token');
+  if (token && token !== 'undefined' && token !== 'null') {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // --- Types & Interfaces ---
 interface Penugasan {
   id: string;
@@ -65,37 +82,49 @@ export default function ManagePenugasan({ taskType }: { taskType: 'RUTIN' | 'ADU
   const fetchPenugasan = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      // 🔥 Filter API langsung berdasarkan taskType (RUTIN/ADUAN)
-      let url = `http://localhost:5000/api/penugasan?type=${taskType}&`;
-      if (filter.status) url += `status=${filter.status}&`;
-
-      const res = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setPenugasanList(res.data.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
+      const url = `/penugasan?type=${taskType}${filter.status ? `&status=${filter.status}` : ''}`;
+      const res = await api.get(url);
+      setPenugasanList(res.data.data || []);
+    } catch (error: any) {
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message || error.message
+        : 'Gagal memuat penugasan';
+      console.error('Error fetching penugasan:', message, error);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchDropdownData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const [supir, truk, laporan] = await Promise.all([
-        axios.get('http://localhost:5000/api/admin/supir-list', { headers: { Authorization: `Bearer ${token}` } }), 
-        axios.get('http://localhost:5000/api/admin/truks', { headers: { Authorization: `Bearer ${token}` } }), 
-        axios.get('http://localhost:5000/api/laporan', { headers: { Authorization: `Bearer ${token}` } }) 
-      ]);
-      
-      const pendingLaporan = laporan.data.data?.filter((l: any) => l.status === 'PENDING') || [];
-      setSupirList(supir.data.data || []);
-      setTrukList(truk.data.data || []);
+    const results = await Promise.allSettled([
+      api.get('/admin/supir-list'),
+      api.get('/admin/truks'),
+      api.get('/laporan'),
+    ]);
+
+    const [supirResult, trukResult, laporanResult] = results;
+
+    if (supirResult.status === 'fulfilled') {
+      setSupirList(supirResult.value.data.data || []);
+    } else {
+      console.error('Error loading supir dropdown:', supirResult.reason);
+      toast.error('Gagal memuat daftar supir');
+    }
+
+    if (trukResult.status === 'fulfilled') {
+      setTrukList(trukResult.value.data.data || []);
+    } else {
+      console.error('Error loading truk dropdown:', trukResult.reason);
+      toast.error('Gagal memuat daftar armada');
+    }
+
+    if (laporanResult.status === 'fulfilled') {
+      const pendingLaporan = laporanResult.value.data.data?.filter((l: any) => l.status === 'PENDING') || [];
       setLaporanList(pendingLaporan);
-    } catch (error) {
-      console.error('Error loading dropdowns:', error);
+    } else {
+      console.error('Error loading laporan dropdown:', laporanResult.reason);
+      toast.error('Gagal memuat laporan pending');
     }
   };
 
@@ -150,19 +179,15 @@ export default function ManagePenugasan({ taskType }: { taskType: 'RUTIN' | 'ADU
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
-      
       if (editingId) {
-        await axios.put(`http://localhost:5000/api/penugasan/${editingId}`, formData, { 
-          headers: { Authorization: `Bearer ${token}` } 
-        });
+        await api.put(`/penugasan/${editingId}`, formData);
         toast.success('Penugasan berhasil dialihkan / diperbarui!');
       } else {
         const endpoint = taskType === 'ADUAN' 
-          ? 'http://localhost:5000/api/penugasan/aduan'
-          : 'http://localhost:5000/api/penugasan/rutin';
+          ? '/penugasan/aduan'
+          : '/penugasan/rutin';
 
-        await axios.post(endpoint, formData, { headers: { Authorization: `Bearer ${token}` } });
+        await api.post(endpoint, formData);
         toast.success('Penugasan berhasil dibuat!');
       }
       
@@ -170,17 +195,18 @@ export default function ManagePenugasan({ taskType }: { taskType: 'RUTIN' | 'ADU
       fetchPenugasan();
       resetForm();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal menyimpan penugasan');
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message || error.message
+        : 'Gagal menyimpan penugasan';
+      console.error('Error saving penugasan:', message, error);
+      toast.error(message);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Hapus penugasan ini?')) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/penugasan/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/penugasan/${id}`);
       toast.success('Penugasan dihapus');
       fetchPenugasan();
     } catch (error) {
@@ -227,17 +253,13 @@ export default function ManagePenugasan({ taskType }: { taskType: 'RUTIN' | 'ADU
           </div>
           <div className="flex items-center gap-3">
             {/* 🔥 Tombol juga disesuaikan secara dinamis */}
-            <button 
-              onClick={() => { resetForm(); setShowModal(true); }}
-              className={`group flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 shadow-xl shadow-slate-200 ${
-                taskType === 'ADUAN' 
-                  ? 'bg-orange-500 hover:bg-orange-600 text-white' 
-                  : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-              }`}
-            >
-              <Plus size={18} className="group-hover:scale-110 transition-transform" /> 
-              {taskType === 'ADUAN' ? 'Tugas Aduan Baru' : 'Jadwal Rutin Baru'}
-            </button>
+          <button
+           onClick={() => { resetForm(); setShowModal(true); }}
+           style={{ backgroundColor: '#064E3B' }}
+            className="group flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-300 shadow-xl shadow-slate-200 hover:opacity-90">
+          <Plus size={18} className="group-hover:scale-110 transition-transform" />
+          {taskType === 'ADUAN' ? 'Tugas Aduan Baru' : 'Jadwal Rutin Baru'}
+          </button>          
           </div>
         </div>
       </header>
@@ -388,7 +410,7 @@ export default function ManagePenugasan({ taskType }: { taskType: 'RUTIN' | 'ADU
                       <div className="flex items-center justify-end gap-2">
                         <button 
                           onClick={() => { setSelectedPenugasan(item); setShowDetailModal(true); }} 
-                          className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                          className="p-2 text-white bg-blue-500 rounded-lg transition-all"
                           title="Lihat Detail"
                         >
                           <Eye size={18} />
@@ -396,7 +418,7 @@ export default function ManagePenugasan({ taskType }: { taskType: 'RUTIN' | 'ADU
                         {item.status !== 'SELESAI' && (
                           <button 
                             onClick={() => openEditModal(item)} 
-                            className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
+                            className="p-2 text-white bg-yellow-500 rounded-lg transition-all"
                             title="Alihkan Supir / Edit Tugas"
                           >
                             <Repeat size={18} />
@@ -404,7 +426,7 @@ export default function ManagePenugasan({ taskType }: { taskType: 'RUTIN' | 'ADU
                         )}
                         <button 
                           onClick={() => handleDelete(item.id)} 
-                          className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                          className="p-2 text-white bg-red-500 rounded-lg transition-all"
                           title="Hapus"
                         >
                           <Trash2 size={18} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, FormEvent, useMemo } from "react";
+import { useState, useEffect, FormEvent, useMemo, type ReactNode } from "react";
 import axios from "axios";
 import {
   Plus,
@@ -21,6 +21,8 @@ import {
   Eye,
   BadgeCheck,
 } from "lucide-react";
+import ConfirmDialog from './ConfirmDialog';
+import AlertDialog from './AlertDialog';
 import { motion, AnimatePresence } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -69,7 +71,15 @@ export default function ManageSupir() {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [viewingSupir, setViewingSupir] = useState<Supir | null>(null);
   const [editingSupir, setEditingSupir] = useState<Supir | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successTitle, setSuccessTitle] = useState('');
+  const [successDescription, setSuccessDescription] = useState('');
+  const [successIcon, setSuccessIcon] = useState<ReactNode>(<CheckCircle2 size={24} />);
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
+  const [selectedSupirForToggle, setSelectedSupirForToggle] = useState<Supir | null>(null);
+  const [showToggleConfirm, setShowToggleConfirm] = useState(false);
 
   // Data Fetching
   const fetchSupir = async (): Promise<void> => {
@@ -129,13 +139,20 @@ export default function ManageSupir() {
 
       if (editingSupir) {
         await axios.put(url, formData, config);
-        toast.success("Data supir berhasil diperbarui");
+        toast.success("Data berhasil diedit", { icon: "✏️" });
+        setSuccessTitle('Data berhasil diedit');
+        setSuccessDescription('Perubahan supir berhasil disimpan.');
+        setSuccessIcon(<Edit3 size={24} />);
       } else {
         await axios.post(url, formData, config);
-        toast.success("Supir baru berhasil ditambahkan! Akun login telah dibuat.");
+        toast.success("Data berhasil ditambahkan", { icon: "✅" });
+        setSuccessTitle('Data berhasil ditambahkan');
+        setSuccessDescription('Supir baru berhasil ditambahkan ke sistem.');
+        setSuccessIcon(<CheckCircle2 size={24} />);
       }
 
       setShowModal(false);
+      setShowSuccessDialog(true);
       fetchSupir();
     } catch (error: any) {
       toast.error(
@@ -147,20 +164,34 @@ export default function ManageSupir() {
     }
   };
 
-  const handleDelete = async (id: string): Promise<void> => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus supir ini?"))
-      return;
+  const openDeleteConfirm = (id: string): void => {
+    setPendingDeleteId(id);
+    setShowConfirmDialog(true);
+  };
+
+  const handleDelete = async (): Promise<void> => {
+    if (!pendingDeleteId) return;
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`${API_BASE_URL}/supir/${id}`, {
+      await axios.delete(`${API_BASE_URL}/supir/${pendingDeleteId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("Supir berhasil dihapus");
+
+      setSuccessTitle('Data berhasil dihapus');
+      setSuccessDescription('Data supir telah dihapus secara permanen.');
+      setSuccessIcon(<Trash2 size={24} />);
+      setShowSuccessDialog(true);
+
       fetchSupir();
+
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Gagal menghapus supir");
       console.error("Delete error:", error);
+    } finally {
+      setShowConfirmDialog(false);
+      setPendingDeleteId(null);
     }
   };
 
@@ -204,6 +235,10 @@ export default function ManageSupir() {
     setShowModal(false);
     setEditingSupir(null);
     setFormData(INITIAL_FORM_DATA);
+  };
+
+  const closeSuccessDialog = (): void => {
+    setShowSuccessDialog(false);
   };
 
   // Render Helpers
@@ -266,7 +301,7 @@ export default function ManageSupir() {
       </td>
       <td className="px-4 py-3">
         <button
-          onClick={() => toggleStatus(supir)}
+onClick={() => openToggleConfirm(supir)}
           className={`px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all ${
             supir.isActive
               ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
@@ -280,21 +315,21 @@ export default function ManageSupir() {
         <div className="flex justify-end gap-2">
           <button
             onClick={() => setViewingSupir(supir)}
-            className="p-1.5 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+            className="p-2 text-white-300 bg-blue-500 rounded-lg transition-all"
             title="Lihat detail supir"
           >
             <Eye size={14} />
           </button>
           <button
             onClick={() => openModal(supir)}
-            className="p-1.5 bg-slate-50 text-slate-400 hover:text-[#064E3B] hover:bg-emerald-50 rounded-lg transition-all"
+            className="p-2 text-white-300 bg-yellow-400 rounded-lg transition-all"
             title="Edit supir"
           >
             <Edit3 size={14} />
           </button>
           <button
-            onClick={() => handleDelete(supir.id)}
-            className="p-1.5 bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+            onClick={() => openDeleteConfirm(supir.id)}
+            className="p-2 text-white-300 bg-red-600 rounded-lg transition-all"
             title="Hapus supir"
           >
             <Trash2 size={14} />
@@ -541,6 +576,54 @@ export default function ManageSupir() {
     </AnimatePresence>
   );
 
+  const renderConfirmDialog = () => (
+    <ConfirmDialog
+      open={showConfirmDialog}
+      title="Yakin Hapus Data?"
+      description="Semua data supir yang terkait akan dihapus permanen."
+      confirmText="Ya"
+      cancelText="Batal"
+      onConfirm={handleDelete}
+      onCancel={() => {
+        setShowConfirmDialog(false);
+        setPendingDeleteId(null);
+      }}
+    />
+  );
+
+  const openToggleConfirm = (supir: Supir): void => {
+  setSelectedSupirForToggle(supir);
+  setShowToggleConfirm(true);
+};
+
+       const renderToggleConfirmDialog = () => (
+  <ConfirmDialog
+    open={showToggleConfirm}
+    title={
+      selectedSupirForToggle?.isActive
+        ? "Nonaktifkan Supir?"
+        : "Aktifkan Supir?"
+    }
+    description={
+      selectedSupirForToggle?.isActive
+        ? "Supir ini tidak akan bisa mengakses aplikasi."
+        : "Supir ini akan bisa kembali mengakses aplikasi."
+    }
+    confirmText="Ya"
+    cancelText="Batal"
+     onConfirm={() => {
+  if (selectedSupirForToggle) {
+    toggleStatus(selectedSupirForToggle);
+  }
+  setShowToggleConfirm(false);
+  setSelectedSupirForToggle(null);
+}}    onCancel={() => {
+      setShowToggleConfirm(false);
+      setSelectedSupirForToggle(null);
+    }}
+  />
+);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-teal-50/20">
       <Toaster
@@ -557,6 +640,18 @@ export default function ManageSupir() {
           },
         }}
       />
+
+      <AlertDialog
+        open={showSuccessDialog}
+        title={successTitle}
+        description={successDescription}
+        buttonText="OK"
+        icon={successIcon}
+        onClose={closeSuccessDialog}
+      />
+
+      {renderConfirmDialog()}
+      {renderToggleConfirmDialog()}
 
       <div className="max-w-7xl mx-auto p-3 md:p-4 space-y-4">
         <motion.div
@@ -580,16 +675,6 @@ export default function ManageSupir() {
                 </p>
               </div>
             </div>
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => openModal()}
-              className="flex items-center justify-center gap-1.5 bg-[#064E3B] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-emerald-900/20 hover:bg-[#053f30] transition-all"
-            >
-              <Plus size={16} />
-              Tambah Supir
-            </motion.button>
           </div>
         </motion.div>
 
@@ -597,6 +682,18 @@ export default function ManageSupir() {
           {renderStatsCard("Total", stats.total, Users, "bg-[#064E3B]", 0.1)}
           {renderStatsCard("Aktif", stats.active, Activity, "bg-emerald-600", 0.2)}
           {renderStatsCard("Nonaktif", stats.inactive, XCircle, "bg-rose-500", 0.3)}
+        </div>
+
+        <div className="flex justify-end mt-4">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => openModal()}
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#064E3B] text-white text-sm font-bold transition-all duration-200 shadow-lg shadow-slate-200 hover:bg-[#053f30] active:scale-95"
+          >
+            <Plus size={18} />
+            Tambah Supir
+          </motion.button>
         </div>
 
         <motion.div

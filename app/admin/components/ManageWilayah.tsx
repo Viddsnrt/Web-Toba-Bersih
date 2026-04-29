@@ -259,9 +259,9 @@ export default function ManageWilayah() {
       <td className="px-3 py-2">
         {/* 🔥 PERBAIKAN: Menambahkan tombol VIEW (Mata) di sini */}
         <div className="flex gap-1 justify-end">
-          <button onClick={() => setViewingWilayah(wilayah)} className="p-1 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded" title="Lihat Detail"><Eye size={12}/></button>
-          <button onClick={() => openEditModal(wilayah)} className="p-1 hover:bg-[#E8F5E9] text-slate-400 hover:text-[#064E3B] rounded" title="Edit"><Edit size={12}/></button>
-          <button onClick={() => handleDelete(wilayah.id, wilayah.name)} className="p-1 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded" title="Hapus"><Trash2 size={12}/></button>
+          <button onClick={() => setViewingWilayah(wilayah)} className="p-2 text-white-300 bg-blue-500 rounded-lg transition-all" title="Lihat Detail"><Eye size={12}/></button>
+          <button onClick={() => openEditModal(wilayah)} className="p-2 text-white-300 bg-yellow-500 rounded-lg transition-all" title="Edit"><Edit size={12}/></button>
+          <button onClick={() => handleDelete(wilayah.id, wilayah.name)} className="p-2 text-white-300 bg-red-500 rounded-lg transition-all" title="Hapus"><Trash2 size={12}/></button>
         </div>
       </td>
     </motion.tr>
