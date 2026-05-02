@@ -11,7 +11,8 @@ const api = axios.create({
   }
 });
 
-const BASE_URL_API = 'https://confoundedly-granitic-janetta.ngrok-free.dev'; 
+const BASE_URL_API = 'http://localhost:5000';
+// const BASE_URL_API = 'https://confoundedly-granitic-janetta.ngrok-free.dev'; 
 
 export default function Home() {
   const [form, setForm] = useState({ pelapor: '', lokasi: '', deskripsi: '', latitude: 0, longitude: 0 });

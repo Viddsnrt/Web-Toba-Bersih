@@ -1,16 +1,34 @@
 import type { NextConfig } from "next";
 
+const API_PROXY_TARGET = (process.env.API_PROXY_TARGET || "http://localhost:5000").replace(/\/$/, "");
+
 const nextConfig: NextConfig = {
-  /* config options here */
   serverExternalPackages: ["@prisma/client"],
   
-  // Tambahkan ini untuk mengizinkan akses dari IP lokal
-  allowedDevOrigins: ['192.168.56.1', 'localhost'],
+  allowedDevOrigins: [
+    '10.195.21.83',
+    'localhost',
+    '127.0.0.1',
+    '*.ngrok-free.dev',
+    '*.ngrok.app',
+  ],
   
-  // Untuk Next.js 16.1.6, gunakan format ini
-  experimental: {
-    // Konfigurasi lain jika ada
+  experimental: {},
+
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${API_PROXY_TARGET}/api/:path*`,
+      },
+      {
+        source: '/uploads/:path*',
+        destination: `${API_PROXY_TARGET}/uploads/:path*`,
+      },
+    ];
   },
+  
+  reactStrictMode: true,
 };
 
 export default nextConfig;
