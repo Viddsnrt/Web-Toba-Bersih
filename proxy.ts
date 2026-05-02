@@ -12,7 +12,7 @@ export function proxy(request: NextRequest) {
     path === '/' ||
     path === '/login' ||
     path === '/register' ||
-    path === '/Warga/login' ||
+    path === '/Warga' ||
     path === '/Warga/register';
 
   // File statis (gambar, icon, dll)

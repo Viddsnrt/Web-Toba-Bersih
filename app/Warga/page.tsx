@@ -5,6 +5,14 @@ import { Trash2 } from 'lucide-react';
 import LaporanForm from '@/app/Warga/components/LaporanForm';
 import LaporanList from '@/app/Warga/components/LaporanList';
 
+const api = axios.create({
+  headers: {
+    'ngrok-skip-browser-warning': 'true', 
+  }
+});
+
+const BASE_URL_API = 'https://confoundedly-granitic-janetta.ngrok-free.dev'; 
+
 export default function Home() {
   const [form, setForm] = useState({ pelapor: '', lokasi: '', deskripsi: '', latitude: 0, longitude: 0 });
   const [laporanList, setLaporanList] = useState([]);
@@ -38,7 +46,9 @@ export default function Home() {
 
   const fetchLaporan = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/laporan');
+      // const res = await axios.get('http://localhost:5000/api/laporan');
+      // console.log('📦 Response API:', res.data);
+           const res = await api.get(`${BASE_URL_API}/api/laporan`);
       console.log('📦 Response API:', res.data);
       
       let dataArray = [];
@@ -104,10 +114,12 @@ export default function Home() {
     }
 
     try {
-      const response = await axios.post('http://localhost:5000/api/laporan/create', formData, {
+      // const response = await axios.post('http://localhost:5000/api/laporan/create', formData, {
+      //   headers: { 'Content-Type': 'multipart/form-data' }
+      // });
+        const response = await api.post(`${BASE_URL_API}/api/laporan/create`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
       console.log('✅ Response:', response.data);
       
       // Reset form

@@ -1,78 +1,153 @@
 "use client";
-import { MapPin, Camera, Image as ImageIcon, X, Send, User, Info } from 'lucide-react';
+import { MapPin, Camera, Image as ImageIcon, X, Send, User, Info, Crosshair, FileText } from 'lucide-react';
+import Image from 'next/image';
 
 export default function LaporanForm({ 
   form, setForm, loading, gpsStatus, previewUrl, 
-  cameraInputRef, fileInputRef, handleImageChange, removeImage, handleSubmit 
+  cameraInputRef, fileInputRef, handleImageChange, removeImage, handleSubmit,
+  handleDeteksiLokasi
 }: any) {
   return (
-    <section className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 mb-12">
-      <div className="flex items-center gap-2 mb-6 text-green-600 font-bold text-lg">
-        <Send size={20} /> Buat Laporan Baru
+    <section className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      {/* Header dengan background hijau */}
+      <div className="bg-green-700 text-white p-6 text-center">
+<div className="flex justify-center mb-3">
+  <Image 
+    src="/dlh.png" // Mengarah ke public/dlh.png
+    alt="Dinas Lingkungan Hidup" 
+    width={70} 
+    height={70}
+    className="object-contain bg-white p-2 rounded-full"
+  />
+</div>
+        <h2 className="text-xl font-bold">DINAS LINGKUNGAN HIDUP</h2>
+        <p className="text-sm opacity-90">KABUPATEN TOBA</p>
       </div>
-      
-      <form onSubmit={handleSubmit} className="grid gap-5">
-        <div className="relative">
-          <User className="absolute left-3 top-3 text-slate-400" size={18} />
-          <input 
-            className="w-full border-slate-200 border p-3 pl-10 rounded-xl focus:ring-2 focus:ring-green-500 outline-none" 
-            placeholder="Nama Lengkap Anda" 
-            value={form.pelapor} 
-            onChange={e => setForm({...form, pelapor: e.target.value})} 
-            required 
-          />
+
+      <div className="p-6">
+        {/* Judul Form */}
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-gray-800">Form Pengaduan</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Laporkan penumpukan sampah atau kerusakan lingkungan untuk masa depan yang lebih bersih.
+          </p>
         </div>
 
-        <div className="relative">
-          <MapPin className="absolute left-3 top-3 text-slate-400" size={18} />
-          <input 
-            className="w-full border-slate-200 border p-3 pl-10 rounded-xl focus:ring-2 focus:ring-green-500 outline-none" 
-            placeholder="Lokasi (Patokan atau nama jalan)" 
-            value={form.lokasi} 
-            onChange={e => setForm({...form, lokasi: e.target.value})} 
-            required 
-          />
-        </div>
-
-        <div className="relative">
-          <Info className="absolute left-3 top-3 text-slate-400" size={18} />
-          <textarea 
-            className="w-full border-slate-200 border p-3 pl-10 rounded-xl focus:ring-2 focus:ring-green-500 outline-none h-28" 
-            placeholder="Deskripsi" 
-            value={form.deskripsi} 
-            onChange={e => setForm({...form, deskripsi: e.target.value})} 
-            required 
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <button type="button" onClick={() => cameraInputRef.current?.click()} className="flex items-center justify-center gap-2 bg-green-700 text-white p-3 rounded-xl font-bold text-sm">
-            <Camera size={18} /> Kamera
-          </button>
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-2 bg-blue-700 text-white p-3 rounded-xl font-bold text-sm">
-            <ImageIcon size={18} /> Galeri
-          </button>
-          <input type="file" accept="image/*" capture="environment" hidden ref={cameraInputRef} onChange={handleImageChange} />
-          <input type="file" accept="image/*" hidden ref={fileInputRef} onChange={handleImageChange} />
-        </div>
-
-        {previewUrl && (
-          <div className="relative w-full h-48 rounded-2xl overflow-hidden border-2 border-slate-100">
-            <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-            <button type="button" onClick={removeImage} className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full shadow-lg">
-              <X size={20} />
-            </button>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Nama Lengkap */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              NAMA LENGKAP
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-3 text-gray-400" size={18} />
+              <input 
+                className="w-full border border-gray-300 p-3 pl-10 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" 
+                placeholder="Masukkan nama lengkap" 
+                value={form.pelapor} 
+                onChange={e => setForm({...form, pelapor: e.target.value})} 
+                required 
+              />
+            </div>
           </div>
-        )}
 
-        <div className={`text-xs font-semibold flex items-center gap-1 ${form.latitude !== 0 ? 'text-green-600' : 'text-orange-500'}`}>
-          <MapPin size={14} /> {gpsStatus}
-        </div>
+          {/* Lokasi Laporan */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              LOKASI LAPORAN
+            </label>
+            <div className="space-y-3">
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3 text-gray-400" size={18} />
+                <input 
+                  className="w-full border border-gray-300 p-3 pl-10 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" 
+                  placeholder="Pilih atau cari lokasi..." 
+                  value={form.lokasi} 
+                  onChange={e => setForm({...form, lokasi: e.target.value})} 
+                  required 
+                />
+              </div>
+              <button 
+                type="button" 
+                onClick={handleDeteksiLokasi}
+                className="flex items-center justify-center gap-2 w-full border border-green-500 text-green-600 p-3 rounded-lg font-semibold text-sm hover:bg-green-50 transition-all"
+              >
+                <Crosshair size={18} /> Deteksi Lokasi
+              </button>
+              <div className={`text-xs font-medium flex items-center gap-1 ${form.latitude !== 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                <MapPin size={12} /> {gpsStatus}
+              </div>
+            </div>
+          </div>
 
-        <button type="submit" disabled={loading} className="bg-green-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-green-700 transition-all flex justify-center items-center gap-2">
-          {loading ? "Mengirim..." : <><Send size={20} /> Kirim Laporan</>}
-        </button>
-      </form>
+          {/* Lampiran Foto */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              LAMPIRAN FOTO
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                type="button" 
+                onClick={() => cameraInputRef.current?.click()} 
+                className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 bg-gray-50 p-4 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all"
+              >
+                <Camera size={24} className="text-gray-500" />
+                <span className="text-xs font-medium text-gray-600">Ambil Foto</span>
+              </button>
+              <button 
+                type="button" 
+                onClick={() => fileInputRef.current?.click()} 
+                className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 bg-gray-50 p-4 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all"
+              >
+                <ImageIcon size={24} className="text-gray-500" />
+                <span className="text-xs font-medium text-gray-600">Pilih dari Galeri</span>
+              </button>
+              <input type="file" accept="image/*" capture="environment" hidden ref={cameraInputRef} onChange={handleImageChange} />
+              <input type="file" accept="image/*" hidden ref={fileInputRef} onChange={handleImageChange} />
+            </div>
+
+            {/* Preview Foto */}
+            {previewUrl && (
+              <div className="relative mt-3 w-full h-40 rounded-lg overflow-hidden border-2 border-green-200">
+                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                <button 
+                  type="button" 
+                  onClick={removeImage} 
+                  className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full shadow-lg"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Deskripsi / Pesan */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              DESKRIPSI / PESAN
+            </label>
+            <div className="relative">
+              <FileText className="absolute left-3 top-3 text-gray-400" size={18} />
+              <textarea 
+                className="w-full border border-gray-300 p-3 pl-10 rounded-lg focus:ring-2 focus:ring-green-500 outline-none h-28" 
+                placeholder="Ceritakan detail kejadian atau kondisi di lokasi..." 
+                value={form.deskripsi} 
+                onChange={e => setForm({...form, deskripsi: e.target.value})} 
+                required 
+              />
+            </div>
+          </div>
+
+          {/* Tombol Kirim */}
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full bg-green-700 text-white py-4 rounded-lg font-bold text-lg hover:bg-green-800 transition-all flex justify-center items-center gap-2 mt-4"
+          >
+            {loading ? "Mengirim..." : <><Send size={20} /> Kirim Laporan</>}
+          </button>
+        </form>
+      </div>
     </section>
   );
 }
