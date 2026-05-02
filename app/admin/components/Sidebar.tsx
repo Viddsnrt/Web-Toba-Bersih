@@ -1,8 +1,8 @@
 "use client";
 import { 
-  Menu, X, Truck, FileText, Archive, Newspaper, Image as ImageIcon, Settings, LogOut, 
-  ChevronLeft, LayoutDashboard, User, Database, ChevronDown, 
-  ChevronUp, Users, Map, Calendar, ClipboardList, AlertCircle
+  Menu, LogOut, LayoutDashboard, Users, Truck, Map, 
+  Newspaper, Image as ImageIcon, Calendar, ClipboardList, 
+  AlertCircle, Settings, GraduationCap, ChevronDown, Database, X
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 
@@ -13,195 +13,219 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeMenu, setActiveMenu, onLogout }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ penugasan: true, data: true });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ 
+    'data-operasional': true, 
+    'manajemen-tugas': false 
+  });
 
-  // --- LOGIKA RESIZE ---
+  // Handle auto-close sidebar on resize
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth;
-      if (width < 768) {
-        setIsCollapsed(false); 
-      } else if (width < 1280) {
-        setIsCollapsed(true);
-      } else {
-        setIsCollapsed(false);
-      }
-      if (width >= 768) setIsMobileOpen(false);
+      if (window.innerWidth >= 768) setIsMobileOpen(false);
     };
-
-    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isExpanded = isMobileOpen || (isHovered || !isCollapsed);
+  // Prevent scrolling when mobile menu is open
+  useEffect(() => {
+    if (isMobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [isMobileOpen]);
 
   const menuConfig = useMemo(() => [
+    { type: "item", id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     {
-      group: "Menu Utama",
-      items: [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'from-emerald-400 to-green-600' },
-        { id: 'daftar', label: 'Laporan Masuk', icon: FileText, color: 'from-lime-400 to-emerald-600', badge: 3 },
-        { id: 'peta-sampah', label: 'Peta Operasional', icon: Map, color: 'from-emerald-500 to-teal-500' },
-      ]
-    },
-    {
-      group: "Data dan Operasional",
-      id: 'data',
+      type: "group",
+      id: 'data-operasional',
+      group: "Data & Operasional",
       icon: Database,
       items: [
-        { id: 'data-supir', label: 'Data Supir', icon: Users, color: 'from-emerald-300 to-lime-500' },
-        { id: 'data-truk', label: 'Data Armada', icon: Truck, color: 'from-emerald-400 to-teal-500' },
+        { id: 'data-supir', label: 'Data Supir', icon: Users, color: 'from-sky-400 to-indigo-600' },
+        { id: 'data-truk', label: 'Data Truk', icon: Truck, color: 'from-amber-400 to-orange-600' },
         { id: 'data-wilayah', label: 'Data Wilayah', icon: Map, color: 'from-teal-400 to-green-600' },
+        { id: 'akun-masyarakat', label: 'Akun Masyarakat', icon: Users },
       ]
     },
+    { type: "item", id: 'peta-sampah', label: 'Peta Operasional', icon: Map },
     {
+      type: "group",
+      id: 'manajemen-tugas',
       group: "Manajemen Tugas",
-      id: 'penugasan', // id group tetap penugasan untuk accordion
       icon: Calendar,
       items: [
-        { id: 'tugas-harian', label: 'Tugas Harian', icon: ClipboardList, color: 'from-green-300 to-emerald-500' },
-        { id: 'tugas-aduan', label: 'Tugas Aduan', icon: AlertCircle, color: 'from-lime-300 to-green-500' },
+        { id: 'tugas-harian', label: 'Tugas Harian', icon: ClipboardList }, // ID Diperbaiki
+        { id: 'tugas-aduan', label: 'Tugas Aduan', icon: AlertCircle },     // ID Diperbaiki
+      ]
+    },
+    { type: "section-header", label: "Analitik & Konten" },
+    {
+      type: "group",
+      id: 'manajemen-konten',
+      group: "Manajemen Konten",
+      icon: Newspaper,
+      items: [
+        { id: 'Education', label: 'Edukasi', icon: GraduationCap },
+        { id: 'berita', label: 'Berita', icon: Newspaper },
+        { id: 'galeri', label: 'Galeri', icon: ImageIcon },
       ]
     },
     {
-      group: "Konten",
-      items: [
-        { id: 'berita', label: 'Manajemen Berita', icon: Newspaper, color: 'from-green-500 to-emerald-600' },
-      ]
+      type: "item",
+      id: 'pengaturan',
+      label: "Pengaturan",
+      icon: Settings,
+      items: []
     }
   ], []);
 
-  const NavItem = ({ item, isSub = false }: { item: any; isSub?: boolean }) => {
+  const NavItem = ({ item, isSubItem = false }: { item: any, isSubItem?: boolean }) => {
     const isActive = activeMenu === item.id;
     return (
       <button
-        onClick={() => { setActiveMenu(item.id); if(isMobileOpen) setIsMobileOpen(false); }}
-        className={`w-full flex items-center group relative transition-all duration-300 rounded-xl mb-1
-          ${isExpanded ? 'px-3 py-2' : 'justify-center py-2'} 
-          ${isActive ? 'bg-white/10 text-white' : 'text-emerald-200 hover:bg-green-500/10 hover:text-white'}`}
+        onClick={() => { 
+          setActiveMenu(item.id); 
+          setIsMobileOpen(false); 
+        }}
+        className={`w-full flex items-center gap-3 transition-all duration-300 rounded-xl group relative
+          ${isSubItem ? 'px-4 py-2.5 mt-0.5' : 'px-4 py-3.5 mb-1'}
+          ${isActive 
+            ? 'bg-white/10 text-white shadow-[inset_0px_0px_12px_rgba(255,255,255,0.05)]' 
+            : 'text-emerald-100/60 hover:text-white hover:bg-white/5'}`}
       >
-        {isActive && <div className="absolute left-0 w-1 h-5 bg-emerald-400 rounded-r-full" />}
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg shrink-0 transition-all ${isActive ? `bg-gradient-to-br ${item.color} text-white shadow-lg shadow-black/20` : 'bg-green-900/50 group-hover:bg-green-800/70'}`}>
-            <item.icon size={isSub ? 16 : 18} />
-          </div>
-          {isExpanded && (
-            <div className="flex justify-between items-center w-full min-w-0">
-              <span className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis">{item.label}</span>
-              {item.badge && <span className="bg-rose-500 text-[10px] px-1.5 py-0.5 rounded-full text-white ml-2">{item.badge}</span>}
-            </div>
-          )}
-        </div>
+        {isActive && (
+          <div className="absolute left-0 w-1 h-6 bg-emerald-400 rounded-r-full shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
+        )}
+        
+        <item.icon size={isSubItem ? 18 : 22} 
+          className={`transition-transform duration-300 group-hover:scale-110 ${isActive ? 'text-emerald-400' : ''}`} 
+        />
+        <span className={`${isSubItem ? 'text-sm' : 'text-sm'} font-medium tracking-wide`}>{item.label}</span>
       </button>
+    );
+  };
+
+  const GroupItem = ({ group }: { group: any }) => {
+    const isOpen = openGroups[group.id];
+    const hasActiveChild = group.items.some((item: any) => item.id === activeMenu);
+
+    return (
+      <div className={`mb-2 rounded-2xl transition-all duration-300 ${isOpen ? 'bg-black/10 pb-2' : ''}`}>
+        <button 
+          onClick={() => setOpenGroups(prev => ({...prev, [group.id]: !prev[group.id]}))}
+          className={`w-full flex items-center gap-3 px-4 py-3.5 transition-all duration-300 rounded-xl group
+            ${hasActiveChild && !isOpen ? 'text-white' : 'text-emerald-100/60 hover:text-white'}`}
+        >
+          <group.icon size={22} className={`${hasActiveChild ? 'text-emerald-400' : 'group-hover:text-white'}`} />
+          <span className="text-sm font-semibold flex-1 text-left tracking-wide">{group.group}</span>
+          <div className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+            <ChevronDown size={18} className="opacity-40" />
+          </div>
+        </button>
+        
+        <div className={`grid transition-all duration-500 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 overflow-hidden'}`}>
+          <div className="overflow-hidden">
+            <div className="mx-4 mt-1 pl-4 border-l border-white/10 space-y-1">
+             {group.items.map((item: any, index: number) => (
+  <NavItem key={`${item.id}-${index}`} item={item} isSubItem />
+))}
+            </div>
+          </div>
+        </div>
+      </div>
     );
   };
 
   return (
     <>
-      {/* Mobile Toggle */}
-      {!isMobileOpen && (
+      {/* Tombol Mobile Toggle */}
+      <div className="md:hidden fixed top-0 left-0 right-0 p-4 bg-[#064E3B] border-b border-white/5 z-[60] flex items-center justify-between">
+       <div className="w-12 h-12 flex-shrink-0 bg-white/10 p-1.5 rounded-xl backdrop-blur-sm">
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg"
+                    alt="Logo Kabupaten Toba"
+                    className="w-full h-full object-contain" />
+                </div>
         <button 
-          onClick={() => setIsMobileOpen(true)}
-          className="fixed top-4 left-4 z-[60] md:hidden p-3 bg-green-600 text-white rounded-xl shadow-lg active:scale-95 transition-transform"
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          className="p-2.5 bg-white/10 text-white rounded-xl active:scale-90 transition-all"
         >
-          <Menu size={22} />
+          {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
-      )}
+      </div>
 
       {/* Backdrop */}
-      {isMobileOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden" onClick={() => setIsMobileOpen(false)} />
-      )}
+      <div 
+        className={`fixed inset-0 bg-emerald-950/60 backdrop-blur-sm z-40 transition-opacity duration-300 md:hidden
+          ${isMobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setIsMobileOpen(false)} 
+      />
 
+      {/* Sidebar Utama */}
       <aside 
-        className={`fixed left-0 top-0 h-full z-50 bg-[#064E3B] border-r border-green-700/20 transition-all duration-300 ease-in-out flex flex-col
-          ${isMobileOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0'}
-          ${isExpanded ? 'w-72' : 'w-20'}`}
-        onMouseEnter={() => !isMobileOpen && setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+        style={{ backgroundColor: '#064E3B' }}
+        className={`fixed left-0 top-0 h-screen z-50 transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) flex flex-col w-[280px] shadow-[20px_0_50px_rgba(0,0,0,0.3)]
+          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       >
-        {/* Header */}
-        <div className="h-20 flex items-center px-4 border-b border-green-700/20 shrink-0">
-          <div className="flex items-center gap-3 w-full">
-            <div className="w-10 h-10 bg-white rounded-xl p-1.5 shrink-0 shadow-inner">
-              <img src="/dlh.png" alt="Logo" className="w-full h-full object-contain" />
+        {/* Header Section */}
+        <div className="p-6">
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-tr from-emerald-400 to-green-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+              <div className="w-12 h-12 flex-shrink-0 bg-white/10 p-1.5 rounded-xl backdrop-blur-sm">
+                  <img
+                    src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg"
+                    alt="Logo Kabupaten Toba"
+                    className="w-full h-full object-contain" />
+                </div>
             </div>
-            {isExpanded && (
-              <div className="min-w-0 animate-in fade-in slide-in-from-left-2 duration-500">
-                <h1 className="text-xs font-black text-white leading-tight uppercase">DLH Kabupaten Toba</h1>
-              </div>
-            )}
+            <div className="overflow-hidden">
+              <h1 className="text-sm font-black text-white leading-tight tracking-tighter uppercase">DLH KABUPATEN</h1>
+              <p className="text-[11px] font-bold text-emerald-400 tracking-[0.3em]">TOBA</p>
+            </div>
           </div>
-          {isExpanded && !isMobileOpen && (
-            <button 
-              onClick={(e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }} 
-              className="ml-auto p-1.5 text-gray-500 hover:text-white bg-white/5 rounded-lg transition-colors"
-            >
-              <ChevronLeft size={18} className={isCollapsed ? 'rotate-180 transition-transform' : 'transition-transform'} />
-            </button>
-          )}
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-4 custom-scrollbar">
-          {menuConfig.map((section, idx) => (
-            <div key={idx} className="space-y-1">
-              {section.id ? (
-                /* Accordion Section */
-                <div className="space-y-1">
-                  <button 
-                    onClick={() => isExpanded && setOpenGroups(p => ({...p, [section.id!]: !p[section.id!]}))}
-                    className={`w-full flex items-center py-2 text-emerald-200 hover:text-white transition-colors ${isExpanded ? 'px-3 justify-between' : 'justify-center'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <section.icon size={16} />
-                      {isExpanded && <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-300">{section.group}</span>}
-                    </div>
-                    {isExpanded && (openGroups[section.id!] ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
-                  </button>
-                  {(openGroups[section.id!] || !isExpanded) && (
-                    <div className={isExpanded ? "ml-2 border-l border-white/5 pl-2" : ""}>
-                      {section.items.map(item => <NavItem key={item.id} item={item} isSub={isExpanded} />)}
-                    </div>
-                  )}
+        {/* Scrollable Navigation */}
+        <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-1 custom-scrollbar">
+          {menuConfig.map((item, idx) => {
+            if (item.type === 'section-header') {
+              return (
+                <div key={`header-${idx}`} className="px-4 pt-6 pb-2">
+                  <p className="text-[10px] font-black text-emerald-500/50 uppercase tracking-[0.25em]">{item.label}</p>
                 </div>
-              ) : (
-                /* Static Section */
-                <div className="space-y-1">
-                  {isExpanded && section.group && (
-                    <p className="px-3 text-[10px] font-bold text-emerald-300 uppercase tracking-widest mb-2 mt-4">{section.group}</p>
-                  )}
-                  {section.items.map(item => <NavItem key={item.id} item={item} />)}
-                </div>
-              )}
-            </div>
-          ))}
+              );
+            }
+            return item.type === 'group' ? (
+              <GroupItem key={item.id || idx} group={item} />
+            ) : (
+              <NavItem key={item.id || idx} item={item} />
+            );
+          })}
         </nav>
 
-        {/* Footer */}
-        <div className="p-3 border-t border-green-700/20 bg-[#064E3B]/80">
-          <div className={`flex flex-col gap-2 ${!isExpanded && 'items-center'}`}>
-            {isExpanded && (
-              <div className="flex items-center gap-3 p-2 bg-white/5 rounded-xl">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-green-700 flex items-center justify-center text-white shadow-lg">
-                  <User size={14} />
-                </div>
-                <div className="truncate group">
-                  <p className="text-[10px] font-bold text-white uppercase truncate">Admin Toba</p>
-                  <p className="text-[9px] text-emerald-200 truncate">Administrator</p>
-                </div>
+        {/* User / Logout Section */}
+        <div className="p-4 mt-auto">
+          <div className="p-4 bg-black/20 rounded-2xl border border-white/5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold">
+                A
               </div>
-            )}
+              <div className="overflow-hidden">
+                <p className="text-xs font-bold text-white truncate">Administrator</p>
+                <p className="text-[10px] text-emerald-400/60 truncate">admin@toba.go.id</p>
+              </div>
+            </div>
             <button 
               onClick={onLogout} 
-              className={`flex items-center gap-3 p-2.5 rounded-xl text-emerald-200 hover:bg-green-500/10 transition-all active:scale-95 ${!isExpanded && 'justify-center'}`}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white transition-all duration-300 rounded-xl font-bold text-xs"
             >
-              <LogOut size={18} />
-              {isExpanded && <span className="text-xs font-bold">Keluar</span>}
+              <LogOut size={16} />
+              <span>LOGOUT</span>
             </button>
           </div>
         </div>
@@ -210,8 +234,11 @@ export default function Sidebar({ activeMenu, setActiveMenu, onLogout }: Sidebar
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(125, 38, 38, 0.05); border-radius: 10px; }
-        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { 
+          background: rgba(255,255,255,0.05); 
+          border-radius: 20px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: rgba(52, 211, 153, 0.2); }
       `}</style>
     </>
   );
