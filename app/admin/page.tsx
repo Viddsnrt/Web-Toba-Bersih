@@ -16,6 +16,7 @@ import PetaSampah from './components/PetaSampah';
 import ManageWilayah from './components/ManageWilayah';
 import ManagePenugasan from './components/ManagePenugasan';
 import ManageLaporan from './components/ManageLaporan';
+import AkunMasyarakat from './components/AkunMasyarakat';
 
 // --- API Instance ---
 const api = axios.create({
@@ -207,6 +208,8 @@ export default function AdminPage() {
         return <ManageTruk />;
       case 'data-wilayah':
         return <ManageWilayah />;
+      case 'akun-masyarakat': 
+      return <AkunMasyarakat />;
       case 'berita':
         return <ManagePosts posts={data.posts} onPostsUpdate={fetchAllData} />;
       default:
