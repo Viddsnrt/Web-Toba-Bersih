@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import {
   XAxis, YAxis, CartesianGrid,
-  Tooltip, AreaChart, Area
+  Tooltip, AreaChart, Area,  ResponsiveContainer
 } from 'recharts';
 import axios from 'axios';
 
@@ -223,16 +223,7 @@ export default function Dashboard({ laporanList, posts }: DashboardProps) {
             {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <div className="flex gap-3">
-          <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-all active:scale-95">
-            Unduh Laporan
-          </button>
-          <button className="px-4 py-2 bg-green-600 rounded-xl text-sm font-semibold text-white shadow-md shadow-green-200 hover:bg-green-700 transition-all active:scale-95">
-            Kelola Armada
-          </button>
-        </div>
       </div>
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard label="Laporan Baru" value={stats.laporanPending} icon={<AlertCircle className="text-blue-600" />} subText="Perlu Respon Segera" trend="+5%" color="blue" />
@@ -240,44 +231,74 @@ export default function Dashboard({ laporanList, posts }: DashboardProps) {
         <StatCard label="Tugas Aduan" value={penugasanStats.totalAduan} icon={<FileText className="text-amber-600" />} subText="Akumulasi Tugas Aduan" trend="ADUAN" color="amber" />
         <StatCard label="Tugas Harian" value={penugasanStats.totalRutin} icon={<Clock className="text-purple-600" />} subText="Akumulasi Tugas Rutin" trend="RUTIN" color="purple" />
       </div>
+          {/* Chart */}
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+  {/* Chart */}
+  <div className="lg:col-span-2 min-w-0 bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
+    <div className="flex items-center justify-between mb-8">
+      <div>
+        <h3 className="text-lg font-bold text-slate-900">Analitik Laporan</h3>
+        <p className="text-sm text-slate-500">Statistik 7 hari terakhir</p>
+      </div>
+      <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-1 rounded-full text-xs font-bold border border-green-100">
+        <TrendingUp size={14} /> Tren
+      </div>
+    </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Chart */}
-        <div className="lg:col-span-2 min-w-0 bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">Analitik Laporan</h3>
-              <p className="text-sm text-slate-500">Statistik 7 hari terakhir</p>
-            </div>
-            <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-1 rounded-full text-xs font-bold border border-green-100">
-              <TrendingUp size={14} /> Tren
-            </div>
-          </div>
-          {/* ✅ FIX: render chart hanya jika ada data DAN lebar sudah diketahui */}
-          <div ref={chartContainerRef} className="w-full min-w-0" style={{ height: '300px' }}>
-            {chartWidth > 0 && grafikData.length > 0 ? (
-              <AreaChart width={chartWidth} height={300} data={grafikData}>
-                <defs>
-                  <linearGradient id="colorLaporan" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="hari" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                <Area type="monotone" dataKey="laporan" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorLaporan)" />
-              </AreaChart>
-            ) : (
-              <div className="h-full w-full flex items-center justify-center">
-                <p className="text-slate-400 text-sm">
-                  {grafikData.length === 0 ? 'Belum ada data laporan untuk ditampilkan' : 'Memuat grafik...'}
-                </p>
-              </div>
-            )}
-          </div>
+    {/* ✅ FIX: pakai ResponsiveContainer (TANPA chartWidth & ref) */}
+    <div className="w-full" style={{ height: '300px' }}>
+      {grafikData.length > 0 ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={grafikData}>
+            <defs>
+              <linearGradient id="colorLaporan" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+
+            <XAxis
+              dataKey="hari"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#94a3b8', fontSize: 12 }}
+            />
+
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#94a3b8', fontSize: 12 }}
+            />
+
+            <Tooltip
+              contentStyle={{
+                borderRadius: '16px',
+                border: 'none',
+                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
+              }}
+            />
+
+            <Area
+              type="monotone"
+              dataKey="laporan"
+              stroke="#10b981"
+              strokeWidth={3}
+              fillOpacity={1}
+              fill="url(#colorLaporan)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="h-full w-full flex items-center justify-center">
+          <p className="text-slate-400 text-sm">
+            Belum ada data laporan untuk ditampilkan
+          </p>
         </div>
+      )}
+    </div>
+  </div>
 
         {/* Kinerja Wilayah */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8">
@@ -301,7 +322,6 @@ export default function Dashboard({ laporanList, posts }: DashboardProps) {
           </div>
           <div className="mt-10 p-5 bg-slate-50 rounded-2xl border border-slate-100">
             <div className="flex justify-between items-center text-sm mb-3">
-              <span className="text-slate-500 font-medium">Total Volume</span>
               <span className="text-slate-900 font-bold">{totalLaporan} Unit</span>
             </div>
             <div className="flex justify-between items-center text-sm">

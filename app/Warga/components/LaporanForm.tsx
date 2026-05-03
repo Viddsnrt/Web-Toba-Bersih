@@ -1,5 +1,5 @@
 "use client";
-import { MapPin, Camera, Image as ImageIcon, X, Send, User, Info, Crosshair, FileText } from 'lucide-react';
+import { MapPin, Camera, Image as ImageIcon, X, Send, User, Crosshair, FileText } from 'lucide-react';
 import Image from 'next/image';
 
 export default function LaporanForm({ 
@@ -13,11 +13,11 @@ export default function LaporanForm({
       <div className="bg-green-700 text-white p-6 text-center">
 <div className="flex justify-center mb-3">
   <Image 
-    src="/dlh.png" // Mengarah ke public/dlh.png
+    src="/icons/web-app-manifest-512x512.png"
     alt="Dinas Lingkungan Hidup" 
-    width={70} 
-    height={70}
-    className="object-contain bg-white p-2 rounded-full"
+    width={80} 
+    height={80}
+    className="object-contain"
   />
 </div>
         <h2 className="text-xl font-bold">DINAS LINGKUNGAN HIDUP</h2>

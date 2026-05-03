@@ -23,8 +23,7 @@ export function proxy(request: NextRequest) {
   // Halaman yang butuh login
   const isProtectedPage = 
     path.startsWith('/admin') || 
-    path.startsWith('/Supir') || 
-    path.startsWith('/Warga');
+    path.startsWith('/Supir') ;
 
   // Kalau file statis atau halaman publik, langsung izinkan
   if (isStaticFile || isPublicPage) {

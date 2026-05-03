@@ -9,7 +9,7 @@ export default function LaporanCard({
   const bukaPeta = (lat: number, lng: number) => {
     window.open(`https://www.google.com/maps?q=${lat},${lng}`, "_blank");
   };
-
+  
   return (
     <div className="bg-white p-6 rounded-[25px] shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 hover:shadow-md transition-all">
       <div className="w-full md:w-32 h-32 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-200">

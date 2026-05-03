@@ -2,8 +2,8 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
 import { 
-  Plus, Edit, Trash2, Search, Truck, MapPin,
-  Phone, User, X, ChevronDown, RefreshCw, 
+  Plus, Edit, Trash2, Search, Truck, 
+  Phone, X, ChevronDown, RefreshCw, 
   CheckCircle2, AlertCircle, LayoutGrid
 } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -13,6 +13,9 @@ import toast, { Toaster } from 'react-hot-toast';
 interface Truk {
   id: string;
   plateNumber: string;
+  unitCode: string | null;
+  brand: string | null;
+  truckType: string | null;
   operatorId: string | null;
   operator?: {
     id: string;
@@ -46,9 +49,11 @@ export default function ManageTruk() {
   
   const [formData, setFormData] = useState({
     plateNumber: '',
+    unitCode: '',
+    brand: '',
+    truckType: '',
     operatorId: '',
     status: 'AVAILABLE',
-    lastLocation: ''
   });
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -57,7 +62,6 @@ export default function ManageTruk() {
   const [successDescription, setSuccessDescription] = useState('');
   const [successIcon, setSuccessIcon] = useState<ReactNode>(<CheckCircle2 size={24} />);
 
-  // --- LOGIC: FETCHING DATA ---
   const fetchTruk = async () => {
     try {
       setLoading(true);
@@ -65,7 +69,6 @@ export default function ManageTruk() {
       const res = await axios.get('http://localhost:5000/api/admin/truks', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // ⚠️ PERBAIKAN: Gunakan .data.data sesuai standar backend kita
       setTrukList(res.data.data || []);
     } catch (error) {
       console.error('Error fetching truk:', error);
@@ -77,11 +80,9 @@ export default function ManageTruk() {
   const fetchSupir = async () => {
     try {
       const token = localStorage.getItem('token');
-      // ⚠️ PERBAIKAN: URL diganti menjadi /supir-list
       const res = await axios.get('http://localhost:5000/api/admin/supir-list', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // ⚠️ PERBAIKAN: Gunakan .data.data
       const supirData = res.data.data || [];
       setSupirList(supirData.filter((s: any) => s.isActive));
     } catch (error) {
@@ -94,14 +95,20 @@ export default function ManageTruk() {
     fetchSupir();
   }, []);
 
-  // --- LOGIC: HANDLERS ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const openCreateModal = () => {
     setEditingTruk(null);
-    setFormData({ plateNumber: '', operatorId: '', status: 'AVAILABLE', lastLocation: '' });
+    setFormData({
+      plateNumber: '',
+      unitCode: '',
+      brand: '',
+      truckType: '',
+      operatorId: '',
+      status: 'AVAILABLE',
+    });
     setShowModal(true);
   };
 
@@ -109,9 +116,11 @@ export default function ManageTruk() {
     setEditingTruk(truk);
     setFormData({
       plateNumber: truk.plateNumber,
+      unitCode: truk.unitCode || '',
+      brand: truk.brand || '',
+      truckType: truk.truckType || '',
       operatorId: truk.operatorId || '',
       status: truk.status,
-      lastLocation: truk.lastLocation || ''
     });
     setShowModal(true);
   };
@@ -200,8 +209,10 @@ export default function ManageTruk() {
 
   const filteredTruk = trukList.filter(truk => 
     truk.plateNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    truk.operator?.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    truk.lastLocation?.toLowerCase().includes(searchTerm.toLowerCase())
+    truk.unitCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    truk.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    truk.truckType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    truk.operator?.fullName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -225,7 +236,7 @@ export default function ManageTruk() {
         </div>
       </div>
 
-      {/* STATS */}
+      {/* STATS CARD */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Armada', val: trukList.length, color: 'text-gray-600', bg: 'bg-gray-50', icon: Truck },
@@ -254,14 +265,14 @@ export default function ManageTruk() {
         </button>
       </div>
 
-      {/* SEARCH & TABLE */}
+      {/* TABLE */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-50">
           <div className="relative group max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-500" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
-              placeholder="Cari nopol, supir, atau lokasi..."
+              placeholder="Cari nopol, kode, merek, tipe, atau supir..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-11 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500/20 outline-none text-gray-700"
@@ -280,10 +291,9 @@ export default function ManageTruk() {
               <thead>
                 <tr className="bg-gray-50/50">
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-center w-12">No</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Informasi Truk</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Nomor Polisi / Detail</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Operator</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Status</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest">Tracking</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Aksi</th>
                 </tr>
               </thead>
@@ -300,7 +310,15 @@ export default function ManageTruk() {
                           </div>
                           <div>
                             <p className="font-bold text-gray-900 leading-none">{truk.plateNumber}</p>
-                            <p className="text-[10px] text-gray-400 mt-1 uppercase font-mono tracking-tighter">ID: {truk.id.substring(0,8)}</p>
+                            <div className="text-xs text-gray-500 mt-1 space-x-1">
+                              <span className="bg-gray-100 px-1.5 py-0.5 rounded-md text-[10px] font-mono">
+                                {truk.unitCode || '-'}
+                              </span>
+                              <span>•</span>
+                              <span>{truk.brand || '-'}</span>
+                              <span>•</span>
+                              <span className="text-gray-400">{truk.truckType || '-'}</span>
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -322,17 +340,6 @@ export default function ManageTruk() {
                           {status.label}
                         </span>
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex flex-col">
-                           <div className="flex items-center text-sm text-gray-600 font-medium">
-                              <MapPin size={14} className="mr-1 text-gray-400" />
-                              <span className="truncate max-w-[120px]">{truk.lastLocation || 'Parkir'}</span>
-                           </div>
-                           <p className="text-[10px] text-gray-400 ml-5">
-                              {truk.lastPing ? new Date(truk.lastPing).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}
-                           </p>
-                        </div>
-                      </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex justify-end gap-1">
                           <button onClick={() => openEditModal(truk)} className="p-2 text-white-300 bg-yellow-400 rounded-lg transition-all"><Edit size={18} /></button>
@@ -350,51 +357,106 @@ export default function ManageTruk() {
 
       {renderConfirmDialog()}
 
-      {/* MODAL FORM */}
+      {/* MODAL FORM - lebih rapi dengan grid 2 kolom */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-white/20 scale-100 transition-transform">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20">
             <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h3 className="text-xl font-bold text-gray-900">{editingTruk ? 'Edit Unit' : 'Registrasi Truk'}</h3>
+              <h3 className="text-xl font-bold text-gray-900">{editingTruk ? 'Edit Unit Truk' : 'Registrasi Truk Baru'}</h3>
               <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white rounded-full transition-colors text-gray-400"><X size={20} /></button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-8 space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 ml-1">Nomor Polisi</label>
-                <input name="plateNumber" value={formData.plateNumber} onChange={handleInputChange} placeholder="BK 1234 ABC" required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 outline-none transition-all font-bold uppercase" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 ml-1">Assign Operator</label>
-                <div className="relative">
-                  <select name="operatorId" value={formData.operatorId} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 appearance-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 outline-none transition-all font-medium text-gray-700">
-                    <option value="">Pilih Supir (Opsional)</option>
-                    {supirList.map(supir => <option key={supir.id} value={supir.id}>{supir.fullName}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+              {/* Baris 1: Nomor Polisi + Kode Truk */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 ml-1">Nomor Polisi</label>
+                  <input
+                    name="plateNumber"
+                    value={formData.plateNumber}
+                    onChange={handleInputChange}
+                    placeholder="BK 1234 ABC"
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 outline-none transition font-bold uppercase"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 ml-1">Kode Unit</label>
+                  <input
+                    name="unitCode"
+                    value={formData.unitCode}
+                    onChange={handleInputChange}
+                    placeholder="Contoh: 07, 12"
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 outline-none transition"
+                  />
                 </div>
               </div>
 
+              {/* Baris 2: Merek + Tipe Truk */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 ml-1">Merek</label>
+                  <input
+                    name="brand"
+                    value={formData.brand}
+                    onChange={handleInputChange}
+                    placeholder="Mitsubishi, Hino, Isuzu"
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 outline-none transition"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 ml-1">Tipe Truk</label>
+                  <input
+                    name="truckType"
+                    value={formData.truckType}
+                    onChange={handleInputChange}
+                    placeholder="Dump Truck, Arm Roll, ELF"
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              {/* Baris 3: Operator + Status */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 ml-1">Assign Operator</label>
+                  <div className="relative">
+                    <select
+                      name="operatorId"
+                      value={formData.operatorId}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 appearance-none focus:border-green-500 outline-none transition font-medium text-gray-700"
+                    >
+                      <option value="">Pilih Supir (Opsional)</option>
+                      {supirList.map(supir => <option key={supir.id} value={supir.id}>{supir.fullName}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
                   <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 ml-1">Kondisi Unit</label>
-                  <select name="status" value={formData.status} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 appearance-none focus:ring-2 focus:ring-green-500/20 outline-none">
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 appearance-none focus:border-green-500 outline-none transition"
+                  >
                     <option value="AVAILABLE">Tersedia</option>
                     <option value="BUSY">Bertugas</option>
                     <option value="MAINTENANCE">Servis</option>
                   </select>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 ml-1">Lokasi Awal</label>
-                  <input name="lastLocation" value={formData.lastLocation} onChange={handleInputChange} placeholder="Pool" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500/20 outline-none" />
-                </div>
               </div>
 
+              {/* Tombol */}
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-6 py-3 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition-all">Batal</button>
-              <button type="submit" className="flex- bg-[#064E3B] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#065F46] shadow-lg shadow-green-200 transition-all active:scale-95"> {editingTruk ? 'Simpan Perubahan' : 'Daftarkan Truk'}
-              </button>
+                <button type="submit" className="flex- bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-200 transition-all active:scale-95">
+                  {editingTruk ? 'Simpan Perubahan' : 'Daftarkan Truk'}
+                </button>
               </div>
             </form>
           </div>

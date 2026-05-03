@@ -45,7 +45,7 @@ export default function HalamanSupir() {
 
       setUser(userData);
       setIsLoggedIn(true);
-      fetchTugas(token);
+      fetchTugas();
     } catch (error) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');

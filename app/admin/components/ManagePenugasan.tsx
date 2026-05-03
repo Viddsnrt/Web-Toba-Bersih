@@ -19,7 +19,9 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  if (!config.headers) config.headers = {};
+  if (!config.headers) {
+    config.headers = {} as any;
+  }
   if (typeof window === 'undefined') return config;
   const token = localStorage.getItem('token');
   if (token && token !== 'undefined' && token !== 'null') {
@@ -478,7 +480,7 @@ export default function ManagePenugasan({ taskType }: { taskType: 'RUTIN' | 'ADU
                     value={formData.reportId}
                     required
                     onChange={(e) => {
-                      const sel = laporanList.find((l:any) => l.id === e.target.value);
+                      const sel: any = laporanList.find((l:any) => l.id === e.target.value);
                       if(sel) {
                         setFormData({
                           ...formData,

@@ -391,8 +391,8 @@ export default function ManageWilayah() {
               <th className="p-3 text-[10px] text-[#064E3B]">No</th>
               <th className="p-3 text-[10px] text-[#064E3B]">Kecamatan</th>
               <th className="p-3 text-[10px] text-[#064E3B]">Kode</th>
-              <th className="p-3 text-[10px] text-[#064E3B]">Penduduk</th>
-              <th className="p-3 text-[10px] text-[#064E3B]">Kapasitas</th>
+                <th className="p-3 text-[10px] text-[#064E3B]">Penduduk</th>
+                <th className="p-3 text-[10px] text-[#064E3B]">Kapasitas</th>
               <th className="p-3 text-[10px] text-[#064E3B]">Lokasi & Radius</th>
               <th className="p-3 text-[10px] text-[#064E3B]">Status</th>
               <th className="p-3 text-[10px] text-[#064E3B] text-right">Aksi</th>

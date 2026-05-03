@@ -1,17 +1,62 @@
 "use client";
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { FileText, Search, Filter, Loader2, Inbox } from 'lucide-react';
-import LaporanCard from './LaporanCard'; // Pastikan path import ini benar
+import {
+  Search, MapPin, User, Truck, Clock,
+  AlertCircle, X, CheckCircle2, RefreshCw,
+  FileText, Trash2, ImageIcon,
+  ArrowRightCircle, Loader, Calendar
+} from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
+// --- Types ---
+interface Laporan {
+  id: string;
+  reportNumber?: string;
+  district: string;
+  location?: string;
+  description: string;
+  status: string;
+  createdAt?: string;
+  photoUrl?: string | null;
+  phoneNumber?: string;
+}
+
+interface Driver {
+  id: string;
+  fullName: string;
+  phoneNumber?: string;
+}
+
+interface Truck {
+  id: string;
+  plateNumber: string;
+}
+
 export default function ManageLaporan() {
-  const [laporanList, setLaporanList] = useState<any[]>([]);
+  // --- State ---
+  const [laporanList, setLaporanList] = useState<Laporan[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [showConversionModal, setShowConversionModal] = useState(false);
+  const [selectedLaporan, setSelectedLaporan] = useState<Laporan | null>(null);
+  
+  const [supirList, setSupirList] = useState<Driver[]>([]);
+  const [trukList, setTrukList] = useState<Truck[]>([]);
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
+  
+  const [assignmentByReportId, setAssignmentByReportId] = useState<Record<string, any>>({});
 
-  // --- MENGAMBIL DATA DARI NODE.JS ---
+  const [formData, setFormData] = useState({
+    reportId: '',
+    driverId: '',
+    truckId: '',
+    scheduledAt: '',
+    notes: '',
+  });
+
+  // --- API Calls ---
   const fetchLaporan = async () => {
     try {
       setLoading(true);
@@ -19,122 +64,456 @@ export default function ManageLaporan() {
       const res = await axios.get('http://localhost:5000/api/laporan', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // Mengambil array dari res.data.data sesuai format backend kita
-      setLaporanList(res.data.data || []);
+      const allReports = res.data.data || [];
+      const activeReports = allReports.filter((item: Laporan) => 
+        item.status !== 'SELESAI' && item.status !== 'DIPROSES'
+      );
+      setLaporanList(activeReports);
     } catch (error) {
-      toast.error('Gagal mengambil data laporan');
+      toast.error('Gagal memuat laporan');
       console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchLaporan();
-  }, []);
-
-  // --- MENGUBAH STATUS (PROSES / SELESAI) ---
-  const handleUpdateStatus = async (id: string, newStatus: string) => {
+  const fetchDropdownData = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(`http://localhost:5000/api/laporan/${id}`, 
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
-      toast.success(`Status berhasil diubah menjadi ${newStatus}`);
-      fetchLaporan(); // Refresh data
+      const [supirRes, trukRes] = await Promise.all([
+        axios.get('http://localhost:5000/api/penugasan/supir', { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get('http://localhost:5000/api/penugasan/truk', { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      setSupirList(supirRes.data.data || []);
+      setTrukList(trukRes.data.data || []);
     } catch (error) {
-      toast.error('Gagal mengubah status');
+      console.error('Gagal load dropdown', error);
     }
   };
 
-  // --- MENGHAPUS LAPORAN ---
+  const fetchAssignments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:5000/api/penugasan?type=ADUAN', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const assignments = res.data.data || [];
+      const map: Record<string, any> = {};
+      assignments.forEach((item: any) => {
+        const reportId = item?.report?.id;
+        if (reportId) {
+          map[reportId] = {
+            id: item.id,
+            taskNumber: item.taskNumber,
+            status: item.status,
+            driverName: item.driver?.fullName,
+            truckPlate: item.truck?.plateNumber,
+          };
+        }
+      });
+      setAssignmentByReportId(map);
+    } catch (error) {
+      console.error('Gagal load assignments', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchLaporan();
+    fetchDropdownData();
+    fetchAssignments();
+  }, []);
+
+  const filteredLaporan = useMemo(() => {
+    return laporanList
+      .filter(item =>
+        item.district?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.reportNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => {
+        const aAssigned = Boolean(assignmentByReportId[a.id]);
+        const bAssigned = Boolean(assignmentByReportId[b.id]);
+        if (aAssigned === bAssigned) return 0;
+        return aAssigned ? 1 : -1;
+      });
+  }, [laporanList, searchTerm, assignmentByReportId]);
+
+  const handleVerify = async (id: string, action: 'approve' | 'reject') => {
+    if (!confirm(`Yakin ingin ${action === 'approve' ? 'menerima' : 'menolak'} laporan ini?`)) return;
+    try {
+      const token = localStorage.getItem('token');
+      const newStatus = action === 'approve' ? 'DITERIMA' : 'DITOLAK';
+      await axios.patch(`http://localhost:5000/api/laporan/${id}`, 
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`Laporan ${action === 'approve' ? 'diterima' : 'ditolak'}`);
+      fetchLaporan();
+      fetchAssignments();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Gagal verifikasi');
+    }
+  };
+
+  const openConversionModal = (laporan: Laporan) => {
+    if (assignmentByReportId[laporan.id]) {
+      toast.error('Laporan ini sudah ditugaskan!');
+      return;
+    }
+    setSelectedLaporan(laporan);
+    setFormData({
+      reportId: laporan.id,
+      driverId: '',
+      truckId: '',
+      scheduledAt: '',
+      notes: '',
+    });
+    setShowConversionModal(true);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleConversionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.driverId || !formData.scheduledAt) {
+      toast.error('Driver dan Waktu Pelaksanaan wajib diisi!');
+      return;
+    }
+
+    try {
+      setLoadingSubmit(true);
+      const token = localStorage.getItem('token');
+      
+      const payload = {
+        reportId: formData.reportId,
+        driverId: formData.driverId,
+        truckId: formData.truckId || null,
+        scheduledAt: formData.scheduledAt,
+        location: selectedLaporan?.location || selectedLaporan?.description,
+        district: selectedLaporan?.district,
+        description: selectedLaporan?.description,
+        notes: formData.notes,
+        type: 'ADUAN'
+      };
+
+      await axios.post('http://localhost:5000/api/penugasan/aduan', payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      await axios.patch(`http://localhost:5000/api/laporan/${formData.reportId}`,
+        { status: 'DIPROSES' },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      toast.success('Laporan berhasil dikonversi menjadi tugas aduan!');
+      setShowConversionModal(false);
+      fetchLaporan();
+      fetchAssignments();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Gagal membuat penugasan');
+    } finally {
+      setLoadingSubmit(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus laporan ini?')) return;
+    if (!confirm('Hapus laporan ini permanen?')) return;
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`http://localhost:5000/api/laporan/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success('Laporan berhasil dihapus');
-      fetchLaporan(); // Refresh data
-    } catch (error) {
-      toast.error('Gagal menghapus laporan');
+      toast.success('Laporan dihapus');
+      fetchLaporan();
+      fetchAssignments();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Gagal hapus');
     }
   };
 
-  // --- FILTER & PENCARIAN ---
-  const filteredLaporan = laporanList.filter((item) => {
-    const matchSearch = item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        item.jenisSampah?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchStatus = statusFilter === 'ALL' || item.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleString('id-ID', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 p-4">
+    <div className="min-h-screen bg-[#FDFDFD] text-slate-900 font-sans antialiased pb-20">
       <Toaster position="top-right" />
       
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Laporan Masuk</h1>
-          <p className="text-slate-500 mt-1 flex items-center gap-2">
-            <FileText size={16} /> Pantau dan tindak lanjuti laporan dari masyarakat.
-          </p>
-        </div>
-      </div>
-
-      {/* FILTER & PENCARIAN */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input
-            type="text"
-            placeholder="Cari deskripsi atau jenis sampah..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-green-500/20 outline-none text-slate-700"
-          />
-        </div>
-        <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
-          <Filter size={18} className="text-slate-400 ml-2" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-transparent border-none py-2 pr-4 text-sm font-bold text-slate-600 focus:ring-0 cursor-pointer outline-none"
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="bg-orange-600 p-2.5 rounded-xl shadow-lg shadow-orange-200">
+              <AlertCircle className="text-white" size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Laporan Masuk</h1>
+              <div className="flex items-center gap-2 text-slate-500 text-sm mt-0.5">
+                <span className="flex items-center gap-1"><FileText size={14} /> {laporanList.length} Total</span>
+                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                <span className="flex items-center gap-1"><Clock size={14} /> Menunggu Tindakan</span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => { fetchLaporan(); fetchAssignments(); }}
+            className="p-3 bg-white hover:bg-orange-50 text-slate-500 hover:text-orange-600 rounded-xl transition-all border border-slate-100"
+            title="Refresh"
           >
-            <option value="ALL">Semua Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="DIPROSES">Diproses</option>
-            <option value="SELESAI">Selesai</option>
-          </select>
+            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+          </button>
         </div>
-      </div>
+      </header>
 
-      {/* LIST LAPORAN */}
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-          <Loader2 className="animate-spin text-green-600 mb-4" size={40} />
-          <p className="font-medium">Memuat data laporan...</p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 md:mt-10">
+        <div className="mb-8 bg-gradient-to-r from-orange-50 to-amber-50 border-l-4 border-orange-500 rounded-2xl p-5 flex gap-4">
+          <div className="bg-orange-100 text-orange-600 p-2.5 rounded-lg">
+            <AlertCircle size={20} />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900">Konversi Laporan ke Tugas Aduan</h3>
+            <p className="text-sm text-slate-600">Terima laporan, lalu buat tugas aduan untuk driver. Data lokasi dan deskripsi akan terisi otomatis.</p>
+          </div>
         </div>
-      ) : filteredLaporan.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400 bg-white rounded-3xl border border-slate-100 border-dashed">
-          <Inbox size={60} className="text-slate-300 mb-4" />
-          <p className="text-lg font-bold text-slate-500">Tidak ada laporan</p>
-          <p className="text-sm">Belum ada data yang sesuai dengan pencarianmu.</p>
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-slate-100">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="text"
+                placeholder="Cari wilayah, deskripsi, atau ID..."
+                className="w-full pl-11 pr-4 py-2.5 bg-slate-50 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50/50 text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">
+                <tr>
+                  <th className="px-6 py-4">Laporan</th>
+                  <th className="px-4 py-4">Foto</th>
+                  <th className="px-6 py-4">Lokasi & Wilayah</th>
+                  <th className="px-6 py-4">Deskripsi</th>
+                  <th className="px-6 py-4">Waktu</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Aksi</th>
+                </tr>
+              </thead>
+<tbody className="divide-y divide-slate-100">
+  {loading ? (
+    <tr>
+      <td colSpan={7} className="py-20 text-center">
+        <Loader className="animate-spin mx-auto text-orange-500" size={32} />
+        <p className="mt-2 text-slate-400">Memuat data...</p>
+      </td>
+    </tr>
+  ) : filteredLaporan.length === 0 ? (
+    <tr>
+      <td colSpan={7} className="py-20 text-center text-slate-500">
+        Tidak ada laporan yang perlu ditindaklanjuti
+      </td>
+    </tr>
+  ) : (
+    filteredLaporan.map((laporan) => {
+      const isAssigned = Boolean(assignmentByReportId[laporan.id]);
+
+      return (
+        <tr key={laporan.id} className="hover:bg-slate-50/50 transition">
+          <td className="px-6 py-4">
+            <div className="font-black text-sm">
+              #{laporan.reportNumber || laporan.id.slice(0, 8)}
+            </div>
+            {isAssigned && (
+              <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full mt-1 inline-block">
+                Sudah Ditugaskan
+              </span>
+            )}
+          </td>
+
+          <td className="px-4 py-4">
+            <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+              {laporan.photoUrl ? (
+                <img
+                  src={laporan.photoUrl}
+                  alt="foto"
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              ) : (
+                <ImageIcon size={18} className="text-slate-400" />
+              )}
+            </div>
+          </td>
+
+          <td className="px-6 py-4">
+            <div className="flex gap-2">
+              <MapPin size={16} className="text-slate-400 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm">{laporan.district}</p>
+                <p className="text-xs text-slate-500">
+                  {laporan.location || '-'}
+                </p>
+              </div>
+            </div>
+          </td>
+
+          <td className="px-6 py-4 max-w-xs truncate">
+            {laporan.description}
+          </td>
+
+          <td className="px-6 py-4 text-xs">
+            {formatDate(laporan.createdAt)}
+          </td>
+
+          <td className="px-6 py-4">
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                laporan.status === 'DITERIMA'
+                  ? 'bg-green-100 text-green-700'
+                  : laporan.status === 'DITOLAK'
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-yellow-100 text-yellow-700'
+              }`}
+            >
+              {laporan.status === 'DITERIMA' && <CheckCircle2 size={12} />}
+              {laporan.status === 'DITOLAK' && <X size={12} />}
+              {laporan.status === 'PENDING' && <AlertCircle size={12} />}
+              {laporan.status}
+            </span>
+          </td>
+
+          <td className="px-6 py-4 text-right">
+            <div className="flex justify-end gap-2">
+              {laporan.status === 'PENDING' && (
+                <>
+                  <button
+                    onClick={() => handleVerify(laporan.id, 'approve')}
+                    className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-bold hover:bg-green-100"
+                  >
+                    Terima
+                  </button>
+                  <button
+                    onClick={() => handleVerify(laporan.id, 'reject')}
+                    className="px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-xs font-bold hover:bg-red-100"
+                  >
+                    Tolak
+                  </button>
+                </>
+              )}
+
+              {laporan.status === 'DITERIMA' && !isAssigned && (
+                <button
+                  onClick={() => openConversionModal(laporan)}
+                  className="px-4 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-bold flex items-center gap-1"
+                >
+                  <ArrowRightCircle size={14} /> Tugas Aduan
+                </button>
+              )}
+
+              {laporan.status === 'DITERIMA' && isAssigned && (
+                <span className="text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-lg">
+                  Telah Ditugaskan
+                </span>
+              )}
+
+              <button
+                onClick={() => handleDelete(laporan.id)}
+                className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </td>
+        </tr>
+      );
+    })
+  )}
+</tbody>
+            </table>
+          </div>
+
+          <div className="md:hidden p-4 space-y-3">
+            {filteredLaporan.map(laporan => (
+              <div key={laporan.id} className="border rounded-xl p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="font-bold">#{laporan.reportNumber || laporan.id.slice(0,6)}</span>
+                  <span className="text-xs text-slate-500">{formatDate(laporan.createdAt)}</span>
+                </div>
+                <p className="font-medium">{laporan.district}</p>
+                <p className="text-sm line-clamp-2">{laporan.description}</p>
+                <div className="flex gap-2 justify-end">
+                  {laporan.status === 'PENDING' && (
+                    <>
+                      <button onClick={() => handleVerify(laporan.id, 'approve')} className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs">Terima</button>
+                      <button onClick={() => handleVerify(laporan.id, 'reject')} className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-xs">Tolak</button>
+                    </>
+                  )}
+                  {laporan.status === 'DITERIMA' && !assignmentByReportId[laporan.id] && (
+                    <button onClick={() => openConversionModal(laporan)} className="px-4 py-1 bg-orange-500 text-white rounded-lg text-xs">Buat Tugas</button>
+                  )}
+                  <button onClick={() => handleDelete(laporan.id)} className="p-1 text-red-500">Hapus</button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {filteredLaporan.map((laporan) => (
-            <LaporanCard
-              key={laporan.id}
-              item={laporan}
-              showDelete={true}
-              onUpdate={handleUpdateStatus}
-              onDelete={handleDelete}
-            />
-          ))}
+      </main>
+
+      {showConversionModal && selectedLaporan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b flex justify-between items-center sticky top-0 bg-white">
+              <h3 className="font-bold text-lg">Buat Tugas Aduan</h3>
+              <button onClick={() => setShowConversionModal(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleConversionSubmit} className="p-5 space-y-4">
+              <div className="bg-orange-50 p-3 rounded-xl">
+                <p className="text-xs text-orange-700">Dari laporan: {selectedLaporan.district}</p>
+                <p className="text-sm font-medium">{selectedLaporan.description}</p>
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase text-slate-400">Lokasi Kerja</label>
+                <input type="text" value={selectedLaporan.location || selectedLaporan.description} disabled className="w-full mt-1 p-2 bg-slate-100 rounded-lg text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold">Driver</label>
+                  <select name="driverId" value={formData.driverId} onChange={handleInputChange} required className="w-full mt-1 p-2 border rounded-lg">
+                    <option value="">Pilih Driver</option>
+                    {supirList.map(d => <option key={d.id} value={d.id}>{d.fullName}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold">Truk</label>
+                  <select name="truckId" value={formData.truckId} onChange={handleInputChange} className="w-full mt-1 p-2 border rounded-lg">
+                    <option value="">Pilih Truk</option>
+                    {trukList.map(t => <option key={t.id} value={t.id}>{t.plateNumber}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold">Waktu Pelaksanaan</label>
+                <input type="datetime-local" name="scheduledAt" value={formData.scheduledAt} onChange={handleInputChange} required className="w-full mt-1 p-2 border rounded-lg" />
+              </div>
+              <div>
+                <label className="text-xs font-bold">Instruksi Khusus</label>
+                <textarea name="notes" rows={3} value={formData.notes} onChange={handleInputChange} className="w-full mt-1 p-2 border rounded-lg" placeholder="Petunjuk untuk driver..." />
+              </div>
+              <div className="flex gap-3 pt-3">
+                <button type="submit" disabled={loadingSubmit} className="flex-1 bg-green-600 text-white py-2 rounded-xl font-bold">
+                  {loadingSubmit ? <Loader size={16} className="animate-spin inline" /> : 'Konfirmasi Tugas'}
+                </button>
+                <button type="button" onClick={() => setShowConversionModal(false)} className="flex-1 border py-2 rounded-xl">Batal</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

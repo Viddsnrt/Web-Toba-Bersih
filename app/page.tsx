@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
-import { Trash2, Camera, Newspaper, Mail, Instagram, Facebook, ArrowRight, ChevronRight, ChevronLeft, MapPin, Phone, Clock, ShieldCheck, Leaf, Users, X, Images, ChevronDown } from 'lucide-react';
+import { Trash2 } from "lucide-react";
+import {Camera, Newspaper, Mail, Instagram, Facebook, ArrowRight, ChevronRight, ChevronLeft, MapPin, Phone, Clock, ShieldCheck, Leaf, Users, X, Images, ChevronDown } from 'lucide-react';
 
 interface GalleryPhoto {
   id: number;
@@ -41,54 +42,21 @@ export default function HomePage() {
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [postsRes, albumsRes] = await Promise.all([
+        //   axios.get('http://localhost:5000/api/posts'),
+          axios.get('http://localhost:5000/api/galleries/albums'),
+        ]);
+        // setPosts(postsRes.data.slice(0, 3));
+        setAlbums(albumsRes.data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
       }
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-
-      const [postsRes, albumsRes] = await Promise.all([
-        axios.get(`${apiUrl}/api/posts`).catch(err => {
-          console.error('Failed to fetch posts:', err.message);
-          return { data: [] };
-        }),
-        axios.get(`${apiUrl}/api/galleries/albums`).catch(err => {
-          console.error('Failed to fetch albums:', err.message);
-          return { data: [] };
-        }),
-      ]);
-
-      const postsData = Array.isArray(postsRes.data) ? postsRes.data : [];
-      const albumsData = Array.isArray(albumsRes.data) ? albumsRes.data : (albumsRes.data?.data && Array.isArray(albumsRes.data.data) ? albumsRes.data.data : []);
-      const educationsData: EducationPost[] = [];
-
-      setPosts(postsData.slice(0, 3));
-      setAlbums(albumsData);
-      setEducations(educationsData.slice(0, 3));
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch data';
-      console.error('Error fetching data:', errorMessage);
-      setError(errorMessage);
-      setPosts([]);
-      setAlbums([]);
-      setEducations([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
     fetchData();
   }, []);
 
@@ -632,9 +600,9 @@ const AlbumCard = ({ album }: { album: Album }) => {
 
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="aspect-square bg-slate-100 rounded-2xl animate-pulse"></div>
-              ))}
+{[1, 2, 3, 4].map(i => (
+  <div key={i} className="aspect-square bg-slate-100 rounded-2xl animate-pulse"></div>
+))}
             </div>
           ) : error ? (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
