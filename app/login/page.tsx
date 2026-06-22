@@ -8,7 +8,6 @@ import { Mail, Lock, LogIn, Eye, EyeOff, Leaf } from 'lucide-react';
 import { getRoleRoute, normalizeRole } from '@/lib/authRole';
 
 // Gunakan proxy Next.js untuk backend communication
-const API_BASE_URL = '/api/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,7 +23,10 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const res = await axios.post(`${API_BASE_URL}/login`, { email, password });
+      const rawBase = process.env.NEXT_PUBLIC_API_URL || "";
+      const BASE = rawBase ? rawBase.replace(/\/$/, "") + "/api" : "/api";
+      const res = await axios.post(`${BASE}/auth/login`, { email, password });
+      console.log('[LOGIN DEBUG] Response:', res.data);
 
       if (res.data?.success) {
         const user = res.data.user || res.data.data?.user || res.data.data || null;
@@ -34,7 +36,14 @@ export default function LoginPage() {
           res.data.accessToken ||
           res.data.data?.accessToken ||
           'session-login';
-        const role = normalizeRole(res.data.role || user?.role || res.data.data?.role);
+        
+        // IMPROVED: Role extraction with better fallback
+        let rawRole = res.data.role || user?.role || res.data.data?.role;
+        const role = normalizeRole(rawRole);
+        
+        console.log('[LOGIN DEBUG] User:', user);
+        console.log('[LOGIN DEBUG] Raw role:', rawRole);
+        console.log('[LOGIN DEBUG] Normalized role:', role);
 
         if (user) {
           localStorage.setItem('user', JSON.stringify({ ...user, role }));
@@ -44,12 +53,18 @@ export default function LoginPage() {
         localStorage.setItem('role', role);
         Cookies.set('token', token, { expires: 1, path: '/', sameSite: 'lax' });
 
-        router.push(getRoleRoute(role));
+        const redirectPath = getRoleRoute(role);
+        console.log('[LOGIN DEBUG] Redirecting to:', redirectPath);
+        
+        console.log("[LOGIN DEBUG] Before push");
+        router.push(redirectPath);
+        console.log("[LOGIN DEBUG] After push");
       } else {
         setError(res.data?.message || 'Login gagal.');
       }
     } catch (err: any) {
       // Menangkap pesan error dari backend
+      console.error('[LOGIN ERROR]', err.response?.data || err.message);
       setError(err.response?.data?.message || "Login gagal.");
     } finally {
       setLoading(false);
@@ -162,17 +177,14 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-10 pt-8 border-t border-gray-100 flex flex-col items-center space-y-4">
-            <p className="text-[13px] text-gray-500">
-              Belum punya akun?{' '}
-              <Link href="/register" className="text-[#1B4332] font-bold hover:text-[#40916C] transition-colors">
-                Daftar Warga
-              </Link>
-            </p>
-            <Link href="/" className="text-[11px] font-black text-gray-300 hover:text-[#1B4332] transition-colors uppercase tracking-[0.2em]">
-              ← Kembali ke Beranda
-            </Link>
-          </div>
+       <div className="mt-10 pt-8 border-t border-gray-100 flex flex-col items-center space-y-4">
+        <Link 
+          href="/" 
+          className="text-[11px] font-black text-gray-600 hover:text-[#1B4332] transition-colors uppercase tracking-[0.2em]"
+        >
+          ← Kembali ke Beranda
+        </Link> 
+      </div>
         </div>
       </div>
     </div>

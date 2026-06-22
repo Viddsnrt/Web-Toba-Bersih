@@ -70,12 +70,12 @@ export default function Sidebar({ activeMenu, setActiveMenu, onLogout }: Sidebar
       group: "Data & Operasional",
       icon: Database,
       items: [
-        { id: 'manajemen-pengguna', label: 'Data Kepala Bidang', icon: UserCog, color: 'from-emerald-400 to-cyan-600', href: '/admin/KelolaKabid'},
+        // { id: 'manajemen-pengguna', label: 'Data Kepala Bidang', icon: UserCog, color: 'from-emerald-400 to-cyan-600', href: '/admin/KelolaKabid'},
          { id: 'data-supir', label: 'Data Supir', icon: Users, color: 'from-sky-400 to-indigo-600', href: '/admin/Supir' },
         { id: 'data-truk', label: 'Data Armada', icon: Truck, color: 'from-amber-400 to-orange-600', href: '/admin/Truk' },
         { id: 'data-wilayah', label: 'Data Wilayah', icon: Map, color: 'from-teal-400 to-green-600', href: '/admin/Wilayah' },
         { id: 'manajemen-rute', label: 'Manajemen Rute', icon: Route, color: 'from-purple-400 to-pink-600', href: '/admin/ManajemenRute' },
-        { id: 'akun-masyarakat', label: 'Akun Masyarakat', icon: Users, color: 'from-blue-400 to-indigo-600', href: '/admin/AkunMasyarakat' },
+        { id: 'data-masyarakat', label: 'Data Pelanggan', icon: Users, color: 'from-blue-400 to-indigo-600', href: '/admin/AkunMasyarakat' },
       ]
     },
     
