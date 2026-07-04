@@ -28,7 +28,6 @@ interface Truk {
     phoneNumber: string | null;
   } | null;
   status: "AVAILABLE" | "BUSY" | "MAINTENANCE";
-  lastLocation: string | null;
   lastPing: string | null;
   currentLat: string | null;
   currentLong: string | null;
@@ -941,9 +940,6 @@ export default function ManageTruk() {
                     </div>
                     <div className="sm:col-span-2">
                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Lokasi Terakhir Terdeteksi</p>
-                      <p className="font-bold text-gray-900 mt-1 text-xs leading-relaxed">
-                        {viewingTruk.lastLocation || "Lokasi GPS belum pernah diperbarui."}
-                      </p>
                       {viewingTruk.currentLat && viewingTruk.currentLong && (
                         <p className="text-[10px] text-gray-500 font-mono mt-2 bg-white px-2 py-1 rounded inline-block border border-gray-100">
                           Koordinat: {viewingTruk.currentLat}, {viewingTruk.currentLong}

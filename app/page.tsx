@@ -766,10 +766,6 @@ export default function HomePage() {
           </div>
           <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-slate-500 text-sm">© 2026 <span className="text-slate-300 font-semibold">Dinas Lingkungan Hidup Kabupaten Toba</span>. Seluruh hak cipta dilindungi.</p>
-            <div className="flex gap-6 text-sm">
-              <Link href="/privasi" className="text-slate-500 hover:text-green-400">Kebijakan Privasi</Link>
-              <Link href="/syarat" className="text-slate-500 hover:text-green-400">Syarat &amp; Ketentuan</Link>
-            </div>
           </div>
         </div>
       </footer>

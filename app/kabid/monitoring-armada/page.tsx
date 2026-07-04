@@ -21,7 +21,7 @@ interface RuteHariIni { hari: string; namaHari: string; waypoints: Waypoint[]; }
 interface TrukAktif {
   id: string; plateNumber: string; status: string;
   currentLat: number | null; currentLong: number | null;
-  lastPing: string | null; lastLocation: string | null;
+  lastPing: string | null;
   operator: Operator | null; taskAktif: TaskAktif | null; ruteHariIni: RuteHariIni | null;
 }
 interface TitikJalur { lat: number; lng: number; timestamp: string; }

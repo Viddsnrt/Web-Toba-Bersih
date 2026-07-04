@@ -6,13 +6,13 @@ import LaporanForm from "./components/LaporanForm";
 
 const BASE_URL_API = "/api";
 
-    type FormState = {
-      pelapor: string;
-      email: string;
-      deskripsi: string;
-      latitude: number;
-      longitude: number;
-    };
+type FormState = {
+  pelapor: string;
+  email: string;
+  deskripsi: string;
+  latitude: number;
+  longitude: number;
+};
 
 type FormErrors = {
   pelapor?: string;
@@ -44,7 +44,7 @@ export default function Home() {
     title: string;
     message: string;
   } | null>(null);
-  
+
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -71,41 +71,80 @@ export default function Home() {
     );
   }
 
-  function ambilLokasiOtomatis() {
+function ambilLokasiOtomatis() {
     setGpsStatus("Mendeteksi lokasi...");
+
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setGpsStatus("Situs ini harus dibuka lewat HTTPS (link ngrok) agar GPS bisa aktif.");
+      return;
+    }
 
     if (!navigator.geolocation) {
       setGpsStatus("Browser tidak mendukung GPS");
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const latitude = pos.coords.latitude;
-        const longitude = pos.coords.longitude;
+    if (navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: "geolocation" as PermissionName })
+        .then((result) => {
+          if (result.state === "denied") {
+            setGpsStatus(
+              "Izin lokasi diblokir untuk situs ini. Buka Site Settings di browser HP Anda, izinkan Lokasi, lalu muat ulang halaman."
+            );
+          }
+        })
+        .catch(() => {});
+    }
 
-        setForm((prev) => ({
-          ...prev,
-          latitude,
-          longitude,
-        }));
+    const onSuccess = (pos: GeolocationPosition) => {
+      const { latitude, longitude, accuracy } = pos.coords;
 
-        setSavedLocation(
-          `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-        );
+      setForm((prev) => ({ ...prev, latitude, longitude }));
+      setSavedLocation(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
 
+      if (accuracy > 5000) {
+        setGpsStatus(`Lokasi terdeteksi tapi akurasi rendah (±${Math.round(accuracy)}m). Coba pindah ke area terbuka untuk hasil lebih akurat.`);
+      } else {
         setGpsStatus("Lokasi berhasil didapat");
-      },
-      () => {
-        setGpsStatus("Gagal mendapatkan lokasi");
-      },
-      {
-        enableHighAccuracy: false,  // ← false dulu, lebih cepat di Android
-        timeout: 30000,             // ← 30 detik
-        maximumAge: 60000,          // ← boleh pakai cache 1 menit
       }
+    };
+
+    // ✅ TAHAP 1: coba GPS presisi tinggi dulu
+// ✅ TAHAP 1: coba GPS presisi tinggi dulu
+    navigator.geolocation.getCurrentPosition(
+      onSuccess,
+      (err) => {
+        console.error("Geolocation (high accuracy) error:", err.code, err.message);
+
+        if (err.code === err.PERMISSION_DENIED) {
+          setGpsStatus("Izin lokasi ditolak. Buka pengaturan situs di browser, izinkan akses Lokasi, lalu muat ulang halaman.");
+          return;
+        }
+
+        // ✅ TAHAP 2: fallback low-accuracy, timeout lebih lama + boleh pakai cache
+        setGpsStatus("GPS presisi tinggi lambat, mencoba mode alternatif...");
+
+        navigator.geolocation.getCurrentPosition(
+          onSuccess,
+          (err2) => {
+            console.error("Geolocation (fallback) error:", err2.code, err2.message);
+            if (err2.code === err2.PERMISSION_DENIED) {
+              setGpsStatus("Izin lokasi ditolak. Buka pengaturan situs di browser, izinkan akses Lokasi, lalu muat ulang halaman.");
+            } else if (err2.code === err2.TIMEOUT) {
+              setGpsStatus(
+                "Lokasi tidak dapat dideteksi (timeout). Pastikan: (1) Location Services di HP menyala, (2) mode lokasi diset 'High accuracy', (3) coba di luar ruangan."
+              );
+            } else {
+              setGpsStatus("Lokasi tidak dapat dideteksi. Pastikan GPS/Location Services aktif dan coba di area terbuka.");
+            }
+          },
+          { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 }
+        );
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
-  }
+}
 
   function formatWilayahError(message: string) {
     const normalizedMessage = String(message || "").replace(/\s+/g, " ").trim();
@@ -242,24 +281,24 @@ export default function Home() {
     }));
   }
 
-      function removeImage() {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-
-      setSelectedImage(null);
-      setPreviewUrl(null);
-      setQualityError(null);
-
-      setErrors((prev) => ({
-        ...prev,
-        photo: "Lampiran foto wajib diisi.",
-      }));
-
-      if (cameraInputRef.current) {
-        cameraInputRef.current.value = "";
-      }
+  function removeImage() {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
     }
+
+    setSelectedImage(null);
+    setPreviewUrl(null);
+    setQualityError(null);
+
+    setErrors((prev) => ({
+      ...prev,
+      photo: "Lampiran foto wajib diisi.",
+    }));
+
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = "";
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -288,26 +327,47 @@ export default function Home() {
         formData.append("photo", selectedImage);
       }
 
-const response = await axios.post(
-  `${BASE_URL_API}/laporan/create`,
-  formData,
-  {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-    validateStatus: (status) => status < 500 // 422 dianggap sukses
-  }
-);
+      const response = await axios.post(
+        `${BASE_URL_API}/laporan/create`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          validateStatus: (status) => status < 500, // 422 & 400 dianggap sukses, tetap ditangani manual di bawah
+        }
+      );
 
-// 422 tidak akan throw error
-if (response.status === 422) {
-  // Tangani sebagai response normal, bukan error
-  const errorMessage = response.data?.message || "Foto kurang jelas";
-  setQualityError(errorMessage);
-  setErrors((prev) => ({ ...prev, photo: errorMessage }));
-  showUiAlert("warning", "Perhatian", errorMessage); // Tampilkan sebagai warning
-  return;
-}
+      // 422 = foto tidak lolos verifikasi kualitas ML
+      if (response.status === 422) {
+        const errorMessage = response.data?.message || "Foto kurang jelas";
+        setQualityError(errorMessage);
+        setErrors((prev) => ({ ...prev, photo: errorMessage }));
+        showUiAlert("warning", "Perhatian", errorMessage);
+        return;
+      }
+
+      // ✅ BARU: 400 = laporan ditolak karena alasan lain
+      // (mis. lokasi di luar radius wilayah aktif, email tidak valid, dll)
+      if (response.status === 400) {
+        const errorMessage = response.data?.message || "Laporan tidak dapat dikirim.";
+        const finalMessage = /kecamatan|wilayah|radius|km/i.test(errorMessage)
+          ? formatWilayahError(errorMessage)
+          : errorMessage;
+
+        showUiAlert("error", "Laporan Ditolak", finalMessage);
+        return;
+      }
+
+      // ✅ BARU: jaga-jaga kalau ada status lain (bukan 201) yang lolos dari validateStatus
+      if (response.status !== 201) {
+        showUiAlert(
+          "error",
+          "Laporan Ditolak",
+          response.data?.message || "Laporan tidak dapat dikirim. Silakan coba lagi."
+        );
+        return;
+      }
 
       console.log("Laporan berhasil dibuat:", response.data);
 
@@ -327,27 +387,45 @@ if (response.status === 422) {
         "Laporan berhasil dikirim. Admin akan mengirim notifikasi ke email Anda."
       );
     } catch (err: any) {
-  console.error("Error submit laporan:", err);
+      console.error("Error submit laporan:", err);
 
-  if (err.response?.status === 422) {
-    const errorMessage =
-      err.response?.data?.message ||
-      "Gambar tidak memenuhi kriteria. Silakan foto ulang dengan pencahayaan yang lebih baik dan pastikan objek sampah terlihat jelas.";
+      if (err.response?.status === 422) {
+        const errorMessage =
+          err.response?.data?.message ||
+          "Gambar tidak memenuhi kriteria. Silakan foto ulang dengan pencahayaan yang lebih baik dan pastikan objek sampah terlihat jelas.";
 
-    setQualityError(errorMessage);
+        setQualityError(errorMessage);
+        setErrors((prev) => ({ ...prev, photo: errorMessage }));
+        return;
+      }
 
-    setErrors((prev) => ({
-      ...prev,
-      photo: errorMessage,
-    }));
+      // Tidak ada response sama sekali → masalah koneksi/jaringan
+      if (!err.response) {
+        showUiAlert(
+          "error",
+          "Tidak Dapat Terhubung",
+          "Gagal terhubung ke server. Periksa koneksi internet Anda, lalu coba kirim ulang laporan."
+        );
+        return;
+      }
 
-    return;
-  }
+      // Server ML/backend sedang gangguan
+      if (err.response?.status === 503) {
+        showUiAlert(
+          "warning",
+          "Sistem Verifikasi Sedang Gangguan",
+          err.response?.data?.message ||
+            "Sistem verifikasi foto sedang bermasalah. Silakan coba beberapa saat lagi."
+        );
+        return;
+      }
 
       let errorMessage = "Gagal mengirim laporan.";
 
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
+      } else if (err.response?.status >= 500) {
+        errorMessage = "Terjadi gangguan pada server. Silakan coba beberapa saat lagi.";
       } else if (err.message) {
         errorMessage = err.message;
       }
@@ -380,7 +458,7 @@ if (response.status === 422) {
           handleSubmit={handleSubmit}
           qualityError={qualityError}
           selectedImage={selectedImage}
-        />    
+        />
       </div>
 
       {uiAlert && (

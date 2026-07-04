@@ -100,8 +100,8 @@ function getRequiredRole(
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
-  console.log("================================");
-  console.log("[PROXY] PATH:", path);
+  // console.log("================================");
+  // console.log("[PROXY] PATH:", path);
   // console.log(`[PROXY] 🔍 Checking path: ${path}`)
 
   // 1. Allow static files dan next internals
@@ -118,17 +118,17 @@ export async function proxy(request: NextRequest) {
   const tokenCookie = request.cookies.get('token')
   const token = tokenCookie?.value
 
-  console.log('[PROXY] Path:', path)
-  console.log('[PROXY] Token exists:', !!token)
+  // console.log('[PROXY] Path:', path)
+  // console.log('[PROXY] Token exists:', !!token)
 
 if (token) {
-  console.log('[PROXY] Token preview:', token.substring(0, 30) + '...')
+  // console.log('[PROXY] Token preview:', token.substring(0, 30) + '...')
 }
   if (token) {
-    console.log("[PROXY] TOKEN:", token.substring(0, 40) + "...");
+    // console.log("[PROXY] TOKEN:", token.substring(0, 40) + "...");
   }
 
-  console.log("================================");
+  // console.log("================================");
   // 4. Get route protection config
   const { requiredRoles, requiresAuth } = getRequiredRole(path)
 

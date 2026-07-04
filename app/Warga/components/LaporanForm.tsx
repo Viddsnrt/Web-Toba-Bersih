@@ -168,7 +168,7 @@ function GpsStatusBlock({
     );
   }
 
-  if (isFailed) {
+if (isFailed) {
     return (
       <div className="flex items-start gap-2.5">
         <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100">
@@ -176,13 +176,17 @@ function GpsStatusBlock({
         </div>
         <div>
           <p className="text-xs font-semibold text-orange-700">GPS tidak terdeteksi</p>
+          {/* ✅ Tampilkan pesan ASLI dari gpsStatus, jangan di-hardcode lagi */}
           <p className="mt-0.5 text-[11px] text-gray-500 leading-relaxed">
-            Pastikan izin lokasi diaktifkan di browser. Laporan tetap bisa dikirim, namun koordinat tidak akan tersimpan.
+            {gpsStatus}
+          </p>
+          <p className="mt-1 text-[10px] text-gray-400 leading-relaxed">
+            Laporan tetap bisa dikirim, namun koordinat tidak akan tersimpan.
           </p>
         </div>
       </div>
     );
-  }
+}
 
   return (
     <div className="flex items-center gap-2.5">

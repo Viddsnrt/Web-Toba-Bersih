@@ -23,8 +23,6 @@ const nextConfig: NextConfig = {
   ],
 
   experimental: {},
-
-  // Turbopack configuration for Next.js 16
   turbopack: {},
 
   async rewrites() {
@@ -47,8 +45,6 @@ const nextConfig: NextConfig = {
 
 const withPWAConfig = withPWA({
   dest: "public",
-  // Disable automatic service worker registration — we'll register manually
-  // only for the public Warga pages using a client wrapper component.
   register: false,
   disable: process.env.NODE_ENV === 'development',
 });

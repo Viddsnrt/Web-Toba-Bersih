@@ -486,9 +486,9 @@ export default function ManageLaporan() {
 
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-gray-400 ml-1">Instruksi Khusus</label>
-                <textarea 
-                  name="notes" 
-                  rows={3} 
+                <textarea
+                  name="notes"
+                  rows={3}
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
                   placeholder="Petunjuk tambahan untuk driver..." 
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-orange-500 outline-none transition text-sm resize-none"

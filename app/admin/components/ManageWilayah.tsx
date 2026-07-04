@@ -270,7 +270,7 @@ const handleDeleteConfirm = async () => {
     setSubmitting(false);
     setDeleting(false);
     const msg = error?.response?.data?.message || error?.message || 'Gagal menghapus wilayah.';
-    showAlert('error', 'Gagal Menghapus Wilayah', msg);
+    showAlert('error', 'Gagal Menghapus Wilayah Karena Masih Ada Pelanggan yang Terkait', msg);
   }
 };
 
