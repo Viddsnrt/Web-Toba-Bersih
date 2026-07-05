@@ -568,9 +568,7 @@ export default function ManageTruk() {
                                 <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-gray-600 border border-gray-200/50">
                                   {truk.unitCode || "-"}
                                 </span>
-                                <span>•</span>
                                 <span>{truk.brand || "-"}</span>
-                                <span>•</span>
                                 <span>{truk.truckType || "-"}</span>
                               </div>
                             </div>

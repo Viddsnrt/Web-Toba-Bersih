@@ -43,9 +43,11 @@ interface RiwayatSelesai {
 // ============================================================
 // CONSTANTS & HELPERS
 // ============================================================
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const rawBase = process.env.NEXT_PUBLIC_API_URL || '';
-const API_URL = rawBase ? rawBase.replace(/\/$/, '') + '/api' : '/api';
+const rawBase = process.env.NEXT_PUBLIC_API_URL
+  ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
+  : '';
+const SOCKET_URL = rawBase;
+const API_URL = rawBase ? rawBase + '/api' : '/api';
 const WAYPOINT_PASSED_RADIUS_M = 80;
 
 function formatDurasi(menit: number): string {

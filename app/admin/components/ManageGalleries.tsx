@@ -96,7 +96,9 @@ export default function ManageGalleries({ galleries, onGalleriesUpdate }: Manage
   const [deletingType, setDeletingType] = useState<"album" | "photo" | null>(null);
 
   // API Config
-  const API_ROOT = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  const API_ROOT = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
+    : '';
   const API_BASE_URL = `${API_ROOT}/api/galleries`;
   const UPLOAD_URL = `${API_ROOT}/api/upload`;
   const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
