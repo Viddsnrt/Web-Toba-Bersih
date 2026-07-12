@@ -501,12 +501,21 @@ export default function HomePage() {
                             </div>
                             <p className="text-slate-400 text-sm leading-relaxed mb-6">Mewujudkan lingkungan hidup yang asri, bersih, dan berkelanjutan untuk masyarakat Toba yang sejahtera.</p>
                             <div className="flex gap-3">
-                                {[Facebook, Instagram, Mail].map((Icon, idx) => (
-                                    <a key={idx} href="#" aria-label="Social Link" className="w-10 h-10 bg-slate-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center text-slate-300 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500">
-                                        <Icon size={18} />
-                                    </a>
-                                ))}
-                            </div>
+  {[
+    { Icon: Facebook, href: 'https://www.facebook.com/share/1DyWuusTwD/?mibextid=wwXIfr' },
+    { Icon: Instagram, href: 'https://www.instagram.com/dlh_kab.toba?igsh=aGI5NjhyYW5zOXQ4' },
+    { Icon: Mail, href: 'mailto:dlhtoba@gmail.com' }
+  ].map(({ Icon, href }, idx) => (
+    <a
+      key={idx}
+      href={href}
+      aria-label="Social Link"
+      className="w-10 h-10 bg-slate-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center text-slate-300 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500"
+    >
+      <Icon size={18} />
+    </a>
+  ))}
+</div>
                         </div>
 
                         <div>
@@ -531,8 +540,7 @@ export default function HomePage() {
                             <h4 className="text-white font-semibold mb-6 text-sm tracking-wider">Hubungi Kami</h4>
                             <ul className="space-y-4 text-sm">
                                 <li className="flex items-start gap-3"><MapPin size={18} className="text-slate-500 shrink-0 mt-0.5" /> <span className="text-slate-400">Jl. Hutabulu Mejan No. 14, Sibola Hotangsas, Balige, Toba, Sumatera Utara</span></li>
-                                <li className="flex items-center gap-3"><Phone size={18} className="text-slate-500 shrink-0" /> <span className="text-slate-400">(0632) 123-4567</span></li>
-                                <li className="flex items-center gap-3"><Mail size={18} className="text-slate-500 shrink-0" /> <span className="text-slate-400">dislindup@tobakab.go.id</span></li>
+                                <li className="flex items-center gap-3"><Mail size={18} className="text-slate-500 shrink-0" /> <span className="text-slate-400">dlhtoba@gmail.com</span></li>
                             </ul>
                         </div>
                     </div>
