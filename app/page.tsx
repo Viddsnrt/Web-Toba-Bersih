@@ -527,14 +527,18 @@ export default function HomePage() {
                             </ul>
                         </div>
 
+                  
                         <div>
-                            <h4 className="text-white font-semibold mb-6 text-sm tracking-wider">Informasi Publik</h4>
-                            <ul className="space-y-3.5">
-                                {['Tugas Pokok & Fungsi', 'Dokumen RPJMD', 'Dokumen RENSTRA', 'Struktur Organisasi'].map(item => (
-                                    <li key={item}><a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors text-sm font-medium flex items-center gap-2 focus-visible:outline-none"><ChevronRight size={14} className="text-slate-600" /> {item}</a></li>
-                                ))}
-                            </ul>
-                        </div>
+              <h3 className="font-bold text-lg mb-6 relative inline-block">Sumber Daya<span className="absolute -bottom-1.5 left-0 w-8 h-1 bg-green-500 rounded-full" /></h3>
+              <ul className="space-y-3">{
+                [ 
+                  { name: 'Tugas Pokok & Fungsi', path: 'https://dislindup.tobakab.go.id/tugas-pokok-dan-fungsi/' },
+                  { name: 'Dokumen RPJMD', path: 'https://dislindup.tobakab.go.id/rpjmd/' },
+                  { name: 'Dokumen RENSTRA', path: 'https://dislindup.tobakab.go.id/renstra/' },                
+                  { name: 'Struktur Organisasi', path: 'https://dislindup.tobakab.go.id/struktur-organisasi/' }
+                ].map(l => <li key={l.name}><Link href={l.path} className="text-slate-400 hover:text-green-400 text-sm flex items-center gap-2 group"><ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />{l.name}</Link></li>)
+              }</ul>
+            </div>
 
                         <div>
                             <h4 className="text-white font-semibold mb-6 text-sm tracking-wider">Hubungi Kami</h4>

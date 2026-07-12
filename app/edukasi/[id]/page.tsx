@@ -1,4 +1,6 @@
 "use client";
+import Image from "next/image";
+import Footer from "../../components/Footer";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
@@ -731,151 +733,8 @@ export default function EdukasiDetailPage() {
         .sidebar-all-link svg { transition: transform var(--transition); }
         .sidebar-all-link:hover svg { transform: translateX(3px); }
 
-        /* ── FOOTER ── */
-        .footer {
-          background: var(--slate-900);
-          color: white;
-          padding: 80px 32px 40px;
-        }
-        .footer-inner {
-          max-width: 1280px;
-          margin: 0 auto;
-        }
-        .footer-grid {
-          display: grid;
-          grid-template-columns: 1.5fr 1fr 1fr 1.5fr;
-          gap: 48px;
-          margin-bottom: 64px;
-        }
-        .footer-logo {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 20px;
-        }
-        .footer-logo img {
-          width: 40px;
-          height: 40px;
-          object-fit: contain;
-        }
-        .footer-logo-name {
-          font-size: 18px;
-          font-weight: 800;
-          color: white;
-        }
-        .footer-logo-sub {
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: var(--lime);
-          margin-top: 2px;
-        }
-        .footer-desc {
-          font-size: 14px;
-          color: rgba(255,255,255,0.5);
-          line-height: 1.7;
-        }
-        .footer-col h4 {
-          font-size: 14px;
-          font-weight: 800;
-          color: white;
-          margin: 0 0 24px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid rgba(255,255,255,0.08);
-        }
-        .footer-links {
-          list-style: none;
-          margin: 0;
-          padding: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        .footer-links a {
-          font-size: 14px;
-          color: rgba(255,255,255,0.5);
-          text-decoration: none;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          transition: color var(--transition);
-          font-weight: 500;
-        }
-        .footer-links a:hover { color: var(--lime); }
-        .footer-links a svg { opacity: 0.4; transition: opacity var(--transition), transform var(--transition); }
-        .footer-links a:hover svg { opacity: 1; transform: translateX(3px); }
-        .footer-contact {
-          list-style: none;
-          margin: 0;
-          padding: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .footer-contact li {
-          display: flex;
-          gap: 12px;
-          align-items: flex-start;
-          font-size: 14px;
-          color: rgba(255,255,255,0.5);
-          font-weight: 500;
-          line-height: 1.6;
-        }
-        .footer-contact li svg { color: var(--lime); flex-shrink: 0; margin-top: 1px; }
-        .footer-socials {
-          display: flex;
-          gap: 10px;
-          margin-top: 24px;
-        }
-        .footer-social {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          background: rgba(255,255,255,0.07);
-          border: 1px solid rgba(255,255,255,0.1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: rgba(255,255,255,0.6);
-          text-decoration: none;
-          transition: all var(--transition);
-        }
-        .footer-social:hover {
-          background: var(--forest-mid);
-          color: white;
-          border-color: var(--forest-mid);
-          transform: translateY(-2px);
-        }
-        .footer-bottom {
-          border-top: 1px solid rgba(255,255,255,0.08);
-          padding-top: 32px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-        .footer-bottom p {
-          font-size: 13px;
-          color: rgba(255,255,255,0.35);
-          margin: 0;
-        }
-        .footer-bottom-links {
-          display: flex;
-          gap: 24px;
-        }
-        .footer-bottom-links a {
-          font-size: 13px;
-          color: rgba(255,255,255,0.35);
-          text-decoration: none;
-          transition: color var(--transition);
-        }
-        .footer-bottom-links a:hover { color: var(--lime); }
-
         /* ── RESPONSIVE ── */
         @media (max-width: 1024px) {
-          .footer-grid { grid-template-columns: 1fr 1fr; }
           .detail-inner { grid-template-columns: 1fr; gap: 32px; }
           .detail-sidebar { order: -1; }
           .sidebar-card { position: static; }
@@ -888,9 +747,6 @@ export default function EdukasiDetailPage() {
           .hero-detail { padding: 80px 20px 32px; }
           .detail-section { padding: 40px 20px; }
           .detail-body { padding: 24px; }
-          .footer-grid { grid-template-columns: 1fr; gap: 32px; }
-          .footer { padding: 48px 20px 32px; }
-          .footer-bottom { flex-direction: column; align-items: flex-start; }
         }
         @media (max-width: 480px) {
           .hero-detail-title { font-size: 28px; }
@@ -1068,70 +924,7 @@ export default function EdukasiDetailPage() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer className="footer">
-        <div className="footer-inner">
-          <div className="footer-grid">
-            <div>
-              <div className="footer-logo">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg" alt="Logo" />
-                <div>
-                  <div className="footer-logo-name">DLH TOBA</div>
-                  <div className="footer-logo-sub">Kabupaten Toba</div>
-                </div>
-              </div>
-              <p className="footer-desc">
-                Dinas Lingkungan Hidup Kabupaten Toba berkomitmen menjaga kelestarian alam dan kebersihan lingkungan untuk generasi mendatang.
-              </p>
-            </div>
-            <div className="footer-col">
-              <h4>Tautan Cepat</h4>
-              <ul className="footer-links">
-                {NAV_LINKS.map((item) => (
-                  <li key={item}>
-                    <Link href={navHref(item)}>
-                      <ChevronRight size={14} />{item}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="footer-col">
-              <h4>Sumber Daya</h4>
-              <ul className="footer-links">
-                {[
-                  { name: 'Tugas Pokok dan Fungsi', path: 'https://dislindup.tobakab.go.id/tugas-pokok-dan-fungsi/' },
-                  { name: 'RPJMD', path: 'https://dislindup.tobakab.go.id/rpjmd/' },
-                  { name: 'RENSTRA', path: 'https://dislindup.tobakab.go.id/renstra/' },
-                  { name: 'Struktur Organisasi', path: 'https://dislindup.tobakab.go.id/struktur-organisasi/' }
-                ].map((l) => (
-                  <li key={l.name}><Link href={l.path}><ChevronRight size={14} />{l.name}</Link></li>
-                ))}
-              </ul>
-            </div>
-            <div className="footer-col">
-              <h4>Hubungi Kami</h4>
-              <ul className="footer-contact">
-                <li><MapPin size={16} />Jl. Hutabulu Mejan No. 14, Sibola Hotangsas, Kec. Balige, Toba, Sumatera Utara</li>
-                <li><Phone size={16} />(0632) 123-4567</li>
-                <li><Mail size={16} />dislindup@tobakab.go.id</li>
-              </ul>
-              <div className="footer-socials">
-                <a href="#" className="footer-social" aria-label="Facebook"><Facebook size={18} /></a>
-                <a href="#" className="footer-social" aria-label="Instagram"><Instagram size={18} /></a>
-                <a href="mailto:dislindup@tobakab.go.id" className="footer-social" aria-label="Email"><Mail size={18} /></a>
-              </div>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            <p>© 2026 <strong style={{ color: 'rgba(255,255,255,0.6)' }}>Dinas Lingkungan Hidup Kabupaten Toba</strong>. Seluruh hak cipta dilindungi.</p>
-            <div className="footer-bottom-links">
-              <Link href="/privasi">Kebijakan Privasi</Link>
-              <Link href="/syarat">Syarat &amp; Ketentuan</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }
