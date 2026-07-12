@@ -77,7 +77,7 @@ export default function ManageWilayah() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ── Ganti InlineAlert dengan AlertState seperti ManageSupir ──
+  // ── AlertState ──
   const [alertState, setAlertState] = useState<AlertState>({
     open: false,
     type: "success",
@@ -94,15 +94,14 @@ export default function ManageWilayah() {
     latitude: '-6.200000', longitude: '106.816666', radius: '5000', isActive: true
   });
 
-  // ── showAlert mengikuti signature ManageSupir ──
-const showAlert = (
+  const showAlert = (
     type: "success" | "error" | "delete" | "edit" | "info",
-  title: string,
-  description: string,
-  detailText?: string
-) => {
-  setAlertState({ open: true, type, title, description, detailText });
-};
+    title: string,
+    description: string,
+    detailText?: string
+  ) => {
+    setAlertState({ open: true, type, title, description, detailText });
+  };
 
   const closeAlert = () => {
     setAlertState((prev) => ({ ...prev, open: false }));
@@ -243,62 +242,78 @@ const showAlert = (
     }
   };
 
+  // 🔥 MODIFIKASI: Cegah hapus jika radius < 5000
   const handleDeleteClick = (wilayah: Wilayah) => {
+    if (wilayah.radius && wilayah.radius < 5000) {
+      showAlert(
+        'error',
+        'Tidak Dapat Dihapus',
+        'Wilayah dengan radius di bawah 5000 meter tidak dapat dihapus.',
+        'Radius harus ≥ 5000.'
+      );
+      return;
+    }
     setDeleteTarget(wilayah);
   };
 
-const handleDeleteConfirm = async () => {
-  if (!deleteTarget) return;
-  const namaTerhapus = deleteTarget.name;
-  setDeleteTarget(null); // tutup dialog konfirmasi dulu
-  setDeleting(true);
-  setSubmitting(true);   // tampilkan loading alert
-  try {
-    const token = localStorage.getItem('token');
-    await axios.delete(`${API_BASE_URL}/wilayah/${deleteTarget.id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setSubmitting(false);
-    setDeleting(false);
-    showAlert(
-      'success',
-      'Wilayah Berhasil Dihapus',
-      `Wilayah "${namaTerhapus}" telah dihapus secara permanen dari sistem.`
-    );
-    fetchWilayah();
-  } catch (error: any) {
-    setSubmitting(false);
-    setDeleting(false);
-    const msg = error?.response?.data?.message || error?.message || 'Gagal menghapus wilayah.';
-    showAlert('error', 'Gagal Menghapus Wilayah Karena Masih Ada Pelanggan yang Terkait', msg);
-  }
-};
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    const namaTerhapus = deleteTarget.name;
+    setDeleteTarget(null);
+    setDeleting(true);
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_BASE_URL}/wilayah/${deleteTarget.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSubmitting(false);
+      setDeleting(false);
+      showAlert(
+        'success',
+        'Wilayah Berhasil Dihapus',
+        `Wilayah "${namaTerhapus}" telah dihapus secara permanen dari sistem.`
+      );
+      fetchWilayah();
+    } catch (error: any) {
+      setSubmitting(false);
+      setDeleting(false);
+      const msg = error?.response?.data?.message || error?.message || 'Gagal menghapus wilayah.';
+      showAlert('error', 'Gagal Menghapus Wilayah Karena Masih Ada Pelanggan yang Terkait', msg);
+    }
+  };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  const dupError = checkDuplicate(formData.name, formData.code, formData.latitude, formData.longitude, editingWilayah?.id);
-  if (dupError) { showFormAlert('error', dupError); return; }
+  // 🔥 MODIFIKASI: Tambahkan validasi radius minimum 5000
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  // ── CEK APAKAH ADA PERUBAHAN (khusus mode edit) ──
-  if (editingWilayah && originalData) {
-    const hasChanged =
-      formData.name !== originalData.name ||
-      formData.code !== originalData.code ||
-      formData.address !== originalData.address ||
-      formData.latitude !== originalData.latitude ||
-      formData.longitude !== originalData.longitude ||
-      formData.radius !== originalData.radius ||
-      formData.isActive !== originalData.isActive;
-
-    if (!hasChanged) {
-      setShowModal(false);
-      showAlert('info', 'Tidak Ada Perubahan', 'Data wilayah tidak mengalami perubahan apapun.', 'Silakan ubah data terlebih dahulu sebelum menyimpan.');
+    // Validasi radius minimum
+    const radiusNum = parseInt(formData.radius) || 0;
+    if (radiusNum < 5000) {
+      showFormAlert('error', 'Radius minimal 5000 meter.');
       return;
     }
-  }
 
-  setSubmitting(true);
-  // ... sisa kode tetap sama
+    const dupError = checkDuplicate(formData.name, formData.code, formData.latitude, formData.longitude, editingWilayah?.id);
+    if (dupError) { showFormAlert('error', dupError); return; }
+
+    if (editingWilayah && originalData) {
+      const hasChanged =
+        formData.name !== originalData.name ||
+        formData.code !== originalData.code ||
+        formData.address !== originalData.address ||
+        formData.latitude !== originalData.latitude ||
+        formData.longitude !== originalData.longitude ||
+        formData.radius !== originalData.radius ||
+        formData.isActive !== originalData.isActive;
+
+      if (!hasChanged) {
+        setShowModal(false);
+        showAlert('info', 'Tidak Ada Perubahan', 'Data wilayah tidak mengalami perubahan apapun.', 'Silakan ubah data terlebih dahulu sebelum menyimpan.');
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
@@ -356,7 +371,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 p-4 md:p-6 text-black">
 
-      {/* ── AlertDialog (sama persis seperti ManageSupir) ── */}
+      {/* AlertDialog */}
       <AlertDialog
         open={alertState.open}
         type={alertState.type}
@@ -366,7 +381,6 @@ const handleSubmit = async (e: React.FormEvent) => {
         onClose={closeAlert}
       />
 
-      {/* ── Loading Alert saat submit ── */}
       <AlertDialog
         open={submitting}
         type="loading"
@@ -377,7 +391,6 @@ const handleSubmit = async (e: React.FormEvent) => {
         onClose={() => { }}
       />
 
-      {/* ── Delete Confirm Alert ── */}
       <AlertDialog
         open={!!deleteTarget}
         type="delete"
@@ -389,10 +402,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         }
         buttonText="Hapus"
         showCancelButton={true}
-
-        onConfirm={() => {
-          handleDeleteConfirm();
-        }}
+        onConfirm={handleDeleteConfirm}
         onClose={() => {
           if (!deleting) setDeleteTarget(null);
         }}
@@ -522,16 +532,15 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <td className="px-6 py-4 text-right space-x-2">
                   <button onClick={() => setViewingWilayah(w)} className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors inline-flex"><Eye size={14} /></button>
                   <button onClick={() => {
-                  const editData = {
-                    ...w,
-                    code: w.code || '',
-                    address: w.address || '',
-                    radius: w.radius?.toString() || '5000'
-                  };
-
-                  setEditingWilayah(w);
-                  setOriginalData(editData);
-                  setFormData(editData);
+                    const editData = {
+                      ...w,
+                      code: w.code || '',
+                      address: w.address || '',
+                      radius: w.radius?.toString() || '5000'
+                    };
+                    setEditingWilayah(w);
+                    setOriginalData(editData);
+                    setFormData(editData);
                     setShowModal(true);
                   }} className="p-2 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition-colors inline-flex"><Edit size={14} /></button>
                   <button onClick={() => handleDeleteClick(w)} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors inline-flex"><Trash2 size={14} /></button>
@@ -628,24 +637,23 @@ const handleSubmit = async (e: React.FormEvent) => {
                   </div>
 
                   <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
-                  Status Wilayah
-                </label>
-
-                <select
-                  value={formData.isActive ? 'true' : 'false'}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      isActive: e.target.value === 'true'
-                    })
-                  }
-                  className="w-full p-3 border rounded-xl text-sm bg-white"
-                >
-                  <option value="true">Aktif</option>
-                  <option value="false">Nonaktif</option>
-                </select>
-              </div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
+                      Status Wilayah
+                    </label>
+                    <select
+                      value={formData.isActive ? 'true' : 'false'}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          isActive: e.target.value === 'true'
+                        })
+                      }
+                      className="w-full p-3 border rounded-xl text-sm bg-white"
+                    >
+                      <option value="true">Aktif</option>
+                      <option value="false">Nonaktif</option>
+                    </select>
+                  </div>
                 </div>
 
                 <button

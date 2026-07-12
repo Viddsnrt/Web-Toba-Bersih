@@ -1,20 +1,27 @@
 "use client";
-
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
-  Clock,
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
   ChevronRight,
+  Clock,
+  Leaf,
+  Mail,
+  Instagram,
   Facebook,
+  MapPin,
+  Phone,
+  Menu,
+  X,
+  Share2,
   Twitter,
   MessageCircle,
-  ArrowLeft,
-  Share2,
 } from "lucide-react";
 
-/* ─── Types ─── */
 interface Author {
   id?: number;
   fullName?: string;
@@ -26,7 +33,7 @@ interface Post {
   title: string;
   content: string;
   imageUrl?: string | null;
-  images?: string[];          // array of extra images for collage
+  images?: string[];
   category?: string;
   slug?: string;
   createdAt?: string;
@@ -35,7 +42,6 @@ interface Post {
   views?: number;
 }
 
-/* ─── Helpers ─── */
 const FALLBACK_IMG =
   "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=800";
 
@@ -73,104 +79,102 @@ const fmtDateShort = (v?: string) => {
   }
 };
 
-// Day-of-week + date label like "Selasa, 12 Mei 2026"
-const fmtDateLabel = (v?: string) => {
-  if (!v) return "";
-  try {
-    return new Date(v).toLocaleDateString("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  } catch {
-    return v;
-  }
+const NAV_LINKS = ["Tentang", "Edukasi", "Berita", "Galeri"];
+const navHref = (item: string) => {
+  const key = item.toLowerCase();
+  if (key === "berita") return "/berita";
+  if (key === "edukasi") return "/edukasi";
+  if (key === "galeri") return "/galeri";
+  return `/#${key}`;
 };
 
-const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
-  Artikel:              { bg: "bg-blue-100",   text: "text-blue-700" },
-  "Berita Terkini":     { bg: "bg-green-100",  text: "text-green-700" },
-  "Berita Kementerian": { bg: "bg-purple-100", text: "text-purple-700" },
-  "Berita UPTD":        { bg: "bg-orange-100", text: "text-orange-700" },
-  BERITA:               { bg: "bg-green-100",  text: "text-green-700" },
-  ARTIKEL:              { bg: "bg-blue-100",   text: "text-blue-700" },
-};
-
-const catStyle = (cat?: string) =>
-  (cat && CATEGORY_COLORS[cat]) || { bg: "bg-slate-100", text: "text-slate-600" };
-
-/* ─── Collage Hero ─────────────────────────────────────────
-   Shows up to 5 images in a magazine-style grid.
-   If only 1 image: full-width single.
-   If 2: side-by-side halves.
-   If 3: one large left + two stacked right.
-   If 4: two rows of two.
-   If 5 (like the reference): one large top-left + two top-right + two bottom.
-─────────────────────────────────────────────────────── */
+// ─── Collage Hero ──────────────────────────────────────────────
 function CollageHero({ imgs }: { imgs: string[] }) {
   const list = imgs.slice(0, 5);
   const count = list.length;
-
   const imgClass = "w-full h-full object-cover";
 
   if (count === 1) {
     return (
       <div className="w-full" style={{ maxHeight: 420 }}>
-        <img src={list[0]} alt="" className="w-full h-auto rounded-xl" 
-          onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
+        <img
+          src={list[0]}
+          alt=""
+          className="w-full h-auto rounded-xl"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = FALLBACK_IMG;
+          }}
+        />
       </div>
     );
   }
-
   if (count === 2) {
     return (
       <div className="grid grid-cols-2 gap-0.5" style={{ height: 380 }}>
         {list.map((src, i) => (
           <div key={i} className="overflow-hidden">
-            <img src={src} alt="" className={imgClass}
-              onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
+            <img
+              src={src}
+              alt=""
+              className={imgClass}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = FALLBACK_IMG;
+              }}
+            />
           </div>
         ))}
       </div>
     );
   }
-
   if (count === 3) {
     return (
       <div className="grid grid-cols-2 gap-0.5" style={{ height: 380 }}>
         <div className="overflow-hidden">
-          <img src={list[0]} alt="" className={imgClass}
-            onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
+          <img
+            src={list[0]}
+            alt=""
+            className={imgClass}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = FALLBACK_IMG;
+            }}
+          />
         </div>
         <div className="grid grid-rows-2 gap-0.5">
           {list.slice(1).map((src, i) => (
             <div key={i} className="overflow-hidden">
-              <img src={src} alt="" className={imgClass}
-                onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
+              <img
+                src={src}
+                alt=""
+                className={imgClass}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = FALLBACK_IMG;
+                }}
+              />
             </div>
           ))}
         </div>
       </div>
     );
   }
-
   if (count === 4) {
     return (
       <div className="grid grid-cols-2 gap-0.5" style={{ height: 380 }}>
         {list.map((src, i) => (
           <div key={i} className="overflow-hidden">
-            <img src={src} alt="" className={imgClass}
-              onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
+            <img
+              src={src}
+              alt=""
+              className={imgClass}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = FALLBACK_IMG;
+              }}
+            />
           </div>
         ))}
       </div>
     );
   }
-
-  // 5 images — reference layout:
-  // row 1 (60% height): large left (spans 2 cols) | top-right 1 | top-right 2
-  // row 2 (40% height): bottom-left | bottom-right (spans 2 cols)
+  // 5 images
   return (
     <div
       className="grid gap-0.5"
@@ -180,49 +184,79 @@ function CollageHero({ imgs }: { imgs: string[] }) {
         gridTemplateRows: "60% 40%",
       }}
     >
-      {/* large top-left */}
       <div className="overflow-hidden" style={{ gridRow: "1 / 2", gridColumn: "1 / 2" }}>
-        <img src={list[0]} alt="" className={imgClass}
-          onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
+        <img
+          src={list[0]}
+          alt=""
+          className={imgClass}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = FALLBACK_IMG;
+          }}
+        />
       </div>
-      {/* top-right 1 */}
       <div className="overflow-hidden" style={{ gridRow: "1 / 2", gridColumn: "2 / 3" }}>
-        <img src={list[1]} alt="" className={imgClass}
-          onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
+        <img
+          src={list[1]}
+          alt=""
+          className={imgClass}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = FALLBACK_IMG;
+          }}
+        />
       </div>
-      {/* top-right 2 */}
       <div className="overflow-hidden" style={{ gridRow: "1 / 2", gridColumn: "3 / 4" }}>
-        <img src={list[2]} alt="" className={imgClass}
-          onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
+        <img
+          src={list[2]}
+          alt=""
+          className={imgClass}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = FALLBACK_IMG;
+          }}
+        />
       </div>
-      {/* bottom-left */}
       <div className="overflow-hidden" style={{ gridRow: "2 / 3", gridColumn: "1 / 2" }}>
-        <img src={list[3]} alt="" className={imgClass}
-          onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
+        <img
+          src={list[3]}
+          alt=""
+          className={imgClass}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = FALLBACK_IMG;
+          }}
+        />
       </div>
-      {/* bottom-right spans 2 cols */}
       <div className="overflow-hidden" style={{ gridRow: "2 / 3", gridColumn: "2 / 4" }}>
-        <img src={list[4]} alt="" className={imgClass}
-          onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
+        <img
+          src={list[4]}
+          alt=""
+          className={imgClass}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = FALLBACK_IMG;
+          }}
+        />
       </div>
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════
-   MAIN COMPONENT
-═══════════════════════════════════════════ */
+// ─── MAIN ──────────────────────────────────────────────────────
 export default function BeritaDetailPage() {
-  const params   = useParams();
+  const params = useParams();
   const slugOrId = params?.slug as string;
 
-  const [post,         setPost]         = useState<Post | null>(null);
-  const [recentPosts,  setRecentPosts]  = useState<Post[]>([]);
+  const [post, setPost] = useState<Post | null>(null);
+  const [recentPosts, setRecentPosts] = useState<Post[]>([]);
   const [relatedPosts, setRelatedPosts] = useState<Post[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [copied,       setCopied]       = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  /* Fetch */
+  useEffect(() => {
+    const fn = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", fn);
+    return () => window.removeEventListener("scroll", fn);
+  }, []);
+
   useEffect(() => {
     if (!slugOrId) return;
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -231,7 +265,7 @@ export default function BeritaDetailPage() {
       setLoading(true);
       try {
         const rawBase = process.env.NEXT_PUBLIC_API_URL || "";
-        const BASE    = rawBase ? rawBase.replace(/\/$/, "") + "/api" : "/api";
+        const BASE = rawBase ? rawBase.replace(/\/$/, "") + "/api" : "/api";
 
         let single: Post | null = null;
 
@@ -240,18 +274,19 @@ export default function BeritaDetailPage() {
           const raw = res.data;
           single = raw?.data ?? raw;
         } catch {
-          const allRes  = await axios.get(`${BASE}/posts`);
+          const allRes = await axios.get(`${BASE}/posts`);
           const allList: Post[] = Array.isArray(allRes.data)
             ? allRes.data
             : allRes.data?.data ?? [];
-          single = allList.find(
-            (p) => String(p.id) === String(slugOrId) || p.slug === slugOrId
-          ) ?? null;
+          single =
+            allList.find(
+              (p) => String(p.id) === String(slugOrId) || p.slug === slugOrId
+            ) ?? null;
         }
 
         if (single) {
           setPost(single);
-          const allRes  = await axios.get(`${BASE}/posts`);
+          const allRes = await axios.get(`${BASE}/posts`);
           const allList: Post[] = Array.isArray(allRes.data)
             ? allRes.data
             : allRes.data?.data ?? [];
@@ -277,372 +312,1172 @@ export default function BeritaDetailPage() {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  /* ─── LOADING ─── */
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="grid lg:grid-cols-[1fr_320px] gap-8">
-            <div className="animate-pulse space-y-4">
-              <div className="h-72 bg-slate-100 rounded-2xl" />
-              <div className="h-8 bg-slate-200 rounded w-3/4" />
-              <div className="h-4 bg-slate-100 rounded w-48" />
-              {[1,2,3,4,5].map(i => (
-                <div key={i} className="h-4 bg-slate-100 rounded" style={{ width: `${75 + (i % 3)*8}%` }} />
-              ))}
-            </div>
-            <div className="animate-pulse space-y-4">
-              <div className="h-5 bg-slate-200 rounded w-32" />
-              {[1,2,3,4].map(i => (
-                <div key={i} className="flex gap-3">
-                  <div className="w-20 h-14 bg-slate-100 rounded-lg flex-shrink-0" />
-                  <div className="flex-1 space-y-2 pt-1">
-                    <div className="h-3 bg-slate-100 rounded" />
-                    <div className="h-3 bg-slate-100 rounded w-2/3" />
-                    <div className="h-3 bg-slate-100 rounded w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
+      <>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+          body { font-family: 'Plus Jakarta Sans', sans-serif; background: #F8FAF7; margin: 0; }
+          .skeleton {
+            background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 12px;
+          }
+          @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+        `}</style>
+        <div className="min-h-screen pt-28 px-6" style={{ background: "#F8FAF7" }}>
+          <div className="max-w-6xl mx-auto animate-pulse space-y-6">
+            <div className="skeleton h-4 w-40" />
+            <div className="skeleton h-8 w-3/4" />
+            <div className="skeleton h-80 rounded-3xl" />
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="skeleton h-4" />
+            ))}
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
-  /* ─── NOT FOUND ─── */
   if (!post) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "#F8FAF7" }}
+      >
         <div className="text-center">
-          <p className="text-6xl mb-4">📰</p>
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Berita tidak ditemukan</h2>
-          <p className="text-slate-500 mb-6 text-sm">URL mungkin sudah tidak valid.</p>
+          <BookOpen size={48} className="mx-auto text-slate-300 mb-4" />
+          <p className="text-xl font-bold text-slate-700 mb-4">
+            Berita tidak ditemukan
+          </p>
           <Link
             href="/berita"
-            className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-green-700 transition-all text-sm"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold transition-all"
+            style={{ background: "#0D3D2B", color: "white" }}
           >
-            <ArrowLeft size={15} /> Kembali ke Berita
+            <ArrowLeft size={16} /> Kembali ke Berita
           </Link>
         </div>
       </div>
     );
   }
 
+  const title = post.title;
   const authorName = resolveAuthor(post.author);
-  const dateStr    = (post as any).createdAt || post.date;
-  const cs         = catStyle(post.category);
-
-  // Build collage image list: use post.images if available, else repeat imageUrl for demo
+  const dateStr = (post as any).createdAt || post.date;
   const collageImgs: string[] = post.images?.length
     ? post.images
     : post.imageUrl
-      ? [post.imageUrl]
-      : [FALLBACK_IMG];
+    ? [post.imageUrl]
+    : [FALLBACK_IMG];
 
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
-  const fbShare    = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
-  const twShare    = `https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(currentUrl)}`;
-  const waShare    = `https://wa.me/?text=${encodeURIComponent(post.title + " " + currentUrl)}`;
+  const fbShare = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+    currentUrl
+  )}`;
+  const twShare = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+    post.title
+  )}&url=${encodeURIComponent(currentUrl)}`;
+  const waShare = `https://wa.me/?text=${encodeURIComponent(
+    post.title + " " + currentUrl
+  )}`;
 
-return (
-  <div className="min-h-screen bg-white">
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-    {/* ══ CONTENT AREA ══ */}
-    <div className="max-w-6xl mx-auto px-4 md:px-6 py-6">
-      <div className="grid lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_340px] gap-10">
+        :root {
+          --forest: #0D3D2B;
+          --forest-mid: #155235;
+          --lime: #4ADE80;
+          --lime-dim: #86EFAC;
+          --cream: #F8FAF7;
+          --warm-white: #FFFFFF;
+          --slate-900: #0F172A;
+          --slate-800: #1E293B;
+          --slate-700: #334155;
+          --slate-600: #475569;
+          --slate-500: #64748B;
+          --slate-200: #E2E8F0;
+          --slate-100: #F1F5F9;
+          --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+          --radius-sm: 10px;
+          --radius-md: 16px;
+          --radius-lg: 24px;
+          --radius-xl: 32px;
+          --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(13,61,43,0.08);
+          --shadow-hover: 0 8px 32px rgba(13,61,43,0.15);
+          --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-        {/* ── ARTIKEL ── */}
-        <article>
+        * { box-sizing: border-box; }
+        body { font-family: var(--font); background: var(--cream); color: var(--slate-900); margin: 0; -webkit-font-smoothing: antialiased; }
 
-          {/* Gambar Utama */}
-          <div className="mb-6 rounded-xl overflow-hidden">
-            <CollageHero imgs={collageImgs} />
-          </div>
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(28px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .animate-fade-up  { animation: fadeUp  0.6s ease both; }
+        .animate-fade-in  { animation: fadeIn  0.4s ease both; }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
 
-          {/* Judul */}
-          <h1 className="text-xl md:text-2xl font-black text-slate-900 leading-snug mb-2">
-            {post.title}
-          </h1>
+        /* ── NAVBAR ── */
+        .navbar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 50;
+          height: 76px;
+          display: flex;
+          align-items: center;
+          transition: background var(--transition), box-shadow var(--transition);
+        }
+        .navbar.scrolled {
+          background: rgba(6, 78, 59, 0.95);
+          backdrop-filter: blur(16px);
+          box-shadow: 0 1px 0 rgba(255,255,255,0.08);
+        }
+        .navbar.top { background: transparent; }
+        .navbar.scrolled .nav-logo-text h1 { color: white; }
+        .navbar.scrolled .nav-link { color: rgba(255,255,255,0.9); }
+        .navbar.scrolled .nav-link:hover { color: white; background: rgba(255,255,255,0.15); }
+        .navbar.scrolled .btn-ghost { color: rgba(255,255,255,0.9); }
+        .navbar.scrolled .btn-ghost:hover { color: white; background: rgba(255,255,255,0.15); }
+        .navbar.scrolled .menu-toggle svg { color: white !important; }
+        .navbar.scrolled .btn-primary { background: var(--forest); color: white; }
+        .navbar.scrolled .btn-primary:hover { background: var(--forest-mid); }
 
-            {/* Meta baris: tanggal · author · share icons */}
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-200">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-slate-500">
-                <span>{fmtDateLabel(dateStr)}</span>
-                {authorName && (
-                  <>
-                    <span className="text-slate-300">·</span>
-                    <span>
-                      Oleh{" "}
-                      <span className="text-slate-700 font-semibold">{authorName}</span>
-                    </span>
-                  </>
-                )}
-              </div>
+        .navbar-inner {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 0 32px;
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 40px;
+        }
+        .nav-logo {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          text-decoration: none;
+          flex-shrink: 0;
+        }
+        .nav-logo img {
+          width: 44px;
+          height: 44px;
+          object-fit: contain;
+        }
+        .nav-logo-text {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          line-height: 1.2;
+        }
+        .nav-logo-text h1 {
+          font-size: 15px;
+          font-weight: 800;
+          color: var(--forest);
+          margin: 0;
+          letter-spacing: -0.01em;
+        }
+        .navbar.top .nav-logo-text h1 { color: white; }
+        .nav-logo-text p {
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--lime);
+          margin: 0;
+          margin-top: 1px;
+        }
+        .nav-links {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+        .nav-link {
+          font-size: 14px;
+          font-weight: 600;
+          padding: 8px 18px;
+          border-radius: 10px;
+          color: var(--slate-700);
+          text-decoration: none;
+          transition: all var(--transition);
+        }
+        .navbar.top .nav-link { color: rgba(255,255,255,0.9); }
+        .nav-link:hover { color: var(--forest); background: var(--slate-100); }
+        .navbar.top .nav-link:hover { color: white; background: rgba(255,255,255,0.15); }
 
-              {/* Share inline icons */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-400 mr-0.5">Bagikan:</span>
-                <a href={fbShare} target="_blank" rel="noopener noreferrer"
-                  className="w-7 h-7 flex items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                  title="Facebook">
-                  <Facebook size={13} />
-                </a>
-                <a href={twShare} target="_blank" rel="noopener noreferrer"
-                  className="w-7 h-7 flex items-center justify-center rounded-full bg-sky-400 text-white hover:bg-sky-500 transition-colors"
-                  title="Twitter">
-                  <Twitter size={13} />
-                </a>
-                <a href={waShare} target="_blank" rel="noopener noreferrer"
-                  className="w-7 h-7 flex items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors"
-                  title="WhatsApp">
-                  <MessageCircle size={13} />
-                </a>
+        .nav-actions {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          flex-shrink: 0;
+        }
+        .btn-ghost {
+          font-size: 14px;
+          font-weight: 600;
+          padding: 8px 18px;
+          border-radius: 10px;
+          color: var(--forest);
+          background: none;
+          border: none;
+          cursor: pointer;
+          text-decoration: none;
+          transition: all var(--transition);
+        }
+        .navbar.top .btn-ghost { color: rgba(255,255,255,0.9); }
+        .btn-ghost:hover { color: var(--forest); background: var(--slate-100); }
+        .navbar.top .btn-ghost:hover { color: white; background: rgba(255,255,255,0.15); }
+
+        .btn-primary {
+          font-size: 14px;
+          font-weight: 700;
+          padding: 10px 22px;
+          border-radius: 12px;
+          background: var(--forest);
+          color: white;
+          border: none;
+          cursor: pointer;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          transition: all var(--transition);
+        }
+        .btn-primary:hover {
+          background: var(--forest-mid);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 16px rgba(13, 61, 43, 0.25);
+        }
+        .menu-toggle {
+          display: none;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 6px;
+          border-radius: 8px;
+          transition: background var(--transition);
+        }
+        .menu-toggle:hover { background: rgba(255,255,255,0.1); }
+
+        /* ── MOBILE MENU ── */
+        .mobile-menu {
+          position: fixed;
+          inset: 0;
+          z-index: 100;
+          background: white;
+          padding: 24px 32px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .mobile-menu-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-bottom: 20px;
+          border-bottom: 1px solid var(--slate-200);
+          margin-bottom: 12px;
+        }
+        .mobile-nav-link {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--slate-900);
+          text-decoration: none;
+          padding: 14px 0;
+          border-bottom: 1px solid var(--slate-100);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .btn-ghost-green {
+          font-size: 14px;
+          font-weight: 700;
+          padding: 12px;
+          border-radius: 12px;
+          background: var(--cream);
+          color: var(--forest);
+          border: 1px solid var(--slate-200);
+          cursor: pointer;
+          text-decoration: none;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all var(--transition);
+        }
+        .btn-ghost-green:hover { background: var(--slate-100); }
+
+        /* ── HERO DETAIL ── */
+        .hero-detail {
+          position: relative;
+          padding: 100px 32px 48px;
+          background: var(--forest);
+          overflow: hidden;
+        }
+        .hero-detail-bg {
+          position: absolute;
+          inset: 0;
+          background-image: url('https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=1600');
+          background-size: cover;
+          background-position: center;
+          opacity: 0.15;
+        }
+        .hero-detail-overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, rgba(13,61,43,0.9) 0%, rgba(13,61,43,0.4) 100%);
+        }
+        .hero-detail-inner {
+          position: relative;
+          z-index: 2;
+          max-width: 1280px;
+          margin: 0 auto;
+        }
+        .breadcrumb {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          color: rgba(255,255,255,0.5);
+          margin-bottom: 24px;
+        }
+        .breadcrumb a {
+          color: rgba(255,255,255,0.7);
+          text-decoration: none;
+          transition: color var(--transition);
+        }
+        .breadcrumb a:hover { color: white; }
+        .breadcrumb svg { color: rgba(255,255,255,0.3); }
+        .hero-detail-tag {
+          display: inline-block;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: var(--lime);
+          background: rgba(74,222,128,0.12);
+          padding: 4px 14px;
+          border-radius: 100px;
+          margin-bottom: 16px;
+        }
+        .hero-detail-title {
+          font-size: clamp(32px, 4.5vw, 52px);
+          font-weight: 800;
+          line-height: 1.1;
+          letter-spacing: -0.02em;
+          color: white;
+          max-width: 800px;
+          margin: 0 0 16px;
+        }
+        .hero-detail-meta {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: rgba(255,255,255,0.5);
+          font-size: 14px;
+          font-weight: 500;
+        }
+        .hero-detail-meta svg { color: var(--lime); }
+
+        /* ── MAIN CONTENT ── */
+        .detail-section {
+          padding: 64px 32px 80px;
+          background: var(--cream);
+        }
+        .detail-inner {
+          max-width: 1280px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 48px;
+        }
+        .detail-article {
+          background: white;
+          border-radius: var(--radius-lg);
+          border: 1px solid var(--slate-200);
+          overflow: hidden;
+          box-shadow: var(--shadow-card);
+        }
+        .detail-media {
+          width: 100%;
+          max-height: 420px;
+          overflow: hidden;
+          background: var(--slate-100);
+        }
+        .detail-media img,
+        .detail-media video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .detail-body {
+          padding: 40px;
+        }
+
+        /* ── PROSE STYLING ── */
+        .detail-body .prose {
+          font-family: var(--font);
+          font-size: 1.125rem;
+          line-height: 1.8;
+          color: var(--slate-800);
+          max-width: 100%;
+        }
+        .detail-body .prose p {
+          margin: 0 0 1.25rem 0;
+        }
+        .detail-body .prose h2 {
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: var(--forest);
+          margin: 2.5rem 0 1rem 0;
+          letter-spacing: -0.01em;
+          line-height: 1.3;
+        }
+        .detail-body .prose h3 {
+          font-size: 1.4rem;
+          font-weight: 700;
+          color: var(--forest-mid);
+          margin: 2rem 0 0.75rem 0;
+          line-height: 1.4;
+        }
+        .detail-body .prose h4 {
+          font-size: 1.2rem;
+          font-weight: 700;
+          color: var(--slate-700);
+          margin: 1.5rem 0 0.5rem 0;
+        }
+        .detail-body .prose ul {
+          list-style: disc;
+          padding-left: 1.75rem;
+          margin: 0 0 1.25rem 0;
+        }
+        .detail-body .prose ol {
+          list-style: decimal;
+          padding-left: 1.75rem;
+          margin: 0 0 1.25rem 0;
+        }
+        .detail-body .prose li {
+          margin-bottom: 0.5rem;
+        }
+        .detail-body .prose li > ul,
+        .detail-body .prose li > ol {
+          margin-top: 0.25rem;
+          margin-bottom: 0.25rem;
+        }
+        .detail-body .prose blockquote {
+          border-left: 4px solid var(--lime);
+          padding: 0.75rem 1.5rem;
+          margin: 1.5rem 0;
+          background: var(--cream);
+          border-radius: var(--radius-sm);
+          font-style: italic;
+          color: var(--slate-600);
+        }
+        .detail-body .prose blockquote p {
+          margin: 0;
+        }
+        .detail-body .prose strong {
+          font-weight: 700;
+          color: var(--slate-900);
+        }
+        .detail-body .prose a {
+          color: var(--forest);
+          text-decoration: underline;
+          font-weight: 500;
+        }
+        .detail-body .prose a:hover {
+          color: var(--forest-mid);
+        }
+        .detail-body .prose img {
+          max-width: 100%;
+          border-radius: var(--radius-md);
+          margin: 1.5rem 0;
+          box-shadow: var(--shadow-card);
+        }
+        .detail-body .prose table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 1.5rem 0;
+          font-size: 0.95rem;
+        }
+        .detail-body .prose table th,
+        .detail-body .prose table td {
+          border: 1px solid var(--slate-200);
+          padding: 0.75rem 1rem;
+          text-align: left;
+        }
+        .detail-body .prose table th {
+          background: var(--slate-100);
+          font-weight: 700;
+          color: var(--slate-700);
+        }
+        .detail-body .prose table tr:nth-child(even) {
+          background: var(--cream);
+        }
+        .detail-body .prose hr {
+          border: 0;
+          border-top: 2px solid var(--slate-200);
+          margin: 2.5rem 0;
+        }
+
+        .detail-back {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 32px;
+          padding: 12px 24px;
+          background: var(--forest);
+          color: white;
+          border-radius: var(--radius-md);
+          font-weight: 700;
+          font-size: 14px;
+          text-decoration: none;
+          transition: all var(--transition);
+        }
+        .detail-back:hover {
+          background: var(--forest-mid);
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-hover);
+        }
+        .detail-back svg { transition: transform var(--transition); }
+        .detail-back:hover svg { transform: translateX(-3px); }
+
+        /* ── SIDEBAR ── */
+        .detail-sidebar {
+          display: flex;
+          flex-direction: column;
+          gap: 32px;
+        }
+        .sidebar-card {
+          background: white;
+          border-radius: var(--radius-lg);
+          border: 1px solid var(--slate-200);
+          padding: 28px;
+          box-shadow: var(--shadow-card);
+          position: sticky;
+          top: 100px;
+        }
+        .sidebar-card h3 {
+          font-size: 16px;
+          font-weight: 800;
+          color: var(--slate-900);
+          margin: 0 0 24px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid var(--slate-200);
+        }
+        .sidebar-item {
+          display: flex;
+          gap: 14px;
+          padding: 10px 0;
+          border-bottom: 1px solid var(--slate-100);
+          transition: background var(--transition);
+          border-radius: var(--radius-sm);
+          text-decoration: none;
+          color: inherit;
+        }
+        .sidebar-item:last-child { border-bottom: none; }
+        .sidebar-item:hover { background: var(--cream); }
+        .sidebar-item-img {
+          width: 72px;
+          height: 56px;
+          border-radius: var(--radius-sm);
+          overflow: hidden;
+          flex-shrink: 0;
+          background: var(--slate-100);
+        }
+        .sidebar-item-img img,
+        .sidebar-item-img video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform var(--transition);
+        }
+        .sidebar-item:hover .sidebar-item-img img {
+          transform: scale(1.05);
+        }
+        .sidebar-item-content {
+          flex: 1;
+        }
+        .sidebar-item-content h5 {
+          font-size: 14px;
+          font-weight: 700;
+          color: var(--slate-900);
+          margin: 0 0 4px;
+          line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .sidebar-item-content span {
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--forest);
+        }
+        .sidebar-all-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 16px;
+          padding: 12px 20px;
+          background: var(--forest);
+          color: white;
+          border-radius: var(--radius-md);
+          font-weight: 700;
+          font-size: 13px;
+          text-decoration: none;
+          transition: all var(--transition);
+        }
+        .sidebar-all-link:hover {
+          background: var(--forest-mid);
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-hover);
+        }
+        .sidebar-all-link svg { transition: transform var(--transition); }
+        .sidebar-all-link:hover svg { transform: translateX(3px); }
+
+        /* ── SHARE BUTTONS ── */
+        .share-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 18px;
+          border-radius: var(--radius-sm);
+          font-weight: 700;
+          font-size: 13px;
+          text-decoration: none;
+          transition: all var(--transition);
+          border: none;
+          cursor: pointer;
+        }
+        .share-btn:hover { transform: translateY(-2px); }
+        .share-btn-facebook { background: #1877F2; color: white; }
+        .share-btn-facebook:hover { background: #0d65d9; }
+        .share-btn-twitter { background: #000000; color: white; }
+        .share-btn-twitter:hover { background: #1a1a1a; }
+        .share-btn-wa { background: #25D366; color: white; }
+        .share-btn-wa:hover { background: #1da851; }
+        .share-btn-copy { background: var(--slate-100); color: var(--slate-700); }
+        .share-btn-copy:hover { background: var(--slate-200); }
+        .share-btn-copy.copied { background: var(--lime); color: white; }
+
+        /* ── FOOTER ── */
+        .footer {
+          background: var(--slate-900);
+          color: white;
+          padding: 80px 32px 40px;
+        }
+        .footer-inner {
+          max-width: 1280px;
+          margin: 0 auto;
+        }
+        .footer-grid {
+          display: grid;
+          grid-template-columns: 1.5fr 1fr 1fr 1.5fr;
+          gap: 48px;
+          margin-bottom: 64px;
+        }
+        .footer-logo {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+        .footer-logo img {
+          width: 40px;
+          height: 40px;
+          object-fit: contain;
+        }
+        .footer-logo-name {
+          font-size: 18px;
+          font-weight: 800;
+          color: white;
+        }
+        .footer-logo-sub {
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--lime);
+          margin-top: 2px;
+        }
+        .footer-desc {
+          font-size: 14px;
+          color: rgba(255,255,255,0.5);
+          line-height: 1.7;
+        }
+        .footer-col h4 {
+          font-size: 14px;
+          font-weight: 800;
+          color: white;
+          margin: 0 0 24px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .footer-links {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .footer-links a {
+          font-size: 14px;
+          color: rgba(255,255,255,0.5);
+          text-decoration: none;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: color var(--transition);
+          font-weight: 500;
+        }
+        .footer-links a:hover { color: var(--lime); }
+        .footer-links a svg { opacity: 0.4; transition: opacity var(--transition), transform var(--transition); }
+        .footer-links a:hover svg { opacity: 1; transform: translateX(3px); }
+        .footer-contact {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .footer-contact li {
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          font-size: 14px;
+          color: rgba(255,255,255,0.5);
+          font-weight: 500;
+          line-height: 1.6;
+        }
+        .footer-contact li svg { color: var(--lime); flex-shrink: 0; margin-top: 1px; }
+        .footer-socials {
+          display: flex;
+          gap: 10px;
+          margin-top: 24px;
+        }
+        .footer-social {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          background: rgba(255,255,255,0.07);
+          border: 1px solid rgba(255,255,255,0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: rgba(255,255,255,0.6);
+          text-decoration: none;
+          transition: all var(--transition);
+        }
+        .footer-social:hover {
+          background: var(--forest-mid);
+          color: white;
+          border-color: var(--forest-mid);
+          transform: translateY(-2px);
+        }
+        .footer-bottom {
+          border-top: 1px solid rgba(255,255,255,0.08);
+          padding-top: 32px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+        .footer-bottom p {
+          font-size: 13px;
+          color: rgba(255,255,255,0.35);
+          margin: 0;
+        }
+        .footer-bottom-links {
+          display: flex;
+          gap: 24px;
+        }
+        .footer-bottom-links a {
+          font-size: 13px;
+          color: rgba(255,255,255,0.35);
+          text-decoration: none;
+          transition: color var(--transition);
+        }
+        .footer-bottom-links a:hover { color: var(--lime); }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 1024px) {
+          .footer-grid { grid-template-columns: 1fr 1fr; }
+          .detail-inner { grid-template-columns: 1fr; gap: 32px; }
+          .detail-sidebar { order: -1; }
+          .sidebar-card { position: static; }
+        }
+        @media (max-width: 768px) {
+          .navbar-inner { padding: 0 20px; }
+          .nav-links { display: none; }
+          .btn-ghost { display: none; }
+          .menu-toggle { display: flex; }
+          .hero-detail { padding: 80px 20px 32px; }
+          .detail-section { padding: 40px 20px; }
+          .detail-body { padding: 24px; }
+          .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+          .footer { padding: 48px 20px 32px; }
+          .footer-bottom { flex-direction: column; align-items: flex-start; }
+          .share-buttons { flex-wrap: wrap; }
+        }
+        @media (max-width: 480px) {
+          .hero-detail-title { font-size: 28px; }
+          .detail-body { padding: 20px; }
+          .detail-body .prose { font-size: 1rem; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+      `}</style>
+
+      {/* ── MOBILE MENU ── */}
+      {mobileMenuOpen && (
+        <div className="mobile-menu animate-fade-in">
+          <div className="mobile-menu-header">
+            <div className="nav-logo">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg" alt="Logo" />
+              <div className="nav-logo-text">
+                <h1 style={{ color: 'var(--forest)' }}>Dinas Lingkungan Hidup</h1>
+                <p>Kabupaten Toba</p>
               </div>
             </div>
+            <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+              <X size={24} color="var(--slate-900)" />
+            </button>
+          </div>
+          {NAV_LINKS.map((item) => (
+            <Link key={item} href={navHref(item)} className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
+              {item} <ChevronRight size={18} />
+            </Link>
+          ))}
+          <div style={{ padding: '16px 0', borderTop: '1px solid var(--slate-200)', marginTop: '8px', display: 'flex', gap: '12px' }}>
+            <Link href="/login" className="btn-ghost-green" style={{ flex: 1, justifyContent: 'center' }}>Login</Link>
+            <Link href="/Warga" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }}>Lapor Sekarang</Link>
+          </div>
+        </div>
+      )}
 
-            {/* Category badge */}
-            {post.category && (
-              <span className={`inline-block text-[11px] font-black px-3 py-0.5 rounded uppercase tracking-wide mb-5 ${cs.bg} ${cs.text}`}>
-                {post.category}
-              </span>
+      {/* ── NAVBAR ── */}
+      <nav className={`navbar ${isScrolled ? 'scrolled' : 'top'}`}>
+        <div className="navbar-inner">
+          <Link href="/" className="nav-logo">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg" alt="Logo Kabupaten Toba" />
+            <div className="nav-logo-text">
+              <h1>Dinas Lingkungan Hidup</h1>
+              <p>Kabupaten Toba</p>
+            </div>
+          </Link>
+          <div className="nav-links">
+            {NAV_LINKS.map((item) => (
+              <Link key={item} href={navHref(item)} className="nav-link">
+                {item}
+              </Link>
+            ))}
+          </div>
+          <div className="nav-actions">
+            <Link href="/login" className="btn-ghost">Login</Link>
+            <Link href="/Warga" className="btn-primary">
+              <Leaf size={14} /> Lapor
+            </Link>
+            <button className="menu-toggle" onClick={() => setMobileMenuOpen(true)} aria-label="Buka Menu">
+              <Menu size={24} color="white" />
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* ── HERO DETAIL ── */}
+      <header className="hero-detail">
+        <div className="hero-detail-bg" />
+        <div className="hero-detail-overlay" />
+        <div className="hero-detail-inner">
+          <nav className="breadcrumb">
+            <Link href="/">Beranda</Link>
+            <ChevronRight size={14} />
+            <Link href="/berita">Berita</Link>
+            <ChevronRight size={14} />
+            <span style={{ color: 'rgba(255,255,255,0.6)' }}>{title}</span>
+          </nav>
+          <span className="hero-detail-tag">
+            <Leaf size={12} style={{ display: 'inline', marginRight: 6 }} />
+            Berita Terkini
+          </span>
+          <h1 className="hero-detail-title animate-fade-up delay-100">{title}</h1>
+          <div className="hero-detail-meta animate-fade-up delay-200">
+            <Clock size={16} />
+            <span>{fmtDate(dateStr)}</span>
+            {authorName && (
+              <>
+                <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
+                <span style={{ color: 'rgba(255,255,255,0.6)' }}>
+                  Oleh <span style={{ color: 'white', fontWeight: 600 }}>{authorName}</span>
+                </span>
+              </>
             )}
+          </div>
+        </div>
+      </header>
 
-            {/* ── KONTEN ── */}
-            <div className="text-[15px] leading-[1.85] text-slate-700 text-justify">
+      {/* ── MAIN CONTENT ── */}
+      <section className="detail-section">
+        <div className="detail-inner">
+          {/* Artikel */}
+          <article className="detail-article animate-fade-up delay-100">
+            <div className="detail-media">
+              <CollageHero imgs={collageImgs} />
+            </div>
+            <div className="detail-body">
+              {/* Category badge */}
+              {post.category && (
+                <span
+                  className="inline-block text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full mb-5"
+                  style={{
+                    background: 'rgba(13,61,43,0.08)',
+                    color: 'var(--forest)',
+                  }}
+                >
+                  {post.category}
+                </span>
+              )}
+
+              {/* Content */}
               {post.content?.trim().startsWith("<") ? (
                 <div
+                  className="prose"
                   dangerouslySetInnerHTML={{ __html: post.content }}
-                  className="
-                    [&_p]:mb-5 [&_p]:leading-[1.85]
-                    [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-slate-900 [&_h2]:mt-8 [&_h2]:mb-3
-                    [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-slate-800 [&_h3]:mt-6 [&_h3]:mb-2
-                    [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ul]:space-y-1.5
-                    [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-4 [&_ol]:space-y-1.5
-                    [&_li]:text-slate-700
-                    [&_strong]:font-bold [&_strong]:text-slate-900
-                    [&_em]:italic
-                    [&_blockquote]:border-l-4 [&_blockquote]:border-green-400 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-slate-500 [&_blockquote]:my-5
-                    [&_a]:text-green-700 [&_a]:underline hover:[&_a]:text-green-600
-                    [&_img]:rounded-xl [&_img]:my-6 [&_img]:w-full
-                    [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_th]:border [&_th]:border-slate-200 [&_th]:p-2 [&_th]:bg-slate-50 [&_th]:font-bold
-                  "
                 />
               ) : (
-                post.content
-                  ?.split("\n")
-                  .filter(Boolean)
-                  .map((para, i) => (
-                    <p key={i} className="mb-5 text-slate-700 leading-[1.85]">
-                      {para}
-                    </p>
-                  ))
+                <div className="prose">
+                  {post.content
+                    ?.split("\n")
+                    .filter(Boolean)
+                    .map((para, i) => (
+                      <p key={i}>{para}</p>
+                    ))}
+                </div>
               )}
-            </div>
 
-            {/* ── SHARE BAWAH ── */}
-            <div className="mt-10 pt-5 border-t border-slate-100">
-              <p className="text-sm font-bold text-slate-600 mb-3 flex items-center gap-2">
-                <Share2 size={14} /> Bagikan artikel ini:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <a href={fbShare} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all">
-                  <Facebook size={13} /> Facebook
-                </a>
-                <a href={twShare} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-400 text-white text-sm font-semibold hover:bg-sky-500 transition-all">
-                  <Twitter size={13} /> Twitter
-                </a>
-                <a href={waShare} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-semibold hover:bg-green-600 transition-all">
-                  <MessageCircle size={13} /> WhatsApp
-                </a>
-                <button onClick={handleCopy}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                    copied ? "bg-green-500 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}>
-                  {copied ? "✓ Tersalin!" : "🔗 Salin Link"}
-                </button>
-              </div>
-            </div>
-
-            {/* ── BERITA TERKAIT ── */}
-            {relatedPosts.length > 0 && (
-              <div className="mt-12">
-                <h3 className="text-base font-black text-slate-800 mb-4 pb-3 border-b-2 border-green-600 inline-block">
-                  Berita Terkait
-                </h3>
-                <div className="grid sm:grid-cols-3 gap-4">
-                  {relatedPosts.map(rp => (
-                    <Link
-                      key={rp.id}
-                      href={`/berita/${rp.slug || rp.id}`}
-                      className="group rounded-xl overflow-hidden border border-slate-100 hover:border-green-200 hover:shadow-md transition-all"
-                    >
-                      <div className="h-36 overflow-hidden bg-slate-100">
-                        <img
-                          src={rp.imageUrl || FALLBACK_IMG}
-                          alt={rp.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
-                        />
-                      </div>
-                      <div className="p-3">
-                        <p className="text-xs text-slate-400 flex items-center gap-1 mb-1.5">
-                          <Clock size={11} />
-                          {fmtDateShort((rp as any).createdAt || rp.date)}
-                        </p>
-                        <h4 className="text-sm font-bold text-slate-800 group-hover:text-green-700 transition-colors line-clamp-2 leading-snug">
-                          {rp.title}
-                        </h4>
-                      </div>
-                    </Link>
-                  ))}
+              {/* Share buttons */}
+              <div className="mt-10 pt-6 border-t border-slate-200">
+                <p className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                  <Share2 size={16} /> Bagikan artikel ini:
+                </p>
+                <div className="flex flex-wrap gap-2 share-buttons">
+                  <a
+                    href={fbShare}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="share-btn share-btn-facebook"
+                  >
+                    <Facebook size={14} /> Facebook
+                  </a>
+                  <a
+                    href={twShare}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="share-btn share-btn-twitter"
+                  >
+                    <Twitter size={14} /> Twitter
+                  </a>
+                  <a
+                    href={waShare}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="share-btn share-btn-wa"
+                  >
+                    <MessageCircle size={14} /> WhatsApp
+                  </a>
+                  <button
+                    onClick={handleCopy}
+                    className={`share-btn share-btn-copy ${copied ? 'copied' : ''}`}
+                  >
+                    {copied ? '✓ Tersalin!' : '🔗 Salin Link'}
+                  </button>
                 </div>
               </div>
-            )}
 
-            {/* Back */}
-                    <div className="mt-10">
-        <div className="flex justify-end mt-8">
-        <div className="flex justify-end mt-8">
-        <Link
-            href="/berita"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold text-sm transition-all active:scale-95 group"
-        >
-            <ArrowLeft size={16} />
-            Kembali ke semua berita
-        </Link>
-        </div>
-        </div>
+              {/* Related posts */}
+              {relatedPosts.length > 0 && (
+                <div className="mt-12">
+                  <h3 className="text-lg font-bold text-slate-800 mb-4 pb-3 border-b-2 border-lime-500">
+                    Berita Terkait
+                  </h3>
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    {relatedPosts.map((rp) => (
+                      <Link
+                        key={rp.id}
+                        href={`/berita/${rp.slug || rp.id}`}
+                        className="group rounded-xl overflow-hidden border border-slate-200 hover:border-lime-300 hover:shadow-md transition-all"
+                      >
+                        <div className="h-40 overflow-hidden bg-slate-100">
+                          <img
+                            src={rp.imageUrl || FALLBACK_IMG}
+                            alt={rp.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = FALLBACK_IMG;
+                            }}
+                          />
+                        </div>
+                        <div className="p-4">
+                          <p className="text-xs text-slate-400 flex items-center gap-1 mb-1">
+                            <Clock size={11} />
+                            {fmtDateShort((rp as any).createdAt || rp.date)}
+                          </p>
+                          <h4 className="text-sm font-bold text-slate-800 group-hover:text-forest transition-colors line-clamp-2 leading-snug">
+                            {rp.title}
+                          </h4>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Back button */}
+              <div className="flex justify-end mt-8">
+                <Link
+                  href="/berita"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-forest text-white rounded-xl font-semibold text-sm transition-all hover:bg-forest-mid hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <ArrowLeft size={16} />
+                  Kembali ke semua berita
+                </Link>
+              </div>
             </div>
           </article>
 
-          {/* ══ SIDEBAR ══ */}
-          <aside>
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm sticky top-6 overflow-hidden">
-
-              {/* Header sidebar */}
-              <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b-2 border-green-600">
-                <h3 className="text-base font-black text-slate-800 tracking-tight">
-                  Berita Terkini
-                </h3>
-                <Link
-                  href="/berita"
-                  className="text-xs text-green-600 font-semibold hover:underline flex items-center gap-0.5"
-                >
-                  Semua <ChevronRight size={12} />
-                </Link>
-              </div>
-
-              {/* ── Featured first post: large image + title + excerpt ── */}
-              {recentPosts.length > 0 && (() => {
-                const fp   = recentPosts[0];
-                const fpDate = (fp as any).createdAt || fp.date;
-                const fpCs = catStyle(fp.category);
-                // Plain-text excerpt from content
-                const excerpt = fp.content
-                  ? fp.content.replace(/<[^>]+>/g, "").slice(0, 100) + "…"
-                  : "";
-
-                return (
-                  <Link href={`/berita/${fp.slug || fp.id}`} className="group block">
-                    {/* Large thumbnail */}
-                    <div className="w-full h-44 overflow-hidden bg-slate-100">
-                      <img
-                        src={fp.imageUrl || FALLBACK_IMG}
-                        alt={fp.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
-                      />
-                    </div>
-                    <div className="px-4 py-3 border-b border-slate-100">
-                      {fp.category && (
-                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${fpCs.bg} ${fpCs.text}`}>
-                          {fp.category}
-                        </span>
-                      )}
-                      <h4 className="text-[13.5px] font-bold text-slate-900 group-hover:text-green-700 transition-colors leading-snug mt-1.5 mb-1 line-clamp-2">
-                        {fp.title}
-                      </h4>
-                      {/* excerpt */}
-                      {excerpt && (
-                        <p className="text-[12px] text-slate-500 leading-relaxed line-clamp-2 mb-1">
-                          {excerpt}
-                        </p>
-                      )}
-                      <p className="text-[11px] text-orange-500 font-semibold flex items-center gap-1 mt-1">
-                        <Clock size={10} /> {fmtDateLabel(fpDate)}
-                      </p>
-                    </div>
+          {/* ── SIDEBAR ── */}
+          <aside className="detail-sidebar animate-fade-up delay-200">
+            <div className="sidebar-card">
+              <h3>Berita Terkini</h3>
+              {recentPosts.length === 0 ? (
+                <p style={{ fontSize: '14px', color: 'var(--slate-500)' }}>Tidak ada berita lain</p>
+              ) : (
+                <>
+                  {recentPosts.slice(0, 6).map((rp) => {
+                    const isActive = rp.id === post.id;
+                    const rpDate = (rp as any).createdAt || rp.date;
+                    return (
+                      <Link
+                        key={rp.id}
+                        href={`/berita/${rp.slug || rp.id}`}
+                        className={`sidebar-item ${isActive ? 'bg-cream' : ''}`}
+                        style={{
+                          background: isActive ? 'var(--cream)' : 'transparent',
+                          borderColor: isActive ? 'var(--lime-dim)' : 'var(--slate-100)',
+                        }}
+                      >
+                        <div className="sidebar-item-img">
+                          <img
+                            src={rp.imageUrl || FALLBACK_IMG}
+                            alt={rp.title}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = FALLBACK_IMG;
+                            }}
+                          />
+                        </div>
+                        <div className="sidebar-item-content">
+                          <h5 style={{ color: isActive ? 'var(--forest)' : 'var(--slate-900)' }}>
+                            {rp.title}
+                          </h5>
+                          <span>{fmtDateShort(rpDate)}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                  <Link href="/berita" className="sidebar-all-link">
+                    Lihat Semua Berita <ChevronRight size={16} />
                   </Link>
-                );
-              })()}
-
-              {/* ── Remaining posts: thumbnail + title + short excerpt ── */}
-              <div className="divide-y divide-slate-100">
-                {recentPosts.slice(1).map(rp => {
-                  const rpDate  = (rp as any).createdAt || rp.date;
-                  const isActive = rp.id === post.id;
-                  const rpExcerpt = rp.content
-                    ? rp.content.replace(/<[^>]+>/g, "").slice(0, 60) + "…"
-                    : "";
-                  return (
-                    <Link
-                      key={rp.id}
-                      href={`/berita/${rp.slug || rp.id}`}
-                      className={`flex gap-3 px-4 py-3 group transition-colors ${
-                        isActive ? "bg-green-50" : "hover:bg-slate-50"
-                      }`}
-                    >
-                      {/* Thumbnail */}
-                      <div className="w-[68px] h-[52px] rounded-md overflow-hidden bg-slate-100 flex-shrink-0">
-                        <img
-                          src={rp.imageUrl || FALLBACK_IMG}
-                          alt={rp.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                          onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
-                        />
-                      </div>
-                      {/* Text */}
-                      <div className="flex-1 min-w-0">
-                        <h5 className={`text-[12.5px] font-semibold line-clamp-2 leading-snug transition-colors ${
-                          isActive ? "text-green-700" : "text-slate-800 group-hover:text-green-700"
-                        }`}>
-                          {rp.title}
-                        </h5>
-                        {/* short excerpt */}
-                        {rpExcerpt && (
-                          <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1 leading-snug">
-                            {rpExcerpt}
-                          </p>
-                        )}
-                        <p className={`text-[11px] mt-1 flex items-center gap-1 ${
-                          isActive ? "text-green-600" : "text-slate-400"
-                        }`}>
-                          <Clock size={9} /> {fmtDateShort(rpDate)}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-
-              {/* Footer sidebar */}
-              <div className="px-4 py-3 border-t border-slate-100">
-                <Link
-                  href="/berita"
-                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-green-600 text-white font-bold text-sm hover:bg-green-700 transition-all"
-                >
-                  Lihat Semua Berita <ChevronRight size={14} />
-                </Link>
-              </div>
+                </>
+              )}
             </div>
           </aside>
-
         </div>
-      </div>
-    </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer className="footer">
+        <div className="footer-inner">
+          <div className="footer-grid">
+            <div>
+              <div className="footer-logo">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg" alt="Logo" />
+                <div>
+                  <div className="footer-logo-name">DLH TOBA</div>
+                  <div className="footer-logo-sub">Kabupaten Toba</div>
+                </div>
+              </div>
+              <p className="footer-desc">
+                Dinas Lingkungan Hidup Kabupaten Toba berkomitmen menjaga kelestarian alam dan kebersihan lingkungan untuk generasi mendatang.
+              </p>
+            </div>
+            <div className="footer-col">
+              <h4>Tautan Cepat</h4>
+              <ul className="footer-links">
+                {NAV_LINKS.map((item) => (
+                  <li key={item}>
+                    <Link href={navHref(item)}>
+                      <ChevronRight size={14} />{item}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="footer-col">
+              <h4>Sumber Daya</h4>
+              <ul className="footer-links">
+                {[
+                  { name: 'Tugas Pokok dan Fungsi', path: 'https://dislindup.tobakab.go.id/tugas-pokok-dan-fungsi/' },
+                  { name: 'RPJMD', path: 'https://dislindup.tobakab.go.id/rpjmd/' },
+                  { name: 'RENSTRA', path: 'https://dislindup.tobakab.go.id/renstra/' },
+                  { name: 'Struktur Organisasi', path: 'https://dislindup.tobakab.go.id/struktur-organisasi/' }
+                ].map((l) => (
+                  <li key={l.name}><Link href={l.path}><ChevronRight size={14} />{l.name}</Link></li>
+                ))}
+              </ul>
+            </div>
+            <div className="footer-col">
+              <h4>Hubungi Kami</h4>
+              <ul className="footer-contact">
+                <li><MapPin size={16} />Jl. Hutabulu Mejan No. 14, Sibola Hotangsas, Kec. Balige, Toba, Sumatera Utara</li>
+                <li><Phone size={16} />(0632) 123-4567</li>
+                <li><Mail size={16} />dislindup@tobakab.go.id</li>
+              </ul>
+              <div className="footer-socials">
+                <a href="#" className="footer-social" aria-label="Facebook"><Facebook size={18} /></a>
+                <a href="#" className="footer-social" aria-label="Instagram"><Instagram size={18} /></a>
+                <a href="mailto:dislindup@tobakab.go.id" className="footer-social" aria-label="Email"><Mail size={18} /></a>
+              </div>
+            </div>
+          </div>
+          <div className="footer-bottom">
+            <p>© 2026 <strong style={{ color: 'rgba(255,255,255,0.6)' }}>Dinas Lingkungan Hidup Kabupaten Toba</strong>. Seluruh hak cipta dilindungi.</p>
+            <div className="footer-bottom-links">
+              <Link href="/privasi">Kebijakan Privasi</Link>
+              <Link href="/syarat">Syarat &amp; Ketentuan</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </>
   );
 }

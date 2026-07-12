@@ -16,7 +16,7 @@
     "axios": "^1.13.6",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
-    "framer-motion": "^12.35.2",
+    "framer-motion": "^12.42.2",
     "html2canvas": "^1.4.1",
     "jose": "^6.2.3",
     "js-cookie": "^3.0.5",
