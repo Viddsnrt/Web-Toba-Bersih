@@ -149,7 +149,7 @@ const Navbar = () => {
 const HeroSection = () => (
     <header className="relative w-full min-h-[85vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-            <Image src="https://tobaria.com/wp-content/uploads/2020/07/shutterstock_602246390-1.jpg" alt="Background Toba" fill className="object-cover" unoptimized priority />
+            <Image src="https://www.chubb.com/content/dam/chubb-sites/chubb/global/images/things/green-forest-trees-1280x528.jpg/jcr:content/renditions/cq5dam.web.1280.1280.jpeg" alt="Background Toba" fill className="object-cover" unoptimized priority />
             <div className="absolute inset-0 bg-slate-900/70" />
         </div>
 
