@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, ReactNode, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { 
   Plus, Edit3, Trash2, Search, Mail, Phone, X, Users,
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import ConfirmDialog from '../components/ConfirmDialog';
-import AlertDialog from '../components/AlertDialog';
+import AlertDialog, { AlertType } from '../components/AlertDialog';
 
 // Gunakan proxy Next.js
 const API_BASE_URL = '/api';
@@ -45,7 +45,7 @@ export default function KelolaKabid() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successTitle, setSuccessTitle] = useState('');
   const [successDescription, setSuccessDescription] = useState('');
-  const [successIcon, setSuccessIcon] = useState<ReactNode>(<CheckCircle2 size={24} />);
+  const [successType, setSuccessType] = useState<AlertType>('success');
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorTitle, setErrorTitle] = useState('Aksi Gagal');
   const [errorDescription, setErrorDescription] = useState('Terjadi kesalahan. Silakan coba lagi.');
@@ -162,7 +162,7 @@ export default function KelolaKabid() {
         );
         setSuccessTitle('Data berhasil diedit');
         setSuccessDescription('Perubahan Kepala Bidang berhasil disimpan.');
-        setSuccessIcon(<Edit3 size={24} />);
+        setSuccessType('edit');
       } else {
         // CREATE
         await axios.post(
@@ -177,7 +177,7 @@ export default function KelolaKabid() {
         );
         setSuccessTitle('Data berhasil ditambahkan');
         setSuccessDescription('Akun Kepala Bidang baru berhasil ditambahkan ke sistem.');
-        setSuccessIcon(<CheckCircle2 size={24} />);
+        setSuccessType('create');
       }
 
       setShowModal(false);
@@ -206,7 +206,7 @@ export default function KelolaKabid() {
       });
       setSuccessTitle('Data berhasil dihapus');
       setSuccessDescription('Akun Kepala Bidang telah dihapus secara permanen.');
-      setSuccessIcon(<Trash2 size={24} />);
+      setSuccessType('delete-success');
       setShowSuccessDialog(true);
       fetchKabid();
     } catch (error: any) {
@@ -246,10 +246,10 @@ export default function KelolaKabid() {
       {/* Success Dialog */}
       <AlertDialog
         open={showSuccessDialog}
+        type={successType}
         title={successTitle}
         description={successDescription}
         buttonText="OK"
-        icon={successIcon}
         onClose={() => setShowSuccessDialog(false)}
       />
 
