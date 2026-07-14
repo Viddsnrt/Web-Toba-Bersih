@@ -21,7 +21,8 @@ export type AlertType =
   | "delete-success"
   | "info"
   | "error"
-  | "loading";
+  | "loading"
+  | "warning";
 
 interface AlertDialogProps {
   open: boolean;
