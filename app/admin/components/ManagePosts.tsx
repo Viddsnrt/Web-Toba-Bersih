@@ -50,6 +50,7 @@ interface AlertConfig {
   title: string;
   description: string;
   detailText?: string;
+  afterClose?: () => void;
 }
 
 export default function ManagePosts({
@@ -88,6 +89,14 @@ export default function ManagePosts({
   const [imagePreview, setImagePreview] = useState<string>("");
   const [postList, setPostList] = useState<any[]>(posts);
 
+  // FIX: Simpan data awal saat edit untuk deteksi perubahan (sama seperti ManageTruk)
+  const [originalPostData, setOriginalPostData] = useState<{
+    title: string;
+    content: string;
+    category: string;
+    imageUrl: string;
+  } | null>(null);
+
   // ========== ALERT STATE ==========
   const [alertConfig, setAlertConfig] = useState<AlertConfig>({
     open: false,
@@ -96,13 +105,21 @@ export default function ManagePosts({
     description: "",
   });
 
-  const showAlert = (type: AlertType, title: string, description: string, detailText?: string) => {
-    setAlertConfig({ open: true, type, title, description, detailText });
-  };
+const showAlert = (
+  type: AlertType,
+  title: string,
+  description: string,
+  detailText?: string,
+  afterClose?: () => void
+) => {
+  setAlertConfig({ open: true, type, title, description, detailText, afterClose });
+};
 
-  const closeAlert = () => {
-    setAlertConfig((prev) => ({ ...prev, open: false }));
-  };
+const closeAlert = () => {
+  const afterClose = alertConfig.afterClose;
+  setAlertConfig((prev) => ({ ...prev, open: false, afterClose: undefined }));
+  afterClose?.();
+};
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -249,11 +266,13 @@ export default function ManagePosts({
         throw new Error(response.data?.message || "Gagal menghapus berita");
       }
 
-      showAlert(
-        "success",
-        "Data berhasil dihapus",
-        "Berita atau pengumuman berhasil dihapus dari sistem."
-      );
+   showAlert(
+  "success",
+  "Data berhasil dihapus",
+  "Berita atau pengumuman berhasil dihapus dari sistem.",
+  undefined,
+  refreshPosts   // ← baru jalan setelah user klik "Selesai"
+);
 
       await refreshPosts();
     } catch (err: any) {
@@ -282,7 +301,7 @@ export default function ManagePosts({
       return;
     }
 
-    const token = localStorage.getItem("token");
+const token = localStorage.getItem("token");
     if (!token) {
       showAlert(
         "error",
@@ -290,6 +309,27 @@ export default function ManagePosts({
         "Token tidak ditemukan. Silakan login ulang sebelum menyimpan konten."
       );
       return;
+    }
+
+    // FIX: Cek apakah ada perubahan saat edit (sama seperti ManageTruk)
+    if (editingPost && originalPostData) {
+      const hasChanged =
+        formData.title.trim() !== originalPostData.title ||
+        formData.content.trim() !== originalPostData.content ||
+        formData.category !== originalPostData.category ||
+        formData.imageFile !== null ||
+        (formData.imageUrl || "") !== (originalPostData.imageUrl || "");
+
+      if (!hasChanged) {
+        setShowModal(false);
+        showAlert(
+          "info",
+          "Tidak Ada Perubahan",
+          "Konten tidak mengalami perubahan apapun.",
+          "Silakan ubah data terlebih dahulu sebelum menyimpan."
+        );
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -328,32 +368,34 @@ export default function ManagePosts({
     };
 
     try {
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      if (editingPost) {
-        await axios.put(`${BASE_URL}/api/posts/${editingPost.id}`, payload, config);
-        showAlert(
-          "edit",
-          "Konten Berhasil Diperbarui",
-          "Perubahan berita atau pengumuman berhasil disimpan."
-        );
-      } else {
-        await axios.post(`${BASE_URL}/api/posts`, payload, config);
-        showAlert(
-          "success",
-          "Konten Berhasil Ditambahkan",
-          "Berita atau pengumuman baru berhasil dipublikasikan."
-        );
-      }
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  if (editingPost) {
+    await axios.put(`${BASE_URL}/api/posts/${editingPost.id}`, payload, config);
+    showAlert(
+      "edit",
+      "Konten Berhasil Diperbarui",
+      "Perubahan berita atau pengumuman berhasil disimpan.",
+      undefined,
+      refreshPosts   // ← ditunda
+    );
+  } else {
+    await axios.post(`${BASE_URL}/api/posts`, payload, config);
+    showAlert(
+      "success",
+      "Konten Berhasil Ditambahkan",
+      "Berita atau pengumuman baru berhasil dipublikasikan.",
+      undefined,
+      refreshPosts   // ← ditunda
+    );
+  }
 
-      setShowModal(false);
-      setFormData({ ...INITIAL_FORM });
-      setFormErrors({});
-      setImagePreview("");
-      setEditingPost(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-
-      await refreshPosts();
-    } catch (err: any) {
+  setShowModal(false);
+  setFormData({ ...INITIAL_FORM });
+  setFormErrors({});
+  setImagePreview("");
+  setEditingPost(null);
+  if (fileInputRef.current) fileInputRef.current.value = "";
+} catch (err: any) {
       console.error("Submit error:", err);
       showAlert(
         "error",
@@ -367,20 +409,26 @@ export default function ManagePosts({
     }
   };
 
-  const openModal = (post: any = null) => {
+const openModal = (post: any = null) => {
     if (post) {
       setEditingPost(post);
-      setFormData({
+      const data = {
         title: post.title || "",
         content: post.content || "",
         category: post.category || "BERITA",
         imageUrl: post.imageUrl || post.image_url || "",
+      };
+      setFormData({
+        ...data,
         imageFile: null,
         author_id: Number(post.authorId || post.author_id || 1),
       });
+      // FIX: simpan data asli untuk deteksi perubahan
+      setOriginalPostData(data);
       setImagePreview(resolveImageUrl(post.imageUrl || post.image_url || ""));
     } else {
       setEditingPost(null);
+      setOriginalPostData(null);
       setFormData({ ...INITIAL_FORM });
       setImagePreview("");
     }
@@ -404,13 +452,14 @@ export default function ManagePosts({
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 p-4 md:p-6 text-[#1A2E35] font-sans">
-      {/* GLOBAL ALERT */}
+    {/* GLOBAL ALERT */}
       <AlertDialog
         open={alertConfig.open}
         type={alertConfig.type}
         title={alertConfig.title}
         description={alertConfig.description}
         detailText={alertConfig.detailText}
+        disableBackdropClose={true}
         onClose={closeAlert}
       />
 
@@ -429,24 +478,31 @@ export default function ManagePosts({
         onClose={() => {}}
       />
 
-      {/* DELETE CONFIRMATION ALERT */}
+{/* LOADING ALERT saat proses hapus */}
       <AlertDialog
-        open={deleteModal.show}
-        type="delete"
-        title="Hapus Konten?"
-        description="Konten ini akan dihapus secara permanen dari sistem."
-        detailText="Pastikan konten ini memang sudah tidak digunakan sebelum melanjutkan proses hapus."
-        buttonText="Hapus"
-        cancelText="Batal"
-        showCancelButton={true}
-        isLoading={deleting}
+        open={deleting}
+        type="loading"
+        title="Menghapus Konten"
+        description="Mohon tunggu, konten sedang dihapus dari sistem."
+        isLoading={true}
         disableBackdropClose={true}
-        onConfirm={handleDeleteConfirm}
-        onClose={() => {
-          if (deleting) return;
-          setDeleteModal({ show: false, id: null });
-        }}
+        onClose={() => {}}
       />
+
+// After ✅
+<AlertDialog
+  open={deleteModal.show}
+  type="delete"
+  title="Hapus Konten?"
+  description="Konten ini akan dihapus secara permanen dari sistem."
+  detailText="Pastikan konten ini memang sudah tidak digunakan sebelum melanjutkan proses hapus."
+  buttonText="Hapus"
+  cancelText="Batal"
+  showCancelButton={true}
+  disableBackdropClose={true}
+  onConfirm={handleDeleteConfirm}
+  onClose={() => setDeleteModal({ show: false, id: null })}
+/>
 
       {/* HEADER */}
       <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-3xl p-8 shadow-sm border border-white/60 relative overflow-hidden">
@@ -768,9 +824,13 @@ export default function ManagePosts({
                 )}
                 <div className="text-gray-700 leading-loose text-base md:text-lg whitespace-pre-wrap font-medium">{viewingPost.content}</div>
               </div>
-              <div className="p-6 bg-gray-50 border-t flex gap-4">
-                <button onClick={() => { setShowDetailModal(false); openModal(viewingPost); }} className="flex-1 py-3.5 bg-white border-2 border-yellow-400 text-yellow-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-yellow-50 transition-all"><Edit size={18} /> Edit Konten</button>
-                <button onClick={() => { setShowDetailModal(false); handleDeleteClick(viewingPost.id); }} className="flex-1 py-3.5 bg-red-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-600 shadow-md hover:shadow-lg transition-all"><Trash2 size={18} /> Hapus Permanen</button>
+                <div className="p-6 bg-gray-50 border-t flex gap-4">
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="flex-1 py-3.5 bg-[#4A6D55] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#3a5643] shadow-md hover:shadow-lg transition-all"
+                >
+                  <X size={18} /> Tutup Detail
+                </button>
               </div>
             </motion.div>
           </div>

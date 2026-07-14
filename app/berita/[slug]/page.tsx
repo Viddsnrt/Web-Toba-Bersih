@@ -89,94 +89,90 @@ const navHref = (item: string) => {
   return `/#${key}`;
 };
 
-// ─── Collage Hero ──────────────────────────────────────────────
+// ✅ Judul panjang otomatis pakai ukuran font lebih kecil supaya
+// tidak jatuh ke banyak baris (5 baris → jadi 2-3 baris).
+const titleSizeClass = (title: string) => {
+  const len = title?.length || 0;
+  if (len > 85) return "is-long";
+  if (len > 55) return "is-medium";
+  return "";
+};
+
+// ─── Collage Hero (FIXED) ──────────────────────────────────────
+// ✅ Perbaikan:
+//   1. object-contain → object-cover, supaya foto memenuhi kotak
+//      tanpa menyisakan ruang kosong / background abu-abu.
+//   2. Kasus 2 foto: dulu hanya menampilkan list[0], sekarang
+//      kedua foto benar-benar ditampilkan berdampingan.
+//   3. Semua kotak konsisten pakai helper ImgBox agar seragam
+//      dengan pola yang sudah dipakai di halaman Edukasi.
 function CollageHero({ imgs }: { imgs: string[] }) {
   const list = imgs.slice(0, 5);
   const count = list.length;
-  // ✅ PERUBAHAN: object-cover → object-contain + bg-slate-100
-  const imgClass = "w-full h-full object-contain bg-slate-100";
 
-  if (count === 1) {
+  const ImgBox = ({ src }: { src: string }) => (
+    <div className="w-full h-full overflow-hidden">
+      <img
+        src={src}
+        alt=""
+        className="w-full h-full object-cover"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = FALLBACK_IMG;
+        }}
+      />
+    </div>
+  );
+
+  if (count === 0) {
     return (
-      <div className="w-full" style={{ maxHeight: 420 }}>
-        <img
-          src={list[0]}
-          alt=""
-          className="w-full h-auto rounded-xl"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = FALLBACK_IMG;
-          }}
-        />
+      <div className="w-full overflow-hidden" style={{ height: 420 }}>
+        <ImgBox src={FALLBACK_IMG} />
       </div>
     );
   }
+
+  if (count === 1) {
+    return (
+      <div className="w-full overflow-hidden" style={{ height: 420 }}>
+        <ImgBox src={list[0]} />
+      </div>
+    );
+  }
+
   if (count === 2) {
     return (
-      <div className="grid grid-cols-2 gap-0.5" style={{ height: 380 }}>
+      <div className="grid grid-cols-2 gap-0.5" style={{ height: 420 }}>
         {list.map((src, i) => (
-          <div key={i} className="overflow-hidden">
-            <img
-              src={src}
-              alt=""
-              className={imgClass}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = FALLBACK_IMG;
-              }}
-            />
-          </div>
+          <ImgBox key={i} src={src} />
         ))}
       </div>
     );
   }
+
   if (count === 3) {
     return (
       <div className="grid grid-cols-2 gap-0.5" style={{ height: 380 }}>
-        <div className="overflow-hidden">
-          <img
-            src={list[0]}
-            alt=""
-            className={imgClass}
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = FALLBACK_IMG;
-            }}
-          />
-        </div>
+        <ImgBox src={list[0]} />
         <div className="grid grid-rows-2 gap-0.5">
           {list.slice(1).map((src, i) => (
-            <div key={i} className="overflow-hidden">
-              <img
-                src={src}
-                alt=""
-                className={imgClass}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = FALLBACK_IMG;
-                }}
-              />
-            </div>
+            <ImgBox key={i} src={src} />
           ))}
         </div>
       </div>
     );
   }
+
   if (count === 4) {
     return (
       <div className="grid grid-cols-2 gap-0.5" style={{ height: 380 }}>
         {list.map((src, i) => (
-          <div key={i} className="overflow-hidden">
-            <img
-              src={src}
-              alt=""
-              className={imgClass}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = FALLBACK_IMG;
-              }}
-            />
-          </div>
+          <ImgBox key={i} src={src} />
         ))}
       </div>
     );
   }
-  // 5 images
+
+  // 5 gambar
   return (
     <div
       className="grid gap-0.5"
@@ -186,55 +182,20 @@ function CollageHero({ imgs }: { imgs: string[] }) {
         gridTemplateRows: "60% 40%",
       }}
     >
-      <div className="overflow-hidden" style={{ gridRow: "1 / 2", gridColumn: "1 / 2" }}>
-        <img
-          src={list[0]}
-          alt=""
-          className={imgClass}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = FALLBACK_IMG;
-          }}
-        />
+      <div style={{ gridRow: "1 / 2", gridColumn: "1 / 2" }}>
+        <ImgBox src={list[0]} />
       </div>
-      <div className="overflow-hidden" style={{ gridRow: "1 / 2", gridColumn: "2 / 3" }}>
-        <img
-          src={list[1]}
-          alt=""
-          className={imgClass}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = FALLBACK_IMG;
-          }}
-        />
+      <div style={{ gridRow: "1 / 2", gridColumn: "2 / 3" }}>
+        <ImgBox src={list[1]} />
       </div>
-      <div className="overflow-hidden" style={{ gridRow: "1 / 2", gridColumn: "3 / 4" }}>
-        <img
-          src={list[2]}
-          alt=""
-          className={imgClass}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = FALLBACK_IMG;
-          }}
-        />
+      <div style={{ gridRow: "1 / 2", gridColumn: "3 / 4" }}>
+        <ImgBox src={list[2]} />
       </div>
-      <div className="overflow-hidden" style={{ gridRow: "2 / 3", gridColumn: "1 / 2" }}>
-        <img
-          src={list[3]}
-          alt=""
-          className={imgClass}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = FALLBACK_IMG;
-          }}
-        />
+      <div style={{ gridRow: "2 / 3", gridColumn: "1 / 2" }}>
+        <ImgBox src={list[3]} />
       </div>
-      <div className="overflow-hidden" style={{ gridRow: "2 / 3", gridColumn: "2 / 4" }}>
-        <img
-          src={list[4]}
-          alt=""
-          className={imgClass}
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = FALLBACK_IMG;
-          }}
-        />
+      <div style={{ gridRow: "2 / 3", gridColumn: "2 / 4" }}>
+        <ImgBox src={list[4]} />
       </div>
     </div>
   );
@@ -678,13 +639,19 @@ export default function BeritaDetailPage() {
           margin-bottom: 16px;
         }
         .hero-detail-title {
-          font-size: clamp(32px, 4.5vw, 52px);
+          font-size: clamp(28px, 3.6vw, 52px);
           font-weight: 800;
-          line-height: 1.1;
+          line-height: 1.15;
           letter-spacing: -0.02em;
           color: white;
-          max-width: 800px;
+          max-width: 1000px;
           margin: 0 0 16px;
+        }
+        .hero-detail-title.is-long {
+          font-size: clamp(28px, 3.4vw, 44px);
+        }
+        .hero-detail-title.is-medium {
+          font-size: clamp(30px, 3.8vw, 46px);
         }
         .hero-detail-meta {
           display: flex;
@@ -720,12 +687,6 @@ export default function BeritaDetailPage() {
           max-height: 420px;
           overflow: hidden;
           background: var(--slate-100);
-        }
-        .detail-media img,
-        .detail-media video {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
         }
         .detail-body {
           padding: 40px;
@@ -1076,7 +1037,7 @@ export default function BeritaDetailPage() {
             <Leaf size={12} style={{ display: 'inline', marginRight: 6 }} />
             Berita Terkini
           </span>
-          <h1 className="hero-detail-title animate-fade-up delay-100">{title}</h1>
+          <h1 className={`hero-detail-title animate-fade-up delay-100 ${titleSizeClass(title)}`}>{title}</h1>
           <div className="hero-detail-meta animate-fade-up delay-200">
             <Clock size={16} />
             <span>{fmtDate(dateStr)}</span>

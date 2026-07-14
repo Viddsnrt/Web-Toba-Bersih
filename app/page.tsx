@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence,Variants} from 'framer-motion';
 import {
     Mail, Instagram, Facebook, ArrowRight, ChevronRight,
     MapPin, Phone, Clock, Images, X, Eye, ChevronLeft, Menu, Leaf,
@@ -70,24 +70,34 @@ const useHomeData = () => {
     return { posts, albums, educations, loading };
 };
 
-// ==========================================
-// 3. ANIMATION VARIANTS
-// ==========================================
-const fadeUp = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } } };
-const staggerContainer = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+       const fadeUp: Variants = {
+    hidden: { opacity: 0, y: 15 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.5, ease: "easeOut" }
+    }
+};
 
-// ==========================================
-// 4. SUB-COMPONENTS
-// ==========================================
-const Navbar = () => {
-    const [isScrolled, setIsScrolled] = useState(false);
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const staggerContainer: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: { staggerChildren: 0.1 }
+    }
+};
+          // ==========================================
+          // 4. SUB-COMPONENTS
+          // ==========================================
+          const Navbar = () => {
+              const [isScrolled, setIsScrolled] = useState(false);
+              const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    useEffect(() => {
-        const handleScroll = () => setIsScrolled(window.scrollY > 50);
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+              useEffect(() => {
+                  const handleScroll = () => setIsScrolled(window.scrollY > 50);
+                  window.addEventListener('scroll', handleScroll);
+                  return () => window.removeEventListener('scroll', handleScroll);
+              }, []);
 
     return (
         <>
@@ -501,21 +511,21 @@ export default function HomePage() {
                             </div>
                             <p className="text-slate-400 text-sm leading-relaxed mb-6">Mewujudkan lingkungan hidup yang asri, bersih, dan berkelanjutan untuk masyarakat Toba yang sejahtera.</p>
                             <div className="flex gap-3">
-  {[
-    { Icon: Facebook, href: 'https://www.facebook.com/share/1DyWuusTwD/?mibextid=wwXIfr' },
-    { Icon: Instagram, href: 'https://www.instagram.com/dlh_kab.toba?igsh=aGI5NjhyYW5zOXQ4' },
-    { Icon: Mail, href: 'mailto:dlhtoba@gmail.com' }
-  ].map(({ Icon, href }, idx) => (
-    <a
-      key={idx}
-      href={href}
-      aria-label="Social Link"
-      className="w-10 h-10 bg-slate-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center text-slate-300 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500"
-    >
-      <Icon size={18} />
-    </a>
-  ))}
-</div>
+                            {[
+                              { Icon: Facebook, href: 'https://www.facebook.com/share/1DyWuusTwD/?mibextid=wwXIfr' },
+                              { Icon: Instagram, href: 'https://www.instagram.com/dlh_kab.toba?igsh=aGI5NjhyYW5zOXQ4' },
+                              { Icon: Mail, href: 'mailto:dlhtoba@gmail.com' }
+                            ].map(({ Icon, href }, idx) => (
+                              <a
+                                key={idx}
+                                href={href}
+                                aria-label="Social Link"
+                                className="w-10 h-10 bg-slate-800 hover:bg-emerald-600 rounded-lg flex items-center justify-center text-slate-300 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500"
+                              >
+                                <Icon size={18} />
+                              </a>
+                            ))}
+                          </div>
                         </div>
 
                         <div>
@@ -526,8 +536,6 @@ export default function HomePage() {
                                 ))}
                             </ul>
                         </div>
-
-                  
                         <div>
               <h3 className="font-bold text-lg mb-6 relative inline-block">Sumber Daya<span className="absolute -bottom-1.5 left-0 w-8 h-1 bg-green-500 rounded-full" /></h3>
               <ul className="space-y-3">{
@@ -539,7 +547,26 @@ export default function HomePage() {
                 ].map(l => <li key={l.name}><Link href={l.path} className="text-slate-400 hover:text-green-400 text-sm flex items-center gap-2 group"><ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />{l.name}</Link></li>)
               }</ul>
             </div>
-
+                        <div>
+                            <h4 className="text-white font-semibold mb-6 text-sm tracking-wider">Informasi Publik</h4>
+                            <ul className="space-y-3.5">
+                                {[
+                                    { name: 'Tugas Pokok & Fungsi', path: 'https://dislindup.tobakab.go.id/tugas-pokok-dan-fungsi/' },
+                                    { name: 'Dokumen RPJMD', path: 'https://dislindup.tobakab.go.id/rpjmd/' },
+                                    { name: 'Dokumen RENSTRA', path: 'https://dislindup.tobakab.go.id/renstra/' },
+                                    { name: 'Struktur Organisasi', path: 'https://dislindup.tobakab.go.id/struktur-organisasi/' }
+                                ].map(item => (
+                                    <li key={item.name}>
+                                        <a
+                                            href={item.path}
+                                            className="text-slate-400 hover:text-emerald-400 transition-colors text-sm font-medium flex items-center gap-2 focus-visible:outline-none"
+                                        >
+                                            <ChevronRight size={14} className="text-slate-600" /> {item.name}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
                         <div>
                             <h4 className="text-white font-semibold mb-6 text-sm tracking-wider">Hubungi Kami</h4>
                             <ul className="space-y-4 text-sm">

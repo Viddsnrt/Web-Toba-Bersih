@@ -304,7 +304,7 @@ export default function EdukasiListPage() {
         /* ── HERO ── */
         .hero {
           position: relative;
-          min-height: 480px;
+          min-height: 380px;
           display: flex;
           align-items: center;
           overflow: hidden;

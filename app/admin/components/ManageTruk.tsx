@@ -422,7 +422,7 @@ export default function ManageTruk() {
   ========================= */
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 p-4 text-black">
+    <div className="w-full space-y-10 md:space-y-6 p-4 md:p- text-black">
 
       {/* ─── ALERT SYSTEM ──────────────────────────────────────────── */}
 
@@ -534,13 +534,13 @@ export default function ManageTruk() {
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[800px]">
               <thead>
-                <tr className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest border-b border-gray-50">
-                  <th className="px-6 py-4 text-center w-16">No</th>
-                  <th className="px-6 py-4">Nomor Polisi / Detail</th>
-                  <th className="px-6 py-4">Operator</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Aksi</th>
-                </tr>
+              <tr className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest border-b border-gray-50">
+              <th className="px-6 py-4 text-center w-14">No</th>
+              <th className="px-6 py-4 w-[280px]">Nomor Polisi / Detail</th>
+              <th className="px-6 py-4 w-[220px]">Operator</th>
+              <th className="px-6 py-4 w-[140px] text-center">Status</th>
+              <th className="px-6 py-4 w-[130px] text-right">Aksi</th>
+            </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredTruk.length === 0 ? (
@@ -587,12 +587,12 @@ export default function ManageTruk() {
                             <span className="text-xs italic text-gray-400 px-2 py-0.5 bg-gray-50 rounded border">Kosong</span>
                           )}
                         </td>
-                        <td className="px-6 py-5">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold tracking-wide border ${status.bg} ${status.text}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${status.text.replace("text", "bg")}`} />
-                            {status.label.toUpperCase()}
-                          </span>
-                        </td>
+                      <td className="px-6 py-5 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${status.bg} ${status.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${status.text.replace("text", "bg")}`} />
+                          {status.label.toUpperCase()}
+                        </span>
+                      </td>
                         <td className="px-6 py-5 text-right space-x-1.5">
                           <button
                             onClick={() => setViewingTruk(truk)}

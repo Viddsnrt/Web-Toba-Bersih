@@ -87,10 +87,17 @@ export default function ManageEdukasi() {
   const [editingItem, setEditingItem] = useState<EdukasiItem | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [viewingItem, setViewingItem] = useState<EdukasiItem | null>(null);
-  const [formData, setFormData] = useState({ ...INITIAL_FORM });
+const [formData, setFormData] = useState({ ...INITIAL_FORM });
   const [formErrors, setFormErrors] = useState<Partial<typeof INITIAL_FORM>>({});
   const [mediaPreview, setMediaPreview] = useState<MediaPreview | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // FIX: Simpan data awal saat edit untuk deteksi perubahan (sama seperti ManagePosts)
+  const [originalItemData, setOriginalItemData] = useState<{
+    judul: string;
+    deskripsi: string;
+    mediaUrl: string;
+  } | null>(null);
 
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -142,8 +149,9 @@ export default function ManageEdukasi() {
   const filtered = items.filter((x) => x.judul?.toLowerCase().includes(search.toLowerCase()));
 
   // ========== FORM HANDLERS ==========
-  const resetForm = () => {
+ const resetForm = () => {
     setEditingItem(null);
+    setOriginalItemData(null);
     setFormData({ ...INITIAL_FORM });
     setFormErrors({});
     setMediaPreview(null);
@@ -155,17 +163,21 @@ export default function ManageEdukasi() {
     resetForm();
   };
 
-  const openModal = (item: EdukasiItem | null = null) => {
+const openModal = (item: EdukasiItem | null = null) => {
     setFormErrors({});
     if (item) {
       setEditingItem(item);
-      setFormData({
+      const data = {
         judul: item.judul || "",
         deskripsi: item.deskripsi || "",
         mediaUrl: item.mediaUrl || "",
-      });
+      };
+      setFormData(data);
+      // FIX: simpan data asli untuk deteksi perubahan
+      setOriginalItemData(data);
       setMediaPreview({ url: item.mediaUrl, type: item.mediaType });
     } else {
+      setOriginalItemData(null);
       resetForm();
     }
     setShowModal(true);
@@ -231,7 +243,7 @@ export default function ManageEdukasi() {
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
@@ -239,6 +251,24 @@ export default function ManageEdukasi() {
     const targetTitle = formData.judul.trim();
     const normalizedMediaType = mediaPreview?.type.toUpperCase() as "IMAGE" | "VIDEO";
 
+    // FIX: Cek apakah ada perubahan saat edit (sama seperti ManagePosts)
+    if (editingItem && originalItemData) {
+      const hasChanged =
+        targetTitle !== originalItemData.judul ||
+        formData.deskripsi.trim() !== originalItemData.deskripsi ||
+        (formData.mediaUrl || "") !== (originalItemData.mediaUrl || "");
+
+      if (!hasChanged) {
+        closeModal();
+        showAlert(
+          "info",
+          "Tidak Ada Perubahan",
+          "Konten edukasi tidak mengalami perubahan apapun.",
+          "Silakan ubah data terlebih dahulu sebelum menyimpan."
+        );
+        return;
+      }
+    }
     const payload = {
       judul: targetTitle,
       deskripsi: formData.deskripsi.trim(),
@@ -593,12 +623,12 @@ export default function ManageEdukasi() {
                 <div className="text-gray-700 leading-loose text-base md:text-lg whitespace-pre-wrap font-medium">{viewingItem.deskripsi || <span className="italic text-gray-400">Tidak ada deskripsi tambahan...</span>}</div>
               </div>
               <div className="p-6 bg-gray-50 border-t flex gap-4">
-                <button type="button" onClick={() => { setShowDetailModal(false); openModal(viewingItem); }} className="flex-1 py-3.5 bg-white border-2 border-yellow-400 text-yellow-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-yellow-50 transition-all">
-                  <Edit size={18} /> Edit Konten
-                </button>
-                <button type="button" disabled={deletingId === viewingItem.id} onClick={() => openDeleteConfirm(viewingItem)} className="flex-1 py-3.5 bg-red-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-600 shadow-md hover:shadow-lg transition-all disabled:opacity-50">
-                  {deletingId === viewingItem.id ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
-                  {deletingId === viewingItem.id ? "Menghapus..." : "Hapus Permanen"}
+                <button
+                  type="button"
+                  onClick={() => setShowDetailModal(false)}
+                  className="flex-1 py-3.5 bg-[#4A6D55] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#3a5643] shadow-md hover:shadow-lg transition-all"
+                >
+                  <X size={18} /> Tutup Detail
                 </button>
               </div>
             </motion.div>

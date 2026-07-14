@@ -53,28 +53,30 @@ const getStyles = (type: AlertType): TypeStyles => {
     case "success":
     case "create":
     case "edit":
+    case "delete":
     case "delete-success":
     case "loading":
       return {
         badge: "bg-[#064E3B]/10 text-[#064E3B]",
-        badgeText: type === "success" ? "Berhasil" : type === "create" ? "Tambah Baru" : type === "edit" ? "Perbarui" : type === "delete-success" ? "Berhasil Dihapus" : "Memproses",
+        badgeText: type === "success" ? "Berhasil" : type === "create" ? "Tambah Baru" : type === "edit" ? "Perbarui" : type === "delete" ? "Hapus" : type === "delete-success" ? "Berhasil Dihapus" : "Memproses",
         iconRing: "bg-[#064E3B]/10",
         iconColor: "text-[#064E3B]",
         ringBorderColor: "#064E3B",
         primaryBtn: "bg-gradient-to-br from-[#064E3B] to-[#05402f] hover:from-[#08634e] hover:to-[#064E3B] shadow-lg shadow-emerald-200",
         progressGradient: "from-[#064E3B] to-[#08634e]",
       };
-    case "delete":
     case "error":
       return {
         badge: "bg-red-50 text-red-600",
-        badgeText: type === "delete" ? "Hapus" : "Gagal",
+        badgeText: "Gagal",
         iconRing: "bg-red-50",
         iconColor: "text-red-500",
         ringBorderColor: "#fca5a5",
         primaryBtn: "bg-gradient-to-br from-red-500 to-red-400 hover:from-red-600 hover:to-red-500 shadow-lg shadow-red-200",
         progressGradient: "from-red-400 to-red-500",
       };
+
+      
     default:
       return {
         badge: "bg-slate-100 text-slate-600",
@@ -153,7 +155,7 @@ export default function AlertDialog({
   if (!mounted || !open) return null;
 
   const styles = getStyles(type);
-  const finalButtonText = buttonText ?? (type === "create" ? "Tambah" : type === "edit" ? "Simpan" : type === "delete" ? "Hapus" : type === "delete-success" ? "Selesai" : type === "error" ? "Coba Lagi" : type === "loading" ? "Memproses..."  : type === "info" ? "Mengerti" : "Selesai");
+  const finalButtonText = buttonText ?? (type === "create" ? "Selesai" : type === "edit" ? "Simpan" : type === "delete" ? "Hapus" : type === "delete-success" ? "Selesai" : type === "error" ? "Coba Lagi" : type === "loading" ? "Memproses..."  : type === "info" ? "Mengerti" : "Selesai");
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">

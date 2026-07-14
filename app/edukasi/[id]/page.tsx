@@ -66,6 +66,15 @@ const navHref = (item: string) => {
   return `/#${key}`;
 };
 
+// ✅ Judul panjang otomatis pakai ukuran font lebih kecil supaya
+// tidak jatuh ke banyak baris (sama seperti halaman Berita).
+const titleSizeClass = (title: string) => {
+  const len = title?.length || 0;
+  if (len > 85) return "is-long";
+  if (len > 55) return "is-medium";
+  return "";
+};
+
 export default function EdukasiDetailPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -458,13 +467,19 @@ export default function EdukasiDetailPage() {
           margin-bottom: 16px;
         }
         .hero-detail-title {
-          font-size: clamp(32px, 4.5vw, 52px);
+          font-size: clamp(28px, 3.6vw, 52px);
           font-weight: 800;
-          line-height: 1.1;
+          line-height: 1.15;
           letter-spacing: -0.02em;
           color: white;
-          max-width: 800px;
+          max-width: 1000px;
           margin: 0 0 16px;
+        }
+        .hero-detail-title.is-long {
+          font-size: clamp(28px, 3.4vw, 44px);
+        }
+        .hero-detail-title.is-medium {
+          font-size: clamp(30px, 3.8vw, 46px);
         }
         .hero-detail-meta {
           display: flex;
@@ -830,7 +845,7 @@ export default function EdukasiDetailPage() {
             <Leaf size={12} style={{ display: 'inline', marginRight: 6 }} />
             Edukasi Lingkungan
           </span>
-          <h1 className="hero-detail-title animate-fade-up delay-100">{title}</h1>
+          <h1 className={`hero-detail-title animate-fade-up delay-100 ${titleSizeClass(title)}`}>{title}</h1>
           {post.createdAt && (
             <div className="hero-detail-meta animate-fade-up delay-200">
               <Clock size={16} />
