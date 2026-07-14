@@ -42,4 +42,4 @@ export default function AlertModal({ open, title, description, variant = 'confir
       </motion.div>
     </div>
   );
-}s
+}
