@@ -106,7 +106,7 @@ const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005';
 const API_URL = process.env.NEXT_PUBLIC_API_URL
   ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '') + '/api'
   : '/api';
-  
+
 const WAYPOINT_PASSED_RADIUS_M = 80;
 
 function formatDurasi(menit: number): string {
@@ -158,9 +158,18 @@ function isWaypointDilewati(waypoint: Waypoint, jalur: TitikJalur[]): boolean {
     (titik) => hitungJarakMeter(waypoint.lat, waypoint.lng, titik.lat, titik.lng) <= WAYPOINT_PASSED_RADIUS_M
   );
 }
+// ✅ BARU: ambil sampel titik GPS secara merata (dipakai sebagai fallback
+// tampilan rute di laporan PDF/Excel saat rute terjadwal tidak tersedia).
+function sampleJalur(jalur: TitikJalur[], maxPoints: number): TitikJalur[] {
+  if (jalur.length <= maxPoints) return jalur;
+  const step = (jalur.length - 1) / (maxPoints - 1);
+  const result: TitikJalur[] = [];
+  for (let i = 0; i < maxPoints; i++) result.push(jalur[Math.round(i * step)]);
+  return result;
+}
 
 // ============================================================
-// EXPORT UTILITIES  (tidak berubah)
+// EXPORT UTILITIES
 // ============================================================
 async function exportToExcel(riwayatList: RiwayatSelesai[], tanggal: string) {
   const wb = XLSX.utils.book_new();
@@ -210,8 +219,19 @@ async function exportToExcel(riwayatList: RiwayatSelesai[], tanggal: string) {
         const ket = isFirst ? 'Titik Awal (START)' : isLast ? 'Titik Akhir (END)' : `Titik Pengangkutan ${idx}`;
         detailRows.push([`  ${wp.urutan}.`, `  ${wp.nama}`, `  ${ket}`]);
       });
-    } else
-    detailRows.push(['', '', '']);
+    } else if (r.jalurDilalui && r.jalurDilalui.length > 0) {
+      // ✅ BARU: fallback ke jejak GPS aktual saat rute terjadwal kosong,
+      // supaya sheet Excel tetap informatif (bukan blank).
+      const sampled = sampleJalur(r.jalurDilalui, 10);
+      detailRows.push(['  RUTE TERJADWAL TIDAK DIATUR — JEJAK GPS AKTUAL:']);
+      detailRows.push(['  No.', '  Waktu', '  Koordinat']);
+      sampled.forEach((t, idx) => {
+        const waktu = new Date(t.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        detailRows.push([`  ${idx + 1}.`, `  ${waktu}`, `  ${t.lat.toFixed(5)}, ${t.lng.toFixed(5)}`]);
+      });
+    } else {
+      detailRows.push(['', '', '']);
+    }
     if (i < riwayatList.length - 1) detailRows.push(['─────────────────────────────────────────────']);
     detailRows.push(['']);
   });
@@ -237,15 +257,32 @@ function buildPDFHtml(riwayatList: RiwayatSelesai[], tanggal: string): string {
     const selesai = ring.waktuSelesai ? new Date(ring.waktuSelesai).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-';
     const rute      = r.ruteJadwal ?? (r as any).ruteHariIni ?? null;
     const waypoints = rute?.waypoints ?? [];
-    const ruteHtml  = waypoints.length > 0
-      ? `<table class="rute-table"><thead><tr><th>No</th><th>Nama Lokasi / Titik</th><th>Keterangan</th></tr></thead><tbody>
+    const jalurGPS  = r.jalurDilalui ?? [];
+
+    // ✅ DIPERBAIKI: satu deklarasi `ruteHtml`, tiga kondisi —
+    // (1) ada rute terjadwal → tabel waypoint,
+    // (2) tidak ada rute terjadwal tapi ada jejak GPS → tabel jejak GPS (fallback),
+    // (3) tidak ada keduanya → pesan "tidak tersedia".
+    let ruteHtml: string;
+    if (waypoints.length > 0) {
+      ruteHtml = `<table class="rute-table"><thead><tr><th>No</th><th>Nama Lokasi / Titik</th><th>Keterangan</th></tr></thead><tbody>
           ${waypoints.map((wp: Waypoint, idx: number) => {
             const isFirst = idx === 0; const isLast = idx === waypoints.length - 1;
             const ket = isFirst ? 'Titik Awal (START)' : isLast ? 'Titik Akhir (END)' : `Titik Pengangkutan ${idx}`;
             return `<tr><td class="center">${wp.urutan}</td><td><strong>${wp.nama}</strong></td><td class="ket">${ket}</td></tr>`;
           }).join('')}
-        </tbody></table>`
-      : '<p class="no-data">Data rute tidak tersedia</p>';
+        </tbody></table>`;
+    } else if (jalurGPS.length > 0) {
+      const sampled = sampleJalur(jalurGPS, 8);
+      ruteHtml = `
+        <p class="no-data" style="margin-bottom:6px;">Rute terjadwal tidak diatur — jejak GPS aktual selama beroperasi:</p>
+        <table class="rute-table"><thead><tr><th>No</th><th>Waktu</th><th>Koordinat</th></tr></thead><tbody>
+          ${sampled.map((t, idx) => `<tr><td class="center">${idx + 1}</td><td>${new Date(t.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</td><td>${t.lat.toFixed(5)}, ${t.lng.toFixed(5)}</td></tr>`).join('')}
+        </tbody></table>`;
+    } else {
+      ruteHtml = '<p class="no-data">Data rute tidak tersedia</p>';
+    }
+
     return `
       <div class="truk-block">
         <div class="truk-header">
@@ -332,11 +369,13 @@ async function exportToPDF(riwayatList: RiwayatSelesai[], tanggal: string): Prom
     import('html2canvas').then((m) => m.default),
   ]);
 
-  // Iframe tersembunyi: punya document sendiri, 100% terpisah dari halaman utama.
-  // Apa pun yang html2canvas lakukan di dalamnya tidak bisa "bocor" keluar.
   const iframe = document.createElement('iframe');
+  // ✅ FIX: mulai dari tinggi besar (bukan 100px) supaya body TIDAK pernah
+  // ter-layout di container sempit — ini akar penyebab teks/footer terpotong,
+  // karena browser bisa saja meng-clip/mereflow konten pada container pendek
+  // sebelum kita sempat mengukur & memperbesar iframe.
   iframe.style.cssText =
-    'position:fixed;top:-99999px;left:-99999px;width:794px;height:1px;border:0;visibility:hidden;';
+    'position:fixed;top:-99999px;left:-99999px;width:794px;height:3000px;border:0;visibility:hidden;';
   document.body.appendChild(iframe);
 
   try {
@@ -344,10 +383,38 @@ async function exportToPDF(riwayatList: RiwayatSelesai[], tanggal: string): Prom
     if (!idoc) throw new Error('Tidak bisa membuat dokumen render PDF.');
 
     idoc.open();
-    idoc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="margin:0;padding:0;">${buildPDFHtml(riwayatList, tanggal)}</body></html>`);
+    // ✅ FIX: tambah padding-bottom sebagai buffer fisik di HTML agar baris
+    // terakhir (mis. footer) tidak kepotong akibat pembulatan subpixel
+    // saat html2canvas melakukan scale:2.
+    idoc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="margin:0;padding:0 0 32px 0;">${buildPDFHtml(riwayatList, tanggal)}</body></html>`);
     idoc.close();
 
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    // ✅ FIX: tunggu font benar-benar siap (bukan cuma delay tetap) supaya
+    // scrollHeight yang diukur akurat.
+    try {
+      if ((idoc as any).fonts?.ready) await (idoc as any).fonts.ready;
+    } catch {
+      /* fonts API tidak tersedia — abaikan, tetap lanjut pakai delay di bawah */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    // ✅ FIX: ukur tinggi konten SEBENARNYA dua kali (sebelum & sesudah
+    // resize iframe) untuk menangkap reflow yang masih terjadi, lalu
+    // tambahkan buffer 24px sebagai pengaman terakhir.
+    let actualHeight = Math.max(idoc.body.scrollHeight, idoc.documentElement.scrollHeight);
+    iframe.style.height = `${actualHeight}px`;
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    actualHeight = Math.max(
+      actualHeight,
+      idoc.body.scrollHeight,
+      idoc.documentElement.scrollHeight
+    );
+    const captureHeight = actualHeight + 24;
+    iframe.style.height = `${captureHeight}px`;
+
+    // beri waktu 1 frame lagi agar reflow dengan tinggi baru selesai
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
 
     const canvas = await html2canvas(idoc.body, {
       scale: 2,
@@ -355,7 +422,9 @@ async function exportToPDF(riwayatList: RiwayatSelesai[], tanggal: string): Prom
       allowTaint: true,
       backgroundColor: '#ffffff',
       width: 794,
+      height: captureHeight,
       windowWidth: 794,
+      windowHeight: captureHeight,
       scrollX: 0,
       scrollY: 0,
       logging: false,
@@ -529,7 +598,7 @@ function RiwayatSelesaiCard({ riwayat }: { riwayat: RiwayatSelesai }) {
 }
 
 // ============================================================
-// TAB TRACKING  (tidak berubah sama sekali)
+// TAB TRACKING
 // ============================================================
 export function TabTracking({ addAlert }: { addAlert: (type: AlertType, title: string, msg: string) => void }) {
   const [trukAktifList, setTrukAktifList]       = useState<TrukAktif[]>([]);
@@ -1145,9 +1214,9 @@ function TabLaporan({ addAlert }: { addAlert: (type: AlertType, title: string, m
   const leafletMapRef = useRef<any>(null);
   const markersRef    = useRef<any[]>([]);
   const LRef          = useRef<any>(null);
-  
+
   const [mapElReady, setMapElReady]           = useState(false);       // ← TAMBAH INI
-  const [mapInitialized, setMapInitialized]   = useState(false);  
+  const [mapInitialized, setMapInitialized]   = useState(false);
   const [laporanList, setLaporanList]               = useState<any[]>([]);
   const [loading, setLoading]                       = useState(true);
   const [selectedStatus, setSelectedStatus]         = useState('semua');
@@ -1303,9 +1372,9 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
       // ✅ Tambahkan delay kecil untuk memastikan map sudah siap
       setTimeout(() => {
         try {
-          const heat = (L as any).heatLayer(heatPoints, { 
-            radius: 28, 
-            blur: 18, 
+          const heat = (L as any).heatLayer(heatPoints, {
+            radius: 28,
+            blur: 18,
             maxZoom: 12,
             minOpacity: 0.3,
             gradient: { 0.2: '#34d399', 0.5: '#fbbf24', 0.8: '#f87171', 1.0: '#dc2626' }
@@ -1365,22 +1434,22 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
           <svg width="80" height="80" viewBox="0 0 80 80">
             <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
             {selesai > 0 && (
-              <circle cx="40" cy="40" r="32" fill="none" stroke="#34D399" strokeWidth="8" 
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#34D399" strokeWidth="8"
                 strokeDasharray={`${(selesai / total) * 201} 201`} transform="rotate(-90 40 40)" />
             )}
             {diproses > 0 && (
-              <circle cx="40" cy="40" r="32" fill="none" stroke="#FBBF24" strokeWidth="8" 
-                strokeDasharray={`${(diproses / total) * 201} 201`} 
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#FBBF24" strokeWidth="8"
+                strokeDasharray={`${(diproses / total) * 201} 201`}
                 strokeDashoffset={`-${(selesai / total) * 201}`} transform="rotate(-90 40 40)" />
             )}
             {pending > 0 && (
-              <circle cx="40" cy="40" r="32" fill="none" stroke="#F87171" strokeWidth="8" 
-                strokeDasharray={`${(pending / total) * 201} 201`} 
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#F87171" strokeWidth="8"
+                strokeDasharray={`${(pending / total) * 201} 201`}
                 strokeDashoffset={`-${((selesai + diproses) / total) * 201}`} transform="rotate(-90 40 40)" />
             )}
             <text x="40" y="44" textAnchor="middle" fontSize="16" fontWeight="800" fill="white">{total}</text>
           </svg>
-          
+
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest mb-0.5">Total Laporan</p>
             <p className="text-3xl font-black text-white leading-none mb-3">{total}</p>
@@ -1635,7 +1704,7 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
                 return (
                 <div key={l.id} onClick={() => { setSelectedLaporan(l); setShowDetail(true); }}
                   className="bg-white rounded-2xl border border-gray-100 hover:border-emerald-200 hover:shadow-md transition-all cursor-pointer overflow-hidden group">
-                  
+
                   {/* Foto */}
                   <div className="h-44 bg-gray-100 relative overflow-hidden">
                     {l.photoUrl ? (
@@ -1685,7 +1754,7 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
               })}
             </div>
 
-            
+
           )}
           {!loading && filtered.length > 0 && (
             <p className="text-center text-xs text-gray-400 font-medium mt-4">Menampilkan {filtered.length} dari {laporanList.length} laporan</p>

@@ -488,8 +488,6 @@ const openModal = (post: any = null) => {
         disableBackdropClose={true}
         onClose={() => {}}
       />
-
-// After ✅
 <AlertDialog
   open={deleteModal.show}
   type="delete"
