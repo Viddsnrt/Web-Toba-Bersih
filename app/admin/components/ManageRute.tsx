@@ -841,8 +841,8 @@ export default function ManajemenRute() {
    * RENDER
    * ════════════════════════════════════════════════════════════════════ */
 
-  return (
-    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 p-4 md:p-6 text-black">
+return (
+  <div className="w-full space-y-6 md:space-y-8 p-4 md:p-6 text-black">
 
       <AlertDialog open={alertConfig.open} type={alertConfig.type} title={alertConfig.title}
         description={alertConfig.description} detailText={alertConfig.detailText} onClose={closeAlert} />

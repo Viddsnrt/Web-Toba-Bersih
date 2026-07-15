@@ -422,7 +422,7 @@ export default function ManageTruk() {
   ========================= */
 
   return (
-    <div className="w-full space-y-10 md:space-y-6 p-4 md:p- text-black">
+  <div className="w-full space-y-6 md:space-y-8 p-4 md:p-6 text-black">
 
       {/* ─── ALERT SYSTEM ──────────────────────────────────────────── */}
 

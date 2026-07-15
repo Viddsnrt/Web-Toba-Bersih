@@ -64,8 +64,10 @@ const OPERATIONAL_START = 8;   // 08:00
 const OPERATIONAL_END   = 17;  // 17:00
 
 const isOperationalHours = (date: Date): boolean => {
-  const hours = date.getHours();
-  return hours >= OPERATIONAL_START && hours < OPERATIONAL_END;
+  const hourWIB = parseInt(
+    date.toLocaleString("en-US", { timeZone: "Asia/Jakarta", hour: "2-digit", hour12: false })
+  );
+  return hourWIB >= OPERATIONAL_START && hourWIB < OPERATIONAL_END;
 };
 
 const formatCoordinate = (coord: any, decimals: number = 5): string | null => {
@@ -85,16 +87,18 @@ const getDriverFromTruck = (truk: any) => {
   if (truk.driver) return { id: truk.driver.id, fullName: truk.driver.fullName };
   return null;
 };
-
 const toDateTimeLocalValue = (date: Date) => {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const wibString = date.toLocaleString("sv-SE", { timeZone: "Asia/Jakarta" }); // "YYYY-MM-DD HH:mm:ss"
+  return wibString.slice(0, 16).replace(" ", "T");
 };
 
 const getCurrentDateTimeLocal = () => {
-  const now = new Date();
-  now.setSeconds(0, 0);
-  return toDateTimeLocalValue(now);
+  return toDateTimeLocalValue(new Date());
+};
+
+const toISOWithWIBOffset = (localDateTimeStr: string): string | null => {
+  if (!localDateTimeStr) return null;
+  return `${localDateTimeStr}:00+07:00`;
 };
 
 // ============================================================
@@ -274,15 +278,13 @@ function usePenugasan() {
 // ============================================================
 function StatsCard({ label, value, icon: Icon, color, bg }: any) {
   return (
-    <div className="bg-white/80 backdrop-blur-lg p-5 rounded-[24px] border border-gray-100/50 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-      <div className="flex justify-between items-start">
-        <div className={`p-3 rounded-2xl ${bg} ${color}`}>
-          <Icon size={22} strokeWidth={2.5} />
-        </div>
+    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+      <div className={`p-3 rounded-xl ${bg} ${color}`}>
+        <Icon size={24} />
       </div>
       <div>
-        <p className="text-3xl font-black text-gray-900 mb-1">{value}</p>
-        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+        <p className="text-2xl font-black text-gray-900 mt-0.5">{value}</p>
       </div>
     </div>
   );
@@ -901,7 +903,7 @@ export default function ManagePenugasan() {
 
     // ═══ CEK JAM OPERASIONAL ═══
     if (formData.scheduledAt) {
-      const d = new Date(formData.scheduledAt);
+      const d = new Date(toISOWithWIBOffset(formData.scheduledAt)!); // ✅ parsing dengan offset WIB eksplisit
       if (!isOperationalHours(d)) {
         showAlert(
           "warning",
@@ -921,7 +923,7 @@ export default function ManagePenugasan() {
         reportId: formData.reportId,
         truckId: formData.truckId,
         driverId: formData.driverId,
-        scheduledAt: formData.scheduledAt,
+        scheduledAt: toISOWithWIBOffset(formData.scheduledAt), // ✅ kirim dengan offset +07:00 eksplisit
         location: formData.location.trim(),
         district: selectedItem?.district || null,
         description: selectedItem?.description || null,
@@ -1057,9 +1059,8 @@ export default function ManagePenugasan() {
     );
   };
 
-  return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-green-50/30 py-6 md:py-10 px-4 md:px-8">
-      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 text-black">
+return (
+  <div className="w-full space-y-6 md:space-y-8 p-4 md:p-6 text-black">
         {/* Alert Dialog */}
         <AlertDialog
           open={alert.open}
@@ -1102,22 +1103,21 @@ export default function ManagePenugasan() {
         />
 
         {/* ── Header ── */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-[32px] p-8 shadow-sm border border-gray-100/50 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
-          <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div>
-              <span className="bg-green-50/80 text-[#4A6D55] px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase inline-block mb-4 border border-green-100">
-                Operasional & Monitoring
-              </span>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Penugasan Aduan</h1>
-              <p className="text-gray-500 mt-2 font-medium text-sm md:text-base">Distribusi armada dan monitoring laporan masuk secara real-time.</p>
-            </div>
-          </div>
+    <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-[24px] p-8 shadow-sm border border-white/50 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full -mr-10 -mt-10 blur-2xl" />
+      <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div>
+          <span className="bg-white/60 text-[#4A6D55] px-4 py-1.5 rounded-full text-xs font-medium tracking-wider uppercase inline-block mb-3">
+            Operasional & Monitoring
+          </span>
+          <h1 className="text-3xl font-extrabold text-[#1A2E35] tracking-tight uppercase">Penugasan Aduan</h1>
+          <p className="text-[#5B7078] mt-2 font-medium">Distribusi armada dan monitoring laporan masuk secara real-time.</p>
         </div>
+      </div>
+    </div>
 
         {/* ── Stats ── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {[
             { label: "Total Tugas", value: stats.total, icon: ClipboardList, color: "text-slate-600", bg: "bg-slate-100/80" },
             { label: "Laporan Baru", value: stats.laporan_baru, icon: FileText, color: "text-red-600", bg: "bg-red-50" },
@@ -1303,14 +1303,13 @@ export default function ManagePenugasan() {
           laporan={selectedItem}
         />
 
-        {/* ── Modal Detail Penugasan (menggunakan komponen eksternal) ── */}
-        {showDetailPenugasan && selectedItem && (
-          <PenugasanDetail
-            penugasan={selectedItem}
-            onClose={() => { setShowDetailPenugasan(false); setSelectedItem(null); }}
-          />
-        )}
-      </div>
+      {/* ── Modal Detail Penugasan (menggunakan komponen eksternal) ── */}
+      {showDetailPenugasan && selectedItem && (
+        <PenugasanDetail
+          penugasan={selectedItem}
+          onClose={() => { setShowDetailPenugasan(false); setSelectedItem(null); }}
+        />
+      )}
     </div>
   );
 }

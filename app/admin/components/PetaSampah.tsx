@@ -210,9 +210,7 @@ async function exportToExcel(riwayatList: RiwayatSelesai[], tanggal: string) {
         const ket = isFirst ? 'Titik Awal (START)' : isLast ? 'Titik Akhir (END)' : `Titik Pengangkutan ${idx}`;
         detailRows.push([`  ${wp.urutan}.`, `  ${wp.nama}`, `  ${ket}`]);
       });
-    } else {
-      detailRows.push(['  Rute: Data rute tidak tersedia']);
-    }
+    } else
     detailRows.push(['', '', '']);
     if (i < riwayatList.length - 1) detailRows.push(['─────────────────────────────────────────────']);
     detailRows.push(['']);

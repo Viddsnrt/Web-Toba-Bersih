@@ -4,7 +4,7 @@ import axios from "axios";
 import Link from "next/link";
 import {
   Clock, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft,
-  Newspaper, Menu, X, MapPin, Phone, Mail, Facebook, Instagram,
+  Newspaper, Menu, X, MapPin, Phone, Mail, Facebook, Instagram, Leaf,
 } from 'lucide-react';
 
 interface Post {
@@ -91,29 +91,6 @@ export default function BeritaPage() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
-        :root {
-          --forest: #0D3D2B;
-          --forest-mid: #155235;
-          --lime: #4ADE80;
-          --lime-dim: #86EFAC;
-          --cream: #F8FAF7;
-          --warm-white: #FFFFFF;
-          --slate-900: #0F172A;
-          --slate-700: #334155;
-          --slate-500: #64748B;
-          --slate-200: #E2E8F0;
-          --slate-100: #F1F5F9;
-          --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-          --radius-sm: 10px;
-          --radius-md: 16px;
-          --radius-lg: 24px;
-          --radius-xl: 32px;
-          --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(13,61,43,0.08);
-          --shadow-hover: 0 8px 32px rgba(13,61,43,0.15);
-          --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
         * { box-sizing: border-box; }
         body { font-family: var(--font); background: var(--cream); color: var(--slate-900); margin: 0; -webkit-font-smoothing: antialiased; }
 
@@ -587,21 +564,29 @@ export default function BeritaPage() {
           flex-direction: column;
         }
         @media (min-width: 768px) {
-          .featured-card-inner { flex-direction: row; }
+          .featured-card-inner { flex-direction: row; align-items: stretch; }
         }
         .featured-card-img {
           position: relative;
           overflow: hidden;
           background: var(--slate-100);
           height: 260px;
+          aspect-ratio: 4 / 3;
         }
         @media (min-width: 768px) {
-          .featured-card-img { width: 50%; height: auto; }
+          .featured-card-img {
+            width: 50%;
+            height: auto;
+            aspect-ratio: unset;
+            min-height: 320px;
+            max-height: 420px;
+          }
         }
         .featured-card-img img {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          object-position: center 55%;
           transition: transform 0.6s ease;
         }
         .featured-card:hover .featured-card-img img { transform: scale(1.05); }
@@ -923,12 +908,8 @@ export default function BeritaPage() {
                 <p>Kabupaten Toba</p>
               </div>
             </div>
-            <button
-              aria-label="Tutup Menu"
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-2 bg-slate-50 rounded-full hover:bg-slate-100"
-            >
-              <X size={20} className="text-slate-900" />
+          <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+              <X size={24} color="var(--slate-900)" />
             </button>
           </div>
 
@@ -943,13 +924,10 @@ export default function BeritaPage() {
             </Link>
           ))}
 
-          <Link
-            href="/Warga"
-            onClick={() => setMobileMenuOpen(false)}
-            className="btn-ghost-green mt-4"
-          >
-            Lapor!
-          </Link>
+        <div style={{ padding: '16px 0', borderTop: '1px solid var(--slate-200)', marginTop: '8px', display: 'flex', gap: '12px' }}>
+            <Link href="/login" className="btn-ghost-green" style={{ flex: 1, justifyContent: 'center' }}>Login</Link>
+            <Link href="/Warga" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }}>Lapor Sekarang</Link>
+          </div>
         </div>
       )}
 
@@ -977,7 +955,9 @@ export default function BeritaPage() {
           </div>
           <div className="nav-actions">
             <Link href="/login" className="btn-ghost">Login</Link>
-            <Link href="/Warga" className="btn-primary">Lapor!</Link>
+            <Link href="/Warga" className="btn-primary">
+              <Leaf size={14} /> Lapor
+            </Link>
             <button
               className="menu-toggle"
               aria-label="Buka Menu"
@@ -1010,19 +990,22 @@ export default function BeritaPage() {
       <div className="sticky top-20 z-40 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-1">
           <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
-            {(['semua', 'berita', 'pengumuman'] as TabType[]).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-5 py-2 rounded-lg font-bold text-sm capitalize transition-all ${
-                  activeTab === tab
-                    ? tab === 'pengumuman' ? 'bg-orange-500 text-white shadow-sm' : 'bg-green-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-800'
-                }`}
-              >
-                {tab === 'semua' ? 'Semua' : tab === 'berita' ? 'Berita' : 'Pengumuman'}
-              </button>
-            ))}
+         {(['semua', 'berita', 'pengumuman'] as TabType[]).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-5 py-2 rounded-lg font-bold text-sm capitalize transition-all ${
+                activeTab === tab ? 'text-white shadow-sm' : 'text-slate-600 hover:text-slate-800'
+              }`}
+              style={
+                activeTab === tab
+                  ? { background: tab === 'pengumuman' ? '#F59E0B' : 'var(--forest)' }
+                  : undefined
+              }
+            >
+              {tab === 'semua' ? 'Semua' : tab === 'berita' ? 'Berita' : 'Pengumuman'}
+            </button>
+          ))}
           </div>
         </div>
       </div>

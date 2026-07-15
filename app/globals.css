@@ -1,5 +1,4 @@
-/* @import "tailwindcss";
-@import 'leaflet/dist/leaflet.css';
+@import "tailwindcss";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,6 +6,28 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* ── Palet warna DLH Toba (single source of truth) ── */
+  --forest: #0D3D2B;
+  --forest-mid: #155235;
+  --lime: #4ADE80;
+  --lime-dim: #86EFAC;
+  --amber: #F59E0B;
+  --cream: #F8FAF7;
+  --warm-white: #FFFFFF;
+  --slate-900: #0F172A;
+  --slate-700: #334155;
+  --slate-500: #64748B;
+  --slate-200: #E2E8F0;
+  --slate-100: #F1F5F9;
+  --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(13,61,43,0.08);
+  --shadow-hover: 0 8px 32px rgba(13,61,43,0.15);
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @theme inline {
@@ -16,7 +37,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheFme: dark) {
+@media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
@@ -27,7 +48,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-} */
+}
 
 @import "tailwindcss";
 @tailwind base;

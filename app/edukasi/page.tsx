@@ -72,30 +72,6 @@ export default function EdukasiListPage() {
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; }
-
-        :root {
-          --forest: #0D3D2B;
-          --forest-mid: #155235;
-          --lime: #4ADE80;
-          --lime-dim: #86EFAC;
-          --cream: #F8FAF7;
-          --warm-white: #FFFFFF;
-          --slate-900: #0F172A;
-          --slate-700: #334155;
-          --slate-500: #64748B;
-          --slate-200: #E2E8F0;
-          --slate-100: #F1F5F9;
-          --amber: #F59E0B;
-          --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-          --radius-sm: 10px;
-          --radius-md: 16px;
-          --radius-lg: 24px;
-          --radius-xl: 32px;
-          --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(13,61,43,0.08);
-          --shadow-hover: 0 8px 32px rgba(13,61,43,0.15);
-          --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
         html { scroll-behavior: smooth; }
         body { font-family: var(--font); background: var(--cream); color: var(--slate-900); margin: 0; -webkit-font-smoothing: antialiased; }
 

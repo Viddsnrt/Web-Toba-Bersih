@@ -368,9 +368,8 @@ export default function ManageWilayah() {
     warning: 'bg-yellow-50 border-yellow-200 text-yellow-700',
   };
 
-  return (
-    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 p-4 md:p-6 text-black">
-
+return (
+  <div className="w-full space-y-6 md:space-y-8 p-4 md:p-6 text-black">
       {/* AlertDialog */}
       <AlertDialog
         open={alertState.open}
@@ -425,23 +424,22 @@ export default function ManageWilayah() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {[
-          { label: 'Total', val: stats.total, icon: Building2, color: 'text-gray-600', bg: 'bg-gray-50' },
-          { label: 'Aktif', val: stats.active, icon: CircleCheck, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Nonaktif', val: stats.inactive, icon: PowerOff, color: 'text-red-600', bg: 'bg-red-50' },
-          { label: 'Total Luas', val: formatArea(stats.totalArea), icon: Map, color: 'text-purple-600', bg: 'bg-purple-50' },
-        ].map((s, i) => (
-          <div key={i} className="bg-white p-4 md:p-5 rounded-2xl border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
-            <div className={`p-3 rounded-xl ${s.bg} ${s.color}`}><s.icon size={24} /></div>
-            <div className="min-w-0">
-              <p className="text-[10px] md:text-xs font-medium text-gray-500 uppercase tracking-wider">{s.label}</p>
-              <p className="text-sm md:text-xl font-black truncate">{s.val}</p>
-            </div>
-          </div>
-        ))}
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  {[
+    { label: 'Total', val: stats.total, icon: Building2, color: 'text-gray-600', bg: 'bg-gray-50' },
+    { label: 'Aktif', val: stats.active, icon: CircleCheck, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Nonaktif', val: stats.inactive, icon: PowerOff, color: 'text-red-600', bg: 'bg-red-50' },
+    { label: 'Total Luas', val: formatArea(stats.totalArea), icon: Map, color: 'text-purple-600', bg: 'bg-purple-50' },
+  ].map((s, i) => (
+    <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+      <div className={`p-3 rounded-xl ${s.bg} ${s.color}`}><s.icon size={24} /></div>
+      <div className="min-w-0">
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{s.label}</p>
+        <p className="text-2xl font-black text-gray-900 mt-0.5 truncate">{s.val}</p>
       </div>
+    </div>
+  ))}
+</div>
 
       <div className="flex justify-end">
         <button
@@ -714,7 +712,7 @@ export default function ManageWilayah() {
                   <div className="col-span-2 md:col-span-1">
                     <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Nama & Kode</p>
                     <p className="font-extrabold text-gray-900 leading-tight">{viewingWilayah.name}</p>
-                    <p className="text-xs font-mono text-blue-600">#{viewingWilayah.code}</p>
+                    <p className="text-xs font-mono text-blue-600">{viewingWilayah.code}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Radius</p>
