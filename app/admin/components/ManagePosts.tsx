@@ -624,7 +624,7 @@ const openModal = (post: any = null) => {
                       <img
                         src={resolveImageUrl(post.imageUrl || post.image_url)}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
-                        onError={(e) => ((e.target as HTMLImageElement).src = "https://via.placeholder.com/600x400?text=No+Image")}
+                        onError={(e) => ((e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=No+Image")}
                         alt={post.title}
                       />
                       <div className={`absolute left-2.5 z-10 ${viewMode === "GRID" ? "top-3" : "top-2.5"}`}>
