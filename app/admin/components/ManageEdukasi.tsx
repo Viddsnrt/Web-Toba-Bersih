@@ -484,8 +484,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               >
                 <div className={`relative overflow-hidden bg-gray-100 shrink-0 ${viewMode === "GRID" ? "aspect-video w-full" : "aspect-video w-full sm:w-48 rounded-xl"}`}>
                   {item.mediaType === "IMAGE" ? (
-                    <img src={item.mediaUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out" alt={item.judul} onError={(e) => ((e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=No+Image")} />
-                  ) : (
+<img src={item.mediaUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out" alt={item.judul} onError={(e) => ((e.target as HTMLImageElement).src = "https://placehold.co/600x400?text=No+Image")} />                  ) : (
                     <video src={item.mediaUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out" muted />
                   )}
                   <div className={`absolute left-2.5 z-10 ${viewMode === "GRID" ? "top-3" : "top-2.5"}`}>

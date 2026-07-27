@@ -158,8 +158,6 @@ function isWaypointDilewati(waypoint: Waypoint, jalur: TitikJalur[]): boolean {
     (titik) => hitungJarakMeter(waypoint.lat, waypoint.lng, titik.lat, titik.lng) <= WAYPOINT_PASSED_RADIUS_M
   );
 }
-// ✅ BARU: ambil sampel titik GPS secara merata (dipakai sebagai fallback
-// tampilan rute di laporan PDF/Excel saat rute terjadwal tidak tersedia).
 function sampleJalur(jalur: TitikJalur[], maxPoints: number): TitikJalur[] {
   if (jalur.length <= maxPoints) return jalur;
   const step = (jalur.length - 1) / (maxPoints - 1);
@@ -220,8 +218,6 @@ async function exportToExcel(riwayatList: RiwayatSelesai[], tanggal: string) {
         detailRows.push([`  ${wp.urutan}.`, `  ${wp.nama}`, `  ${ket}`]);
       });
     } else if (r.jalurDilalui && r.jalurDilalui.length > 0) {
-      // ✅ BARU: fallback ke jejak GPS aktual saat rute terjadwal kosong,
-      // supaya sheet Excel tetap informatif (bukan blank).
       const sampled = sampleJalur(r.jalurDilalui, 10);
       detailRows.push(['  RUTE TERJADWAL TIDAK DIATUR — JEJAK GPS AKTUAL:']);
       detailRows.push(['  No.', '  Waktu', '  Koordinat']);
@@ -259,10 +255,6 @@ function buildPDFHtml(riwayatList: RiwayatSelesai[], tanggal: string): string {
     const waypoints = rute?.waypoints ?? [];
     const jalurGPS  = r.jalurDilalui ?? [];
 
-    // ✅ DIPERBAIKI: satu deklarasi `ruteHtml`, tiga kondisi —
-    // (1) ada rute terjadwal → tabel waypoint,
-    // (2) tidak ada rute terjadwal tapi ada jejak GPS → tabel jejak GPS (fallback),
-    // (3) tidak ada keduanya → pesan "tidak tersedia".
     let ruteHtml: string;
     if (waypoints.length > 0) {
       ruteHtml = `<table class="rute-table"><thead><tr><th>No</th><th>Nama Lokasi / Titik</th><th>Keterangan</th></tr></thead><tbody>
@@ -370,10 +362,6 @@ async function exportToPDF(riwayatList: RiwayatSelesai[], tanggal: string): Prom
   ]);
 
   const iframe = document.createElement('iframe');
-  // ✅ FIX: mulai dari tinggi besar (bukan 100px) supaya body TIDAK pernah
-  // ter-layout di container sempit — ini akar penyebab teks/footer terpotong,
-  // karena browser bisa saja meng-clip/mereflow konten pada container pendek
-  // sebelum kita sempat mengukur & memperbesar iframe.
   iframe.style.cssText =
     'position:fixed;top:-99999px;left:-99999px;width:794px;height:3000px;border:0;visibility:hidden;';
   document.body.appendChild(iframe);
@@ -383,24 +371,16 @@ async function exportToPDF(riwayatList: RiwayatSelesai[], tanggal: string): Prom
     if (!idoc) throw new Error('Tidak bisa membuat dokumen render PDF.');
 
     idoc.open();
-    // ✅ FIX: tambah padding-bottom sebagai buffer fisik di HTML agar baris
-    // terakhir (mis. footer) tidak kepotong akibat pembulatan subpixel
-    // saat html2canvas melakukan scale:2.
     idoc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/></head><body style="margin:0;padding:0 0 32px 0;">${buildPDFHtml(riwayatList, tanggal)}</body></html>`);
     idoc.close();
 
-    // ✅ FIX: tunggu font benar-benar siap (bukan cuma delay tetap) supaya
-    // scrollHeight yang diukur akurat.
     try {
       if ((idoc as any).fonts?.ready) await (idoc as any).fonts.ready;
     } catch {
-      /* fonts API tidak tersedia — abaikan, tetap lanjut pakai delay di bawah */
+      /* fonts API tidak tersedia — abaikan */
     }
     await new Promise((resolve) => setTimeout(resolve, 400));
 
-    // ✅ FIX: ukur tinggi konten SEBENARNYA dua kali (sebelum & sesudah
-    // resize iframe) untuk menangkap reflow yang masih terjadi, lalu
-    // tambahkan buffer 24px sebagai pengaman terakhir.
     let actualHeight = Math.max(idoc.body.scrollHeight, idoc.documentElement.scrollHeight);
     iframe.style.height = `${actualHeight}px`;
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
@@ -413,7 +393,6 @@ async function exportToPDF(riwayatList: RiwayatSelesai[], tanggal: string): Prom
     const captureHeight = actualHeight + 24;
     iframe.style.height = `${captureHeight}px`;
 
-    // beri waktu 1 frame lagi agar reflow dengan tinggi baru selesai
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
 
     const canvas = await html2canvas(idoc.body, {
@@ -616,33 +595,24 @@ export function TabTracking({ addAlert }: { addAlert: (type: AlertType, title: s
   const mapRef    = useRef<any>(null);
   const socketRef = useRef<Socket | null>(null);
 
-const flyToTruck = useCallback((lat: number, lng: number) => {
-  const doFly = () => {
+  const flyToTruck = useCallback((lat: number, lng: number) => {
     if (mapRef.current) {
       mapRef.current.flyTo([lat, lng], 15, { duration: 1.2, easeLinearity: 0.5 });
     }
-  };
-  if (mapRef.current) {
-    doFly();
-  } else {
-    // map belum siap, coba lagi setelah render
-    setTimeout(doFly, 300);
-  }
-}, []);
+  }, []);
 
-const handleSelectTruck = useCallback((truk: TrukAktif) => {
-  if (selectedTruk?.id === truk.id) {
-    // klik truk yang sama → re-center ke truk, tidak deselect
-    if (truk.currentLat != null && truk.currentLong != null) {
-      flyToTruck(truk.currentLat, truk.currentLong);
+  const handleSelectTruck = useCallback((truk: TrukAktif) => {
+    if (selectedTruk?.id === truk.id) {
+      if (truk.currentLat != null && truk.currentLong != null) {
+        flyToTruck(truk.currentLat, truk.currentLong);
+      }
+    } else {
+      setSelectedTruk(truk);
+      if (truk.currentLat != null && truk.currentLong != null) {
+        flyToTruck(truk.currentLat, truk.currentLong);
+      }
     }
-  } else {
-    setSelectedTruk(truk);
-    if (truk.currentLat != null && truk.currentLong != null) {
-      flyToTruck(truk.currentLat, truk.currentLong);
-    }
-  }
-}, [selectedTruk, flyToTruck]);
+  }, [selectedTruk, flyToTruck]);
 
   const handleExportExcel = async () => {
     if (riwayatSelesai.length === 0) return;
@@ -744,14 +714,14 @@ const handleSelectTruck = useCallback((truk: TrukAktif) => {
     });
 
     return () => { socket.disconnect(); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (trukAktifList.length === 0) return;
     fetchAllHistory();
-  }, [selectedDate, trukAktifList.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedDate, trukAktifList.length]);
 
-  useEffect(() => { fetchRiwayatSelesai(riwayatDate); }, [riwayatDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchRiwayatSelesai(riwayatDate); }, [riwayatDate]);
 
   const fetchTrukAktif = async () => {
     try {
@@ -761,7 +731,6 @@ const handleSelectTruck = useCallback((truk: TrukAktif) => {
       if (res.data.success) {
         const semuaTruk = res.data.data as TrukAktif[];
         setTrukAktifList(semuaTruk);
-        // if (semuaTruk.length === 0) addAlert('info', 'Tidak Ada Armada', 'Belum ada armada yang memiliki jadwal hari ini.');
       } else { setTrukAktifList([]); }
     } catch { setTrukAktifList([]); addAlert('error', 'Gagal Memuat Armada', 'Tidak dapat terhubung ke server.'); }
   };
@@ -847,7 +816,7 @@ const handleSelectTruck = useCallback((truk: TrukAktif) => {
     useEffect(() => {
       if (selectedTruk?.currentLat != null && selectedTruk?.currentLong != null)
         map.flyTo([selectedTruk.currentLat, selectedTruk.currentLong], 15, { duration: 1.2, easeLinearity: 0.5 });
-    }, [selectedTruk?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [selectedTruk?.id]);
     return null;
   };
 
@@ -877,77 +846,68 @@ const handleSelectTruck = useCallback((truk: TrukAktif) => {
         isExporting={isExporting}
       />
 
-      {/* Header Bar */}
-{/* ── STAT CARDS TRACKING ─────────────────────────────── */}
-<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-  {/* Card 1 — Armada Aktif */}
-  <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-    <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
-      <Truck size={22} className="text-white" />
-    </div>
-    <div>
-      <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">Armada Aktif</p>
-      <p className="text-3xl font-black text-white leading-none mt-0.5">
-        {trukAktifList.length}
-        <span className="text-sm font-semibold text-emerald-300 ml-1">unit</span>
-      </p>
-      <p className="text-[10px] text-emerald-300 mt-1">
-        {trukAktifList.filter(t => t.status === 'BUSY').length} sedang beroperasi
-      </p>
-    </div>
-  </div>
+      {/* STAT CARDS TRACKING */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+            <Truck size={22} className="text-white" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">Armada Aktif</p>
+            <p className="text-3xl font-black text-white leading-none mt-0.5">
+              {trukAktifList.length}
+              <span className="text-sm font-semibold text-emerald-300 ml-1">unit</span>
+            </p>
+            <p className="text-[10px] text-emerald-300 mt-1">
+              {trukAktifList.filter(t => t.status === 'BUSY').length} sedang beroperasi
+            </p>
+          </div>
+        </div>
 
-  {/* Card 2 — Total Jarak Hari Ini */}
-  <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-    <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
-      <Route size={22} className="text-white" />
-    </div>
-    <div>
-      <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">Total Jarak Hari Ini</p>
-      <p className="text-3xl font-black text-white leading-none mt-0.5">
-        {(
-          Object.values(historyData).reduce((sum, e) => sum + (e.jarakTotalKm ?? 0), 0) +
-          riwayatSelesai.reduce((sum, r) => sum + normalizeRingkasan(r.ringkasan).jarakTempuhKm, 0)
-        ).toFixed(1)}
-        <span className="text-sm font-semibold text-emerald-300 ml-1">km</span>
-      </p>
-      <p className="text-[10px] text-emerald-300 mt-1">
-        Aktif + selesai hari ini
-      </p>
-    </div>
-  </div>
+        <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
+            <Route size={22} className="text-white" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">Total Jarak Hari Ini</p>
+            <p className="text-3xl font-black text-white leading-none mt-0.5">
+              {(
+                Object.values(historyData).reduce((sum, e) => sum + (e.jarakTotalKm ?? 0), 0) +
+                riwayatSelesai.reduce((sum, r) => sum + normalizeRingkasan(r.ringkasan).jarakTempuhKm, 0)
+              ).toFixed(1)}
+              <span className="text-sm font-semibold text-emerald-300 ml-1">km</span>
+            </p>
+            <p className="text-[10px] text-emerald-300 mt-1">Aktif + selesai hari ini</p>
+          </div>
+        </div>
 
-  {/* Card 3 — Progress Riwayat */}
-  <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-2xl p-5 shadow-sm relative overflow-hidden">
-    <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-white/5" />
-    <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest mb-2">Selesai Hari Ini</p>
-    <div className="flex items-end gap-2 mb-3">
-      <p className="text-3xl font-black text-white leading-none">{riwayatSelesai.length}</p>
-      <p className="text-sm text-emerald-300 mb-0.5 font-semibold">armada</p>
-    </div>
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-[10px]">
-        <span className="text-emerald-300 font-semibold">Progress operasional</span>
-        <span className="text-white font-black">
-          {trukAktifList.length + riwayatSelesai.length > 0
-            ? Math.round((riwayatSelesai.length / (trukAktifList.length + riwayatSelesai.length)) * 100)
-            : 0}%
-        </span>
+        <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-2xl p-5 shadow-sm relative overflow-hidden">
+          <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-white/5" />
+          <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest mb-2">Selesai Hari Ini</p>
+          <div className="flex items-end gap-2 mb-3">
+            <p className="text-3xl font-black text-white leading-none">{riwayatSelesai.length}</p>
+            <p className="text-sm text-emerald-300 mb-0.5 font-semibold">armada</p>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-[10px]">
+              <span className="text-emerald-300 font-semibold">Progress operasional</span>
+              <span className="text-white font-black">
+                {trukAktifList.length + riwayatSelesai.length > 0
+                  ? Math.round((riwayatSelesai.length / (trukAktifList.length + riwayatSelesai.length)) * 100)
+                  : 0}%
+              </span>
+            </div>
+            <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+              <div className="h-full bg-white rounded-full transition-all duration-700"
+                style={{
+                  width: `${trukAktifList.length + riwayatSelesai.length > 0
+                    ? (riwayatSelesai.length / (trukAktifList.length + riwayatSelesai.length)) * 100
+                    : 0}%`
+                }} />
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
-        <div className="h-full bg-white rounded-full transition-all duration-700"
-          style={{
-            width: `${trukAktifList.length + riwayatSelesai.length > 0
-              ? (riwayatSelesai.length / (trukAktifList.length + riwayatSelesai.length)) * 100
-              : 0}%`
-          }} />
-      </div>
-    </div>
-  </div>
-</div>
-
-{/* Header Bar */}
-<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"></div>
 
       {/* Map + Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ height: '680px' }}>
@@ -1137,10 +1097,9 @@ const handleSelectTruck = useCallback((truk: TrukAktif) => {
 }
 
 // ============================================================
-// TAB LAPORAN — REDESIGNED  ✨
+// TAB LAPORAN — REDESIGNED
 // ============================================================
 
-// ─── Status config ─────────────────────────────────────────
 const STATUS_CONFIG = {
   PENDING: {
     label: 'Pending',  color: '#EF4444',
@@ -1178,7 +1137,6 @@ function buildMarkerHtml(status: string, isSelected: boolean) {
   return `<div style="background:${cfg.color};width:${size}px;height:${size}px;border-radius:50%;border:2.5px solid white;transition:all 0.2s;${ring}"></div>`;
 }
 
-// ─── Donut chart mini ───────────────────────────────────────
 function DonutChart({ pending, diproses, selesai, total }: {
   pending: number; diproses: number; selesai: number; total: number;
 }) {
@@ -1201,22 +1159,13 @@ function DonutChart({ pending, diproses, selesai, total }: {
   );
 }
 
-function ProgressBar({ value, color }: { value: number; color: string }) {
-  return (
-    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${value}%`, background: color }} />
-    </div>
-  );
-}
-
 function TabLaporan({ addAlert }: { addAlert: (type: AlertType, title: string, msg: string) => void }) {
-  const mapElRef      = useRef<HTMLDivElement>(null);
-  const leafletMapRef = useRef<any>(null);
-  const markersRef    = useRef<any[]>([]);
-  const LRef          = useRef<any>(null);
-
-  const [mapElReady, setMapElReady]           = useState(false);       // ← TAMBAH INI
+  const mapRef          = useRef<HTMLDivElement>(null);
+  const leafletMapRef   = useRef<any>(null);
+  const markersRef      = useRef<any[]>([]);
+  const LRef            = useRef<any>(null);
   const [mapInitialized, setMapInitialized]   = useState(false);
+
   const [laporanList, setLaporanList]               = useState<any[]>([]);
   const [loading, setLoading]                       = useState(true);
   const [selectedStatus, setSelectedStatus]         = useState('semua');
@@ -1229,98 +1178,48 @@ function TabLaporan({ addAlert }: { addAlert: (type: AlertType, title: string, m
   const [searchQuery, setSearchQuery]               = useState('');
   const [sortBy, setSortBy]                         = useState<'date' | 'status'>('date');
 
-  // ── Init Leaflet ─────────────────────────────────────────
-// ── Init Leaflet ─────────────────────────────────────────
+  // ── Init Leaflet ──
+  useEffect(() => {
+    let cancelled = false;
+    const init = async () => {
+      try {
+        await import('leaflet/dist/leaflet.css');
+        const L = (await import('leaflet')).default;
+        if (cancelled) return;
+        LRef.current = L;
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+          iconUrl:       'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+          shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        });
 
-const mapCallbackRef = useCallback((node: HTMLDivElement | null) => {
-  if (node !== null) {
-    setMapElReady(true);
-    (mapCallbackRef as any)._node = node;
-  } else {
-    setMapElReady(false);
-    (mapCallbackRef as any)._node = null;
-  }
-}, []);
-
-
-
-// ── Init Leaflet — dipanggil ulang saat mapElReady berubah ──
-useEffect(() => {
-  if (!mapElReady) return; // tunggu DOM element siap dulu
-
-  let cancelled = false;
-
-  const init = async () => {
-    try {
-      await import('leaflet/dist/leaflet.css');
-      const L = (await import('leaflet')).default;
-
-      try { await import('leaflet.heat'); } catch {}
-
-      if (cancelled) return;
-
-      LRef.current = L;
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-        iconUrl:       'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-        shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      });
-
-      // KUNCI: pakai _node dari mapCallbackRef, bukan mapElRef
-      const node = (mapCallbackRef as any)._node as HTMLDivElement | null;
-      if (!cancelled && node && !(node as any)._leaflet_id) {
-        const map = L.map(node, { zoomControl: false }).setView([2.3333, 99.0632], 10);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap',
-          maxZoom: 19,
-        }).addTo(map);
-
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        leafletMapRef.current = map;
-        setMapInitialized(true); // ← ini yang membuat loading overlay hilang
+        if (!cancelled && mapRef.current && !(mapRef.current as any)._leaflet_id) {
+          const map = L.map(mapRef.current, { zoomControl: false }).setView([2.3333, 99.0632], 10);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap',
+            maxZoom: 19,
+          }).addTo(map);
+          L.control.zoom({ position: 'bottomright' }).addTo(map);
+          leafletMapRef.current = map;
+          setMapInitialized(true);
+        }
+      } catch (err) {
+        console.error('Init peta gagal:', err);
+        addAlert('error', 'Gagal Memuat Peta', 'Library peta tidak dapat dimuat.');
       }
-    } catch (err) {
-      console.error('Init peta gagal:', err);
-      addAlert('error', 'Gagal Memuat Peta', 'Library peta tidak dapat dimuat.');
+    };
+    init();
+    return () => { cancelled = true; if (leafletMapRef.current) { leafletMapRef.current.remove(); leafletMapRef.current = null; setMapInitialized(false); } };
+  }, [addAlert]);
+
+  useEffect(() => {
+    if (activeView === 'map' && leafletMapRef.current && mapInitialized) {
+      setTimeout(() => leafletMapRef.current?.invalidateSize(), 300);
     }
-  };
+  }, [activeView, mapInitialized]);
 
-  init();
-
-  return () => {
-    cancelled = true;
-    if (leafletMapRef.current) {
-      leafletMapRef.current.remove();
-      leafletMapRef.current = null;
-      setMapInitialized(false);
-    }
-  };
-}, [mapElReady]); // ← listen ke mapElReady bukan []
-
-// ── Invalidate size saat tab peta aktif ──
-useEffect(() => {
-  if (activeView === 'map' && leafletMapRef.current && mapInitialized) {
-    // Delay lebih panjang agar DOM benar-benar visible
-    setTimeout(() => leafletMapRef.current?.invalidateSize(), 300);
-  }
-}, [activeView, mapInitialized]);
-
-
-
-// ── Invalidate size saat activeView berubah ke 'map' ──
-useEffect(() => {
-  if (activeView === 'map' && leafletMapRef.current && mapInitialized) {
-    setTimeout(() => {
-      leafletMapRef.current?.invalidateSize();
-    }, 100);
-  }
-}, [activeView, mapInitialized]);
-
-
-  // ── Fetch ────────────────────────────────────────────────
+  // ── Fetch ──
   const fetchLaporan = async () => {
     setLoading(true);
     try {
@@ -1337,9 +1236,9 @@ useEffect(() => {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchLaporan(); }, []); // eslint-disable-line
+  useEffect(() => { fetchLaporan(); }, []);
 
-  // ── Markers ──────────────────────────────────────────────
+  // ── Markers ──
   useEffect(() => {
     const L   = LRef.current;
     const map = leafletMapRef.current;
@@ -1362,44 +1261,15 @@ useEffect(() => {
       markersRef.current.push(marker);
     });
 
-      const heatPoints = fil.filter((l) => { const lat = parseFloat(l.latitude); const lng = parseFloat(l.longitude); return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0; })
-        .map((l) => [parseFloat(l.latitude), parseFloat(l.longitude), 0.6]);
-if (heatPoints.length > 0 && (L as any).heatLayer) {
-  try {
-    const mapContainer = map.getContainer();
-    // ✅ Pastikan container visible dan punya ukuran
-    if (mapContainer && mapContainer.offsetWidth > 0 && mapContainer.offsetHeight > 0) {
-      // ✅ Tambahkan delay kecil untuk memastikan map sudah siap
-      setTimeout(() => {
-        try {
-          const heat = (L as any).heatLayer(heatPoints, {
-            radius: 28,
-            blur: 18,
-            maxZoom: 12,
-            minOpacity: 0.3,
-            gradient: { 0.2: '#34d399', 0.5: '#fbbf24', 0.8: '#f87171', 1.0: '#dc2626' }
-          });
-          heat.addTo(map);
-          markersRef.current.push(heat);
-        } catch (innerErr) {
-          console.warn('Heatmap add failed:', innerErr);
-        }
-      }, 100);
-    }
-  } catch (e) {
-    console.warn('Heatmap skip (container not ready):', e);
-  }
-}
-
     if (markersRef.current.length > 0) {
       try {
         const latLngs = fil.filter((l) => !isNaN(parseFloat(l.latitude)) && !isNaN(parseFloat(l.longitude))).map((l) => [parseFloat(l.latitude), parseFloat(l.longitude)] as [number, number]);
         if (latLngs.length > 0) map.fitBounds(L.latLngBounds(latLngs), { padding: [40, 40] });
       } catch {}
     }
-  }, [laporanList, selectedStatus, selectedKecamatan, selectedLaporan]); // eslint-disable-line
+  }, [laporanList, selectedStatus, selectedKecamatan, selectedLaporan]);
 
-  // ── Stats ────────────────────────────────────────────────
+  // ── Stats ──
   const total     = laporanList.length;
   const pending   = laporanList.filter((l) => l.status === 'PENDING').length;
   const diproses  = laporanList.filter((l) => l.status === 'DITINDAKLANJUTI').length;
@@ -1421,15 +1291,12 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
       return (order[a.status as StatusKey] ?? 3) - (order[b.status as StatusKey] ?? 3);
     });
 
-  const activeFilterCount = selectedKecamatan !== 'semua' ? 1 : 0;
-
   return (
     <div className="space-y-4">
 
-      {/* ── STAT CARDS ─────────────────────────────────────── */}
+      {/* ── STAT CARDS ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-2">
 
-        {/* Donut + list - BACKGROUND HIJAU */}
         <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-2xl shadow-sm p-6 flex items-center gap-5">
           <svg width="80" height="80" viewBox="0 0 80 80">
             <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
@@ -1471,7 +1338,6 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
           </div>
         </div>
 
-        {/* Progress bars - BACKGROUND HIJAU */}
         <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-2xl shadow-sm p-5 space-y-3">
           <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest">Distribusi Status</p>
           {([
@@ -1498,7 +1364,6 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
           ))}
         </div>
 
-         {/* Resolution rate - BACKGROUND HIJAU (tetap) */}
         <div className="bg-gradient-to-br from-[#064E3B] to-[#065F46] rounded-2xl shadow-sm p-5 flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -top-4 -right-4 w-24 h-24 rounded-full bg-white/5" />
           <div className="absolute -bottom-6 -left-6 w-32 h-32 rounded-full bg-white/5" />
@@ -1520,11 +1385,10 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
         </div>
       </div>
 
-      {/* ── TOOLBAR ─────────────────────────────────────────── */}
+      {/* ── TOOLBAR ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-2 flex-wrap">
-            {/* View toggle */}
             <div className="flex bg-gray-100 rounded-xl p-1 gap-0.5">
               <button onClick={() => setActiveView('map')}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${activeView === 'map' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}>
@@ -1536,20 +1400,11 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
               </button>
             </div>
 
-            {/* Filter button */}
             <button onClick={() => setShowFilter(!showFilter)}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all ${showFilter ? 'bg-[#064E3B] text-white border-[#064E3B]' : 'border-gray-200 text-gray-600 hover:border-gray-300 bg-white'}`}>
               <Filter size={12} />Filter
-              {activeFilterCount > 0 && <span className="w-4 h-4 bg-red-500 text-white rounded-full text-[9px] font-black flex items-center justify-center">{activeFilterCount}</span>}
             </button>
-            {selectedKecamatan !== 'semua' && (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border bg-blue-100 text-blue-700 border-blue-200">
-                <MapPin size={9} />{selectedKecamatan}
-                <button onClick={() => setSelectedKecamatan('semua')}><X size={9} /></button>
-              </span>
-            )}
           </div>
-          {/* Right side */}
 
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400 font-medium hidden sm:block">{filtered.length} laporan</span>
@@ -1559,7 +1414,6 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
           </div>
         </div>
 
-        {/* Filter panel */}
         {showFilter && (
           <div className="mt-3 pt-3 border-t border-gray-100">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1582,101 +1436,79 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
                   })}
                 </div>
               </div>
-              {/* <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2 block">Kecamatan</label>
-                <select value={selectedKecamatan} onChange={(e) => setSelectedKecamatan(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 outline-none focus:border-emerald-300">
-                  <option value="semua">Semua Kecamatan</option>
-                  {kecamatanList.map((k) => <option key={k} value={k}>{k}</option>)}
-                </select>
-              </div> */}
             </div>
-            {selectedKecamatan !== 'semua' && (
-              <button onClick={() => setSelectedKecamatan('semua')}
-                className="mt-2 text-[11px] font-bold text-red-500 hover:text-red-600 flex items-center gap-1">
-                <X size={10} /> Reset filter
-              </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── MAP VIEW ── */}
+      <div
+        className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+        style={{ height: 560, display: activeView === 'map' ? 'block' : 'none' }}
+      >
+        {loading ? (
+          <div className="h-full flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-sm font-bold text-gray-500">Memuat data peta...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="relative h-full">
+            <div ref={mapRef} className="h-full w-full" />
+            {!mapInitialized && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-[1000]">
+                <div className="text-center">
+                  <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                  <p className="text-xs font-bold text-gray-400">Memuat peta...</p>
+                </div>
+              </div>
+            )}
+
+            <div className="absolute bottom-10 left-3 z-[999] bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-lg p-3 min-w-[120px]">
+              <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-2">Legenda</p>
+              {(Object.entries(STATUS_CONFIG) as [StatusKey, (typeof STATUS_CONFIG)[StatusKey]][]).map(([key, cfg]) => (
+                <button key={key}
+                  onClick={() => setSelectedStatus(selectedStatus === key ? 'semua' : key)}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all w-full text-left mb-1 last:mb-0 ${selectedStatus === key ? `${cfg.bg} ${cfg.border} border` : 'hover:bg-gray-50'}`}>
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cfg.color }} />
+                  <span className="text-[10px] font-bold text-gray-700 flex-1">{cfg.label}</span>
+                  <span className="text-[10px] font-black" style={{ color: cfg.color }}>
+                    {laporanList.filter((l) => l.status === key).length}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="absolute top-3 left-3 z-[999] bg-white/95 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm px-3 py-1.5 flex items-center gap-2">
+              <Activity size={12} className="text-emerald-500" />
+              <span className="text-[10px] font-black text-gray-700">{filtered.length} titik ditampilkan</span>
+              {selectedStatus !== 'semua' && (
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${getStatusCfg(selectedStatus).badge}`}>
+                  {getStatusCfg(selectedStatus).label}
+                </span>
+              )}
+            </div>
+
+            {filtered.length === 0 && !loading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-[998]">
+                <div className="text-center p-6">
+                  <MapIcon size={40} className="text-gray-300 mx-auto mb-3" />
+                  <p className="font-bold text-gray-600 mb-1">Tidak ada laporan</p>
+                  <p className="text-xs text-gray-400 mb-3">Ubah filter untuk melihat data</p>
+                  <button
+                    onClick={() => { setSelectedStatus('semua'); setSelectedKecamatan('semua'); }}
+                    className="px-4 py-2 bg-[#064E3B] text-white rounded-xl text-xs font-bold">
+                    Reset Filter
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}
       </div>
 
-      {/* ── MAP VIEW ────────────────────────────────────────── */}
-     <div
-  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
-  style={{ height: 560, display: activeView === 'map' ? 'block' : 'none' }}
->
-  {loading ? (
-    <div className="h-full flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-sm font-bold text-gray-500">Memuat data peta...</p>
-      </div>
-    </div>
-  ) : (
-    <div className="relative h-full">
-      {/*
-       * PENTING: div ini SELALU ada di DOM (tidak conditional),
-       * sehingga Leaflet bisa membaca ukuran container dengan benar.
-       */}
-      <div ref={mapCallbackRef} className="h-full w-full" />
-
-      {/* Loading overlay saat Leaflet belum siap */}
-      {!mapInitialized && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-[1000]">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-            <p className="text-xs font-bold text-gray-400">Memuat peta...</p>
-          </div>
-        </div>
-      )}
-
-    {/* Legend */}
-<div className="absolute bottom-10 left-3 z-[999] bg-white/95 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-lg p-3 min-w-[120px]">
-  <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-2">Legenda</p>
-  {(Object.entries(STATUS_CONFIG) as [StatusKey, (typeof STATUS_CONFIG)[StatusKey]][]).map(([key, cfg]) => (
-    <button key={key}
-      onClick={() => setSelectedStatus(selectedStatus === key ? 'semua' : key)}
-      className={`flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all w-full text-left mb-1 last:mb-0 ${selectedStatus === key ? `${cfg.bg} ${cfg.border} border` : 'hover:bg-gray-50'}`}>
-      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cfg.color }} />
-      <span className="text-[10px] font-bold text-gray-700 flex-1">{cfg.label}</span>
-      <span className="text-[10px] font-black" style={{ color: cfg.color }}>
-        {laporanList.filter((l) => l.status === key).length}
-      </span>
-    </button>
-  ))}
-</div>
-
-{/* Active count chip */}
-<div className="absolute top-3 left-3 z-[999] bg-white/95 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm px-3 py-1.5 flex items-center gap-2">
-  <Activity size={12} className="text-emerald-500" />
-  <span className="text-[10px] font-black text-gray-700">{filtered.length} titik ditampilkan</span>
-  {selectedStatus !== 'semua' && (
-    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${getStatusCfg(selectedStatus).badge}`}>
-      {getStatusCfg(selectedStatus).label}
-    </span>
-  )}
-</div>
-
-      {/* Empty overlay */}
-      {filtered.length === 0 && !loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm z-[998]">
-          <div className="text-center p-6">
-            <MapIcon size={40} className="text-gray-300 mx-auto mb-3" />
-            <p className="font-bold text-gray-600 mb-1">Tidak ada laporan</p>
-            <p className="text-xs text-gray-400 mb-3">Ubah filter untuk melihat data</p>
-            <button
-              onClick={() => { setSelectedStatus('semua'); setSelectedKecamatan('semua'); }}
-              className="px-4 py-2 bg-[#064E3B] text-white rounded-xl text-xs font-bold">
-              Reset Filter
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )}
-      </div>
-      {/* ── LIST VIEW ────────────────────────────────────────── */}
+      {/* ── LIST VIEW ── */}
       {activeView === 'list' && (
         <div>
           {loading ? (
@@ -1702,59 +1534,50 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
               {filtered.map((l) => {
                 const cfg = getStatusCfg(l.status);
                 return (
-                <div key={l.id} onClick={() => { setSelectedLaporan(l); setShowDetail(true); }}
-                  className="bg-white rounded-2xl border border-gray-100 hover:border-emerald-200 hover:shadow-md transition-all cursor-pointer overflow-hidden group">
+                  <div key={l.id} onClick={() => { setSelectedLaporan(l); setShowDetail(true); }}
+                    className="bg-white rounded-2xl border border-gray-100 hover:border-emerald-200 hover:shadow-md transition-all cursor-pointer overflow-hidden group">
 
-                  {/* Foto */}
-                  <div className="h-44 bg-gray-100 relative overflow-hidden">
-                    {l.photoUrl ? (
-                      <img src={l.photoUrl} alt="Laporan" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 gap-2">
-                        <FileText size={32} className="text-gray-300" />
-                        <span className="text-[10px] text-gray-300 font-medium">Tidak ada foto</span>
-                      </div>
-                    )}
-                    {/* Hover arrow */}
-                    <div className="absolute top-2 right-2 w-7 h-7 bg-white/90 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
-                      <ChevronRight size={13} className="text-gray-600" />
-                    </div>
-                  </div>
-
-                  {/* Info di bawah foto */}
-                  <div className="p-4 space-y-2.5">
-                    {/* Status badge */}
-                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-full ${cfg.badge}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                      {cfg.label}
-                    </span>
-
-                    {/* Deskripsi */}
-                    <p className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">
-                      {l.description || 'Tanpa deskripsi'}
-                    </p>
-
-                    {/* Meta: lokasi + tanggal */}
-                    <div className="flex items-center justify-between text-[10px] font-medium text-gray-400 pt-1 border-t border-gray-50">
-                      {l.location?.name
-                        ? <span className="flex items-center gap-1 truncate"><MapPin size={9} className="shrink-0 text-emerald-500" /><span className="truncate">{l.location.name}</span></span>
-                        : <span />
-                      }
-                      {l.createdAt && (
-                        <span className="flex items-center gap-1 shrink-0 ml-2">
-                          <Calendar size={9} />
-                          {new Date(l.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                        </span>
+                    <div className="h-44 bg-gray-100 relative overflow-hidden">
+                      {l.photoUrl ? (
+                        <img src={l.photoUrl} alt="Laporan" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 gap-2">
+                          <FileText size={32} className="text-gray-300" />
+                          <span className="text-[10px] text-gray-300 font-medium">Tidak ada foto</span>
+                        </div>
                       )}
+                      <div className="absolute top-2 right-2 w-7 h-7 bg-white/90 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
+                        <ChevronRight size={13} className="text-gray-600" />
+                      </div>
+                    </div>
+
+                    <div className="p-4 space-y-2.5">
+                      <span className={`inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-full ${cfg.badge}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                        {cfg.label}
+                      </span>
+
+                      <p className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug">
+                        {l.description || 'Tanpa deskripsi'}
+                      </p>
+
+                      <div className="flex items-center justify-between text-[10px] font-medium text-gray-400 pt-1 border-t border-gray-50">
+                        {l.location?.name
+                          ? <span className="flex items-center gap-1 truncate"><MapPin size={9} className="shrink-0 text-emerald-500" /><span className="truncate">{l.location.name}</span></span>
+                          : <span />
+                        }
+                        {l.createdAt && (
+                          <span className="flex items-center gap-1 shrink-0 ml-2">
+                            <Calendar size={9} />
+                            {new Date(l.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-
                 );
               })}
             </div>
-
-
           )}
           {!loading && filtered.length > 0 && (
             <p className="text-center text-xs text-gray-400 font-medium mt-4">Menampilkan {filtered.length} dari {laporanList.length} laporan</p>
@@ -1762,7 +1585,7 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
         </div>
       )}
 
-      {/* ── DETAIL MODAL ─────────────────────────────────────── */}
+      {/* ── DETAIL MODAL ── */}
       {showDetail && selectedLaporan && (
         <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDetail(false)} />
@@ -1844,7 +1667,7 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
 }
 
 // ============================================================
-// MAIN COMPONENT  (tidak berubah)
+// MAIN COMPONENT
 // ============================================================
 export default function PetaSampah() {
   const [activeTab, setActiveTab] = useState<'tracking' | 'laporan'>('tracking');
@@ -1874,12 +1697,12 @@ export default function PetaSampah() {
           </div>
         </div>
 
-      <div style={{ display: activeTab === 'tracking' ? 'block' : 'none' }}>
-        <TabTracking addAlert={addAlert} />
-      </div>
-      <div style={{ display: activeTab === 'laporan' ? 'block' : 'none' }}>
-        <TabLaporan addAlert={addAlert} />
-      </div>
+        <div style={{ display: activeTab === 'tracking' ? 'block' : 'none' }}>
+          <TabTracking addAlert={addAlert} />
+        </div>
+        <div style={{ display: activeTab === 'laporan' ? 'block' : 'none' }}>
+          <TabLaporan addAlert={addAlert} />
+        </div>
       </div>
     </>
   );

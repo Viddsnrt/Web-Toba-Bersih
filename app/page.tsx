@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion, AnimatePresence,Variants} from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import {
     Mail, Instagram, Facebook, ArrowRight, ChevronRight,
-    MapPin, Phone, Clock, Images, X, Eye, ChevronLeft, Menu, Leaf,
+    MapPin, Phone, Clock, Images, X, Eye, ChevronLeft, Leaf,
     Users, Target, Award
 } from 'lucide-react';
 
@@ -45,14 +45,11 @@ const useHomeData = () => {
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
-            const rawBase = process.env.NEXT_PUBLIC_API_URL || '';
-            const BASE = rawBase ? rawBase.replace(/\/$/, '') + '/api' : '/api';
-
             try {
                 const [resEdu, resPosts, resAlbums] = await Promise.all([
-                    axios.get(`${BASE}/edukasi`).catch(() => ({ data: [] })),
-                    axios.get(`${BASE}/posts`).catch(() => ({ data: [] })),
-                    axios.get(`${BASE}/galleries/albums`).catch(() => ({ data: [] }))
+                    axios.get('/api/edukasi').catch(() => ({ data: [] })),
+                    axios.get('/api/posts').catch(() => ({ data: [] })),
+                    axios.get('/api/galleries/albums').catch(() => ({ data: [] }))
                 ]);
 
                 setEducations((Array.isArray(resEdu.data) ? resEdu.data : (resEdu.data?.data ?? [])).slice(0, 3));
@@ -70,7 +67,7 @@ const useHomeData = () => {
     return { posts, albums, educations, loading };
 };
 
-       const fadeUp: Variants = {
+const fadeUp: Variants = {
     hidden: { opacity: 0, y: 15 },
     visible: {
         opacity: 1,
@@ -86,76 +83,62 @@ const staggerContainer: Variants = {
         transition: { staggerChildren: 0.1 }
     }
 };
-          // ==========================================
-          // 4. SUB-COMPONENTS
-          // ==========================================
-          const Navbar = () => {
-              const [isScrolled, setIsScrolled] = useState(false);
-              const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-              useEffect(() => {
-                  const handleScroll = () => setIsScrolled(window.scrollY > 50);
-                  window.addEventListener('scroll', handleScroll);
-                  return () => window.removeEventListener('scroll', handleScroll);
-              }, []);
+// ==========================================
+// 3. NAVBAR COMPONENT (DIPERBAIKI)
+// ==========================================
+const Navbar = () => {
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => setIsScrolled(window.scrollY > 50);
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     return (
-        <>
-            <nav className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-slate-900/95 backdrop-blur-md border-b border-slate-800 py-3 shadow-md' : 'bg-transparent py-5'}`}>
-                <div className="max-w-7xl mx-auto px-6 lg:px-8 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-lg">
-                        <Image src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg" alt="Logo Toba" width={40} height={40} className="transition-transform group-hover:scale-105" unoptimized />
-                        <div className="flex flex-col">
-                            <h1 className="font-bold text-sm tracking-tight transition-colors text-white">Dinas Lingkungan Hidup</h1>
-                            <p className="text-[10px] font-bold tracking-widest uppercase text-emerald-400">Kabupaten Toba</p>
-                        </div>
-                    </Link>
-
-                    <div className="hidden md:flex items-center gap-2">
-                        {NAV_LINKS.map((item) => (
-                            <Link key={item} href={navHref(item)} className="px-4 py-2 rounded-lg text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-emerald-500 text-white/90 hover:text-white hover:bg-white/10">
-                                {item}
-                            </Link>
-                        ))}
+        <nav className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-slate-900/95 backdrop-blur-md border-b border-slate-800 py-3 shadow-md' : 'bg-transparent py-5'}`}>
+            <div className="max-w-7xl mx-auto px-6 lg:px-8 flex items-center justify-between">
+                {/* Logo */}
+                <Link href="/" className="flex items-center gap-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-lg">
+                    <Image src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg" alt="Logo Toba" width={40} height={40} className="transition-transform group-hover:scale-105" unoptimized />
+                    <div className="flex flex-col">
+                        <h1 className="font-bold text-sm tracking-tight transition-colors text-white">Dinas Lingkungan Hidup</h1>
+                        <p className="text-[10px] font-bold tracking-widest uppercase text-emerald-400">Kabupaten Toba</p>
                     </div>
+                </Link>
 
-                    <div className="hidden md:flex items-center gap-3">
-                        <Link href="/login" className="text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 text-white hover:bg-white/10">Login</Link>
-                        <Link href="/Warga" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">
-                            <Leaf size={16} /> Lapor
+                {/* Navigasi Desktop */}
+                <div className="hidden md:flex items-center gap-2">
+                    {NAV_LINKS.map((item) => (
+                        <Link key={item} href={navHref(item)} className="px-4 py-2 rounded-lg text-sm font-semibold transition-all focus-visible:ring-2 focus-visible:ring-emerald-500 text-white/90 hover:text-white hover:bg-white/10">
+                            {item}
                         </Link>
-                    </div>
-
-                    <button aria-label="Menu" className="md:hidden p-2 rounded-lg transition-colors text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" onClick={() => setMobileMenuOpen(true)}>
-                        <Menu size={24} />
-                    </button>
+                    ))}
                 </div>
-            </nav>
 
-            <AnimatePresence>
-                {mobileMenuOpen && (
-                    <motion.div initial={{ opacity: 0, x: '100%' }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: '100%' }} transition={{ duration: 0.3 }} className="fixed inset-0 z-[60] bg-white flex flex-col">
-                        <div className="p-6 flex items-center justify-between border-b border-slate-100">
-                            <div className="flex items-center gap-3">
-                                <Image src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg" alt="Logo" width={40} height={40} unoptimized />
-                                <h1 className="font-bold text-emerald-900 text-sm">DLH Toba</h1>
-                            </div>
-                            <button aria-label="Tutup Menu" onClick={() => setMobileMenuOpen(false)} className="p-2 bg-slate-50 rounded-full hover:bg-slate-100 transition-colors"><X size={20} className="text-slate-900" /></button>
-                        </div>
-                        <div className="p-6 flex flex-col gap-4">
-                            {NAV_LINKS.map(item => (
-                                <Link key={item} href={navHref(item)} onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-slate-700 flex justify-between items-center border-b border-slate-50 pb-4 hover:text-emerald-600 transition-colors">
-                                    {item} <ChevronRight size={18} className="text-slate-300" />
-                                </Link>
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </>
+                {/* Tombol Desktop (Login + Lapor) */}
+                <div className="hidden md:flex items-center gap-3">
+                    <Link href="/login" className="text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 text-white hover:bg-white/10">Login</Link>
+                    <Link href="/Warga" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">
+                        <Leaf size={16} /> Lapor
+                    </Link>
+                </div>
+
+                {/* Mobile: hanya Logo + tombol Lapor (tanpa menu hamburger) */}
+                <div className="flex md:hidden items-center gap-3">
+                    <Link href="/Warga" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">
+                        <Leaf size={16} /> Lapor
+                    </Link>
+                </div>
+            </div>
+        </nav>
     );
 };
 
+// ==========================================
+// 4. HERO & BENTO (tidak berubah)
+// ==========================================
 const HeroSection = () => (
     <header className="relative w-full min-h-[85vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
@@ -164,34 +147,34 @@ const HeroSection = () => (
         </div>
 
         <div className="max-w-4xl mx-auto px-6 relative z-10 w-full flex flex-col items-start justify-start text-left mt-16">
-  <motion.div
-    initial="hidden"
-    animate="visible"
-    variants={staggerContainer}
-    className="flex flex-col items-start"
-  >
-    <motion.span
-      variants={fadeUp}
-      className="px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-emerald-300 text-xs font-semibold tracking-wider uppercase mb-6"
-    >
-      Pemerintah Kabupaten Toba
-    </motion.span>
-    <motion.h1
-      variants={fadeUp}
-      className="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-[1.2] tracking-tight"
-    >
-      Menjaga <span className="text-emerald-400">Kelestarian Lingkungan</span>{" "}
-      Toba
-    </motion.h1>
-    <motion.p
-      variants={fadeUp}
-      className="text-lg text-slate-200 mb-10 leading-relaxed max-w-2xl"
-    >
-      Sinergi pemerintah dan masyarakat dalam mewujudkan lingkungan yang asri,
-      bersih, dan berkelanjutan untuk generasi mendatang.
-    </motion.p>
-  </motion.div>
-</div>
+            <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer}
+                className="flex flex-col items-start"
+            >
+                <motion.span
+                    variants={fadeUp}
+                    className="px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-emerald-300 text-xs font-semibold tracking-wider uppercase mb-6"
+                >
+                    Pemerintah Kabupaten Toba
+                </motion.span>
+                <motion.h1
+                    variants={fadeUp}
+                    className="text-4xl md:text-6xl font-extrabold text-white mb-6 leading-[1.2] tracking-tight"
+                >
+                    Menjaga <span className="text-emerald-400">Kelestarian Lingkungan</span>{" "}
+                    Toba
+                </motion.h1>
+                <motion.p
+                    variants={fadeUp}
+                    className="text-lg text-slate-200 mb-10 leading-relaxed max-w-2xl"
+                >
+                    Sinergi pemerintah dan masyarakat dalam mewujudkan lingkungan yang asri,
+                    bersih, dan berkelanjutan untuk generasi mendatang.
+                </motion.p>
+            </motion.div>
+        </div>
     </header>
 );
 

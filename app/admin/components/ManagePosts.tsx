@@ -89,7 +89,6 @@ export default function ManagePosts({
   const [imagePreview, setImagePreview] = useState<string>("");
   const [postList, setPostList] = useState<any[]>(posts);
 
-  // FIX: Simpan data awal saat edit untuk deteksi perubahan (sama seperti ManageTruk)
   const [originalPostData, setOriginalPostData] = useState<{
     title: string;
     content: string;
@@ -97,7 +96,6 @@ export default function ManagePosts({
     imageUrl: string;
   } | null>(null);
 
-  // ========== ALERT STATE ==========
   const [alertConfig, setAlertConfig] = useState<AlertConfig>({
     open: false,
     type: "info",
@@ -105,21 +103,21 @@ export default function ManagePosts({
     description: "",
   });
 
-const showAlert = (
-  type: AlertType,
-  title: string,
-  description: string,
-  detailText?: string,
-  afterClose?: () => void
-) => {
-  setAlertConfig({ open: true, type, title, description, detailText, afterClose });
-};
+  const showAlert = (
+    type: AlertType,
+    title: string,
+    description: string,
+    detailText?: string,
+    afterClose?: () => void
+  ) => {
+    setAlertConfig({ open: true, type, title, description, detailText, afterClose });
+  };
 
-const closeAlert = () => {
-  const afterClose = alertConfig.afterClose;
-  setAlertConfig((prev) => ({ ...prev, open: false, afterClose: undefined }));
-  afterClose?.();
-};
+  const closeAlert = () => {
+    const afterClose = alertConfig.afterClose;
+    setAlertConfig((prev) => ({ ...prev, open: false, afterClose: undefined }));
+    afterClose?.();
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -266,13 +264,13 @@ const closeAlert = () => {
         throw new Error(response.data?.message || "Gagal menghapus berita");
       }
 
-   showAlert(
-  "success",
-  "Data berhasil dihapus",
-  "Berita atau pengumuman berhasil dihapus dari sistem.",
-  undefined,
-  refreshPosts   // ← baru jalan setelah user klik "Selesai"
-);
+      showAlert(
+        "success",
+        "Data berhasil dihapus",
+        "Berita atau pengumuman berhasil dihapus dari sistem.",
+        undefined,
+        refreshPosts
+      );
 
       await refreshPosts();
     } catch (err: any) {
@@ -301,7 +299,7 @@ const closeAlert = () => {
       return;
     }
 
-const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
     if (!token) {
       showAlert(
         "error",
@@ -311,7 +309,6 @@ const token = localStorage.getItem("token");
       return;
     }
 
-    // FIX: Cek apakah ada perubahan saat edit (sama seperti ManageTruk)
     if (editingPost && originalPostData) {
       const hasChanged =
         formData.title.trim() !== originalPostData.title ||
@@ -368,34 +365,34 @@ const token = localStorage.getItem("token");
     };
 
     try {
-  const config = { headers: { Authorization: `Bearer ${token}` } };
-  if (editingPost) {
-    await axios.put(`${BASE_URL}/api/posts/${editingPost.id}`, payload, config);
-    showAlert(
-      "edit",
-      "Konten Berhasil Diperbarui",
-      "Perubahan berita atau pengumuman berhasil disimpan.",
-      undefined,
-      refreshPosts   // ← ditunda
-    );
-  } else {
-    await axios.post(`${BASE_URL}/api/posts`, payload, config);
-    showAlert(
-      "success",
-      "Konten Berhasil Ditambahkan",
-      "Berita atau pengumuman baru berhasil dipublikasikan.",
-      undefined,
-      refreshPosts   // ← ditunda
-    );
-  }
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      if (editingPost) {
+        await axios.put(`${BASE_URL}/api/posts/${editingPost.id}`, payload, config);
+        showAlert(
+          "edit",
+          "Konten Berhasil Diperbarui",
+          "Perubahan berita atau pengumuman berhasil disimpan.",
+          undefined,
+          refreshPosts
+        );
+      } else {
+        await axios.post(`${BASE_URL}/api/posts`, payload, config);
+        showAlert(
+          "success",
+          "Konten Berhasil Ditambahkan",
+          "Berita atau pengumuman baru berhasil dipublikasikan.",
+          undefined,
+          refreshPosts
+        );
+      }
 
-  setShowModal(false);
-  setFormData({ ...INITIAL_FORM });
-  setFormErrors({});
-  setImagePreview("");
-  setEditingPost(null);
-  if (fileInputRef.current) fileInputRef.current.value = "";
-} catch (err: any) {
+      setShowModal(false);
+      setFormData({ ...INITIAL_FORM });
+      setFormErrors({});
+      setImagePreview("");
+      setEditingPost(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err: any) {
       console.error("Submit error:", err);
       showAlert(
         "error",
@@ -409,7 +406,7 @@ const token = localStorage.getItem("token");
     }
   };
 
-const openModal = (post: any = null) => {
+  const openModal = (post: any = null) => {
     if (post) {
       setEditingPost(post);
       const data = {
@@ -423,7 +420,6 @@ const openModal = (post: any = null) => {
         imageFile: null,
         author_id: Number(post.authorId || post.author_id || 1),
       });
-      // FIX: simpan data asli untuk deteksi perubahan
       setOriginalPostData(data);
       setImagePreview(resolveImageUrl(post.imageUrl || post.image_url || ""));
     } else {
@@ -451,8 +447,8 @@ const openModal = (post: any = null) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 p-4 md:p-6 text-[#1A2E35] font-sans">
-    {/* GLOBAL ALERT */}
+    <div className="max-w-7xl mx-auto space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6 text-[#1A2E35] font-sans">
+      {/* GLOBAL ALERT */}
       <AlertDialog
         open={alertConfig.open}
         type={alertConfig.type}
@@ -478,7 +474,7 @@ const openModal = (post: any = null) => {
         onClose={() => {}}
       />
 
-{/* LOADING ALERT saat proses hapus */}
+      {/* LOADING ALERT saat proses hapus */}
       <AlertDialog
         open={deleting}
         type="loading"
@@ -488,55 +484,56 @@ const openModal = (post: any = null) => {
         disableBackdropClose={true}
         onClose={() => {}}
       />
-<AlertDialog
-  open={deleteModal.show}
-  type="delete"
-  title="Hapus Konten?"
-  description="Konten ini akan dihapus secara permanen dari sistem."
-  detailText="Pastikan konten ini memang sudah tidak digunakan sebelum melanjutkan proses hapus."
-  buttonText="Hapus"
-  cancelText="Batal"
-  showCancelButton={true}
-  disableBackdropClose={true}
-  onConfirm={handleDeleteConfirm}
-  onClose={() => setDeleteModal({ show: false, id: null })}
-/>
+
+      <AlertDialog
+        open={deleteModal.show}
+        type="delete"
+        title="Hapus Konten?"
+        description="Konten ini akan dihapus secara permanen dari sistem."
+        detailText="Pastikan konten ini memang sudah tidak digunakan sebelum melanjutkan proses hapus."
+        buttonText="Hapus"
+        cancelText="Batal"
+        showCancelButton={true}
+        disableBackdropClose={true}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setDeleteModal({ show: false, id: null })}
+      />
 
       {/* HEADER */}
-      <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-3xl p-8 shadow-sm border border-white/60 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+      <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 shadow-sm border border-white/60 relative overflow-hidden">
+        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 md:gap-6">
           <div>
-            <span className="bg-white/80 text-[#4A6D55] px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase inline-block mb-4 shadow-sm backdrop-blur-sm">
+            <span className="bg-white/80 text-[#4A6D55] px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold tracking-wider uppercase inline-block mb-2 md:mb-4 shadow-sm backdrop-blur-sm">
               Konten & Publikasi
             </span>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-[#1A2E35] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#1A2E35] tracking-tight">
               Manajemen Berita
             </h1>
-            <p className="text-[#5B7078] mt-2 text-sm md:text-base font-medium max-w-xl">
+            <p className="text-sm md:text-base text-[#5B7078] mt-1 md:mt-2 font-medium max-w-xl">
               Kelola pusat informasi, berita terbaru, dan pengumuman penting
               untuk portal utama Anda dengan mudah.
             </p>
           </div>
         </div>
-        <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+        <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none hidden sm:block">
           <Newspaper size={200} />
         </div>
       </div>
 
       {/* STATS CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         {[
           { label: "Total Postingan", val: stats.total, icon: Newspaper, color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-100" },
           { label: "Berita Aktif", val: stats.berita, icon: TrendingUp, color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-100" },
           { label: "Pengumuman", val: stats.pengumuman, icon: Megaphone, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
         ].map((s, i) => (
-          <div key={i} className={`bg-white p-5 rounded-2xl border ${s.border} flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow duration-300`}>
-            <div className={`p-4 rounded-xl ${s.bg} ${s.color}`}>
-              <s.icon size={26} strokeWidth={2.5} />
+          <div key={i} className={`bg-white p-4 sm:p-5 rounded-2xl border ${s.border} flex flex-col sm:flex-row items-center gap-3 sm:gap-4 shadow-sm hover:shadow-md transition-shadow duration-300`}>
+            <div className={`p-3 sm:p-4 rounded-xl ${s.bg} ${s.color}`}>
+              <s.icon size={22} className="sm:w-6 sm:h-6" strokeWidth={2.5} />
             </div>
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">{s.label}</p>
-              <p className="text-2xl font-black text-gray-800 leading-none">{s.val}</p>
+            <div className="text-center sm:text-left">
+              <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">{s.label}</p>
+              <p className="text-xl sm:text-2xl font-black text-gray-800 leading-none">{s.val}</p>
             </div>
           </div>
         ))}
@@ -544,7 +541,7 @@ const openModal = (post: any = null) => {
 
       {/* FILTER & ACTION BAR */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 flex flex-col lg:flex-row gap-3 justify-between items-stretch lg:items-center sticky top-4 z-40">
-        <div className="flex-1 px-2">
+        <div className="flex-1 px-1 sm:px-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
@@ -552,18 +549,18 @@ const openModal = (post: any = null) => {
               placeholder="Cari judul atau isi konten..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-transparent border-none outline-none text-sm font-medium text-gray-700 placeholder-gray-400"
+              className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-transparent border-none outline-none text-sm font-medium text-gray-700 placeholder-gray-400"
             />
           </div>
         </div>
         <div className="h-px bg-gray-100 lg:h-8 lg:w-px mx-2"></div>
-        <div className="flex flex-col sm:flex-row items-center gap-3 px-2 pb-2 lg:pb-0">
+        <div className="flex flex-col sm:flex-row items-center gap-3 px-1 sm:px-2 pb-2 lg:pb-0">
           <div className="flex w-full sm:w-auto bg-gray-50 p-1 rounded-xl">
             {(["SEMUA", "BERITA", "PENGUMUMAN"] as TabType[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap ${
+                className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all whitespace-nowrap ${
                   activeTab === tab
                     ? "bg-white text-gray-900 shadow-sm border border-gray-200/50"
                     : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
@@ -581,7 +578,7 @@ const openModal = (post: any = null) => {
               <List size={18} />
             </button>
           </div>
-          <button onClick={() => openModal()} className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#4A6D55] text-white text-sm font-bold shadow-md hover:bg-[#3a5643] hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
+          <button onClick={() => openModal()} className="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-xl bg-[#4A6D55] text-white text-sm font-bold shadow-md hover:bg-[#3a5643] hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2">
             <Plus size={18} /> Tambah Baru
           </button>
         </div>
@@ -590,18 +587,18 @@ const openModal = (post: any = null) => {
       {/* POSTS GRID / LIST */}
       <AnimatePresence mode="wait">
         {loading && filteredPosts.length === 0 ? (
-          <div className="py-20 flex flex-col items-center justify-center text-gray-400">
-            <Loader2 className="animate-spin text-[#4A6D55]" size={34} />
+          <div className="py-16 sm:py-20 flex flex-col items-center justify-center text-gray-400">
+            <Loader2 className="animate-spin text-[#4A6D55]" size={30} />
             <p className="mt-3 text-sm font-medium italic">Memuat data publikasi...</p>
           </div>
         ) : (
-          <motion.div layout className={viewMode === "GRID" ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6" : "flex flex-col gap-3.5"}>
+          <motion.div layout className={viewMode === "GRID" ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 md:gap-6" : "flex flex-col gap-3.5"}>
             {filteredPosts.length === 0 ? (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="col-span-full py-20 px-4 flex flex-col items-center justify-center text-center border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50">
-                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 text-gray-300">
-                  <FileQuestion size={40} />
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="col-span-full py-16 sm:py-20 px-4 flex flex-col items-center justify-center text-center border-2 border-dashed border-gray-200 rounded-2xl sm:rounded-3xl bg-gray-50">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 text-gray-300">
+                  <FileQuestion size={32} className="sm:w-10 sm:h-10" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-700 mb-2">Tidak ada data ditemukan</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-gray-700 mb-2">Tidak ada data ditemukan</h3>
                 <p className="text-gray-500 text-sm max-w-sm">Mungkin kata kunci pencarian salah, atau belum ada konten yang dipublikasikan pada kategori ini.</p>
               </motion.div>
             ) : (
@@ -616,11 +613,11 @@ const openModal = (post: any = null) => {
                     key={post.id}
                     className={`bg-white border border-gray-100 overflow-hidden hover:shadow-lg hover:border-gray-200 hover:-translate-y-1 transition-all duration-300 group ${
                       viewMode === "LIST"
-                        ? "flex flex-col sm:flex-row p-3 gap-4 rounded-2xl items-center"
-                        : "flex flex-col rounded-3xl"
+                        ? "flex flex-col sm:flex-row p-3 gap-3 sm:gap-4 rounded-2xl"
+                        : "flex flex-col rounded-2xl sm:rounded-3xl"
                     }`}
                   >
-                    <div className={`relative overflow-hidden bg-gray-100 shrink-0 ${viewMode === "GRID" ? "aspect-video w-full" : "aspect-video w-full sm:w-48 rounded-xl"}`}>
+                    <div className={`relative overflow-hidden bg-gray-100 shrink-0 ${viewMode === "GRID" ? "aspect-video w-full" : "aspect-video w-full sm:w-44 md:w-48 rounded-xl"}`}>
                       <img
                         src={resolveImageUrl(post.imageUrl || post.image_url)}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
@@ -628,28 +625,28 @@ const openModal = (post: any = null) => {
                         alt={post.title}
                       />
                       <div className={`absolute left-2.5 z-10 ${viewMode === "GRID" ? "top-3" : "top-2.5"}`}>
-                        <span className={`inline-flex items-center rounded-md font-bold bg-white/95 backdrop-blur-sm shadow-sm uppercase tracking-wide border ${viewMode === "GRID" ? "px-3 py-1 text-[10px]" : "px-2 py-0.5 text-[9px]"} ${badgeStyle.text} ${badgeStyle.border}`}>
+                        <span className={`inline-flex items-center rounded-md font-bold bg-white/95 backdrop-blur-sm shadow-sm uppercase tracking-wide border ${viewMode === "GRID" ? "px-2.5 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-[10px]" : "px-2 py-0.5 text-[9px]"}`}>
                           {post.category}
                         </span>
                       </div>
                       {viewMode === "GRID" && <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none"></div>}
                     </div>
-                    <div className={`flex-1 flex flex-col min-w-0 w-full ${viewMode === "GRID" ? "p-6" : "py-1 pr-2"}`}>
-                      <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-wider ${viewMode === "GRID" ? "mb-3" : "mb-1.5"}`}>
-                        <span className="flex items-center gap-1"><Calendar size={13} className="text-gray-300" />{new Date(post.createdAt || Date.now()).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
-                        <span className="flex items-center gap-1"><User size={13} className="text-gray-300" />Admin</span>
+                    <div className={`flex-1 flex flex-col min-w-0 w-full ${viewMode === "GRID" ? "p-4 sm:p-5 md:p-6" : "py-1 pr-1 sm:pr-2"}`}>
+                      <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-wider ${viewMode === "GRID" ? "mb-2 sm:mb-3" : "mb-1.5"}`}>
+                        <span className="flex items-center gap-1"><Calendar size={12} className="text-gray-300" />{new Date(post.createdAt || Date.now()).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        <span className="flex items-center gap-1"><User size={12} className="text-gray-300" />Admin</span>
                       </div>
-                      <h3 className={`font-extrabold text-gray-900 leading-snug group-hover:text-[#4A6D55] transition-colors ${viewMode === "GRID" ? "text-lg mb-2 line-clamp-2" : "text-base mb-1.5 line-clamp-1 sm:line-clamp-2"}`}>{post.title}</h3>
-                      <p className={`text-gray-500 leading-relaxed ${viewMode === "GRID" ? "text-sm line-clamp-2 mb-6" : "text-[13px] line-clamp-2 mb-3"}`}>{post.content}</p>
-                      <div className={`mt-auto flex items-center gap-2 ${viewMode === "LIST" ? "justify-start sm:justify-end border-none pt-0" : "justify-between pt-4 border-t border-gray-50"}`}>
-                        <button onClick={() => openDetailModal(post)} className={`text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white font-bold transition-colors flex items-center justify-center gap-2 ${viewMode === "GRID" ? "py-2 px-4 rounded-xl text-xs flex-1" : "py-1.5 px-3 rounded-lg text-[11px]"}`}>
+                      <h3 className={`font-extrabold text-gray-900 leading-snug group-hover:text-[#4A6D55] transition-colors ${viewMode === "GRID" ? "text-base sm:text-lg mb-1.5 sm:mb-2 line-clamp-2" : "text-sm sm:text-base mb-1.5 line-clamp-2"}`}>{post.title}</h3>
+                      <p className={`text-gray-500 leading-relaxed ${viewMode === "GRID" ? "text-sm line-clamp-2 mb-4 sm:mb-6" : "text-[13px] line-clamp-2 mb-2 sm:mb-3"}`}>{post.content}</p>
+                      <div className={`mt-auto flex flex-wrap items-center gap-2 ${viewMode === "LIST" ? "justify-start sm:justify-end border-none pt-0" : "justify-between pt-3 sm:pt-4 border-t border-gray-50"}`}>
+                        <button onClick={() => openDetailModal(post)} className={`text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white font-bold transition-colors flex items-center justify-center gap-1.5 sm:gap-2 ${viewMode === "GRID" ? "py-2 px-3 sm:px-4 rounded-xl text-xs flex-1" : "py-1.5 px-3 rounded-lg text-[11px]"}`}>
                           <Eye size={14} /> {viewMode === "GRID" ? "Buka Detail" : "Detail"}
                         </button>
                         <div className="flex items-center gap-1.5">
-                          <button onClick={() => openModal(post)} title="Edit Konten" className={`text-gray-500 bg-gray-50 hover:bg-amber-50 hover:text-amber-600 transition-colors ${viewMode === "GRID" ? "p-2.5 rounded-xl" : "p-1.5 rounded-lg"}`}>
+                          <button onClick={() => openModal(post)} title="Edit Konten" className={`text-gray-500 bg-gray-50 hover:bg-amber-50 hover:text-amber-600 transition-colors ${viewMode === "GRID" ? "p-2 sm:p-2.5 rounded-xl" : "p-1.5 rounded-lg"}`}>
                             <Edit size={14} />
                           </button>
-                          <button onClick={() => handleDeleteClick(post.id)} title="Hapus Konten" className={`text-gray-500 bg-gray-50 hover:bg-red-50 hover:text-red-600 transition-colors ${viewMode === "GRID" ? "p-2.5 rounded-xl" : "p-1.5 rounded-lg"}`}>
+                          <button onClick={() => handleDeleteClick(post.id)} title="Hapus Konten" className={`text-gray-500 bg-gray-50 hover:bg-red-50 hover:text-red-600 transition-colors ${viewMode === "GRID" ? "p-2 sm:p-2.5 rounded-xl" : "p-1.5 rounded-lg"}`}>
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -666,45 +663,45 @@ const openModal = (post: any = null) => {
       {/* FORM MODAL */}
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[28px] shadow-2xl w-full max-w-3xl overflow-hidden my-auto border border-white/20"
+              className="bg-white rounded-2xl sm:rounded-[28px] shadow-2xl w-full max-w-3xl overflow-hidden my-auto border border-white/20 max-h-[95vh] flex flex-col"
             >
-              <div className="px-6 md:px-8 py-6 border-b border-gray-100 flex justify-between items-start gap-4 bg-gradient-to-r from-gray-50 to-white">
+              <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 border-b border-gray-100 flex justify-between items-start gap-3 sm:gap-4 bg-gradient-to-r from-gray-50 to-white shrink-0">
                 <div>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-[#4A6D55]/10 text-[#4A6D55] mb-3">
+                  <span className="inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black tracking-wider uppercase bg-[#4A6D55]/10 text-[#4A6D55] mb-2 sm:mb-3">
                     {editingPost ? "Mode Edit" : "Konten Baru"}
                   </span>
-                  <h2 className="font-extrabold text-xl md:text-2xl text-gray-900">{editingPost ? "Edit Publikasi" : "Buat Publikasi Baru"}</h2>
-                  <p className="text-xs md:text-sm text-gray-500 mt-1 font-medium">Lengkapi data konten dengan rapi agar publikasi mudah dipahami pembaca.</p>
+                  <h2 className="font-extrabold text-lg sm:text-xl md:text-2xl text-gray-900">{editingPost ? "Edit Publikasi" : "Buat Publikasi Baru"}</h2>
+                  <p className="text-xs md:text-sm text-gray-500 mt-0.5 sm:mt-1 font-medium">Lengkapi data konten dengan rapi agar publikasi mudah dipahami pembaca.</p>
                 </div>
-                <button onClick={() => { if (submitting) return; setShowModal(false); setFormErrors({}); }} disabled={submitting} className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors disabled:opacity-50">
-                  <X size={20} />
+                <button onClick={() => { if (submitting) return; setShowModal(false); setFormErrors({}); }} disabled={submitting} className="p-2 sm:p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors disabled:opacity-50 shrink-0">
+                  <X size={18} className="sm:w-5 sm:h-5" />
                 </button>
               </div>
-              <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-5 md:p-8 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   <div className="md:col-span-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Judul Publikasi <span className="text-red-500">*</span></label>
-                      <span className="text-[11px] text-gray-400 font-semibold">{formData.title.length}/120</span>
+                    <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                      <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Judul Publikasi <span className="text-red-500">*</span></label>
+                      <span className="text-[10px] sm:text-[11px] text-gray-400 font-semibold">{formData.title.length}/120</span>
                     </div>
                     <input
                       name="title"
                       value={formData.title}
                       onChange={(e) => { setFormData({ ...formData, title: e.target.value }); if (formErrors.title) setFormErrors((prev) => ({ ...prev, title: "" })); }}
                       maxLength={120}
-                      className={`w-full p-4 bg-white border rounded-xl outline-none text-sm font-medium text-gray-900 shadow-sm transition-all ${formErrors.title ? "border-red-400 focus:ring-2 focus:ring-red-500/20 focus:border-red-500" : "border-gray-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500"}`}
+                      className={`w-full p-3 sm:p-4 bg-white border rounded-xl outline-none text-sm font-medium text-gray-900 shadow-sm transition-all ${formErrors.title ? "border-red-400 focus:ring-2 focus:ring-red-500/20 focus:border-red-500" : "border-gray-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500"}`}
                       placeholder="Contoh: Pemerintah Desa Mengadakan Pelatihan UMKM"
                     />
-                    {formErrors.title && <p className="mt-2 text-xs font-semibold text-red-500">{formErrors.title}</p>}
+                    {formErrors.title && <p className="mt-1.5 text-xs font-semibold text-red-500">{formErrors.title}</p>}
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Kategori Konten <span className="text-red-500">*</span></label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 sm:mb-2 block">Kategori Konten <span className="text-red-500">*</span></label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                       {[
                         { value: "BERITA", title: "Berita Portal", desc: "Informasi umum dan kegiatan terbaru.", icon: Newspaper },
                         { value: "PENGUMUMAN", title: "Pengumuman Resmi", desc: "Informasi penting untuk masyarakat.", icon: Megaphone },
@@ -716,34 +713,37 @@ const openModal = (post: any = null) => {
                             key={item.value}
                             type="button"
                             onClick={() => { setFormData({ ...formData, category: item.value }); if (formErrors.category) setFormErrors((prev) => ({ ...prev, category: "" })); }}
-                            className={`p-4 rounded-2xl border text-left transition-all ${active ? "border-[#4A6D55] bg-[#4A6D55]/10 shadow-sm" : "border-gray-200 bg-white hover:border-[#4A6D55]/40 hover:bg-gray-50"}`}
+                            className={`p-3 sm:p-4 rounded-2xl border text-left transition-all ${active ? "border-[#4A6D55] bg-[#4A6D55]/10 shadow-sm" : "border-gray-200 bg-white hover:border-[#4A6D55]/40 hover:bg-gray-50"}`}
                           >
-                            <div className="flex items-start gap-3">
-                              <div className={`p-2.5 rounded-xl ${active ? "bg-[#4A6D55] text-white" : "bg-gray-100 text-gray-500"}`}><Icon size={18} /></div>
-                              <div><p className={`text-sm font-extrabold ${active ? "text-[#4A6D55]" : "text-gray-800"}`}>{item.title}</p><p className="text-xs text-gray-500 mt-1 leading-relaxed">{item.desc}</p></div>
+                            <div className="flex items-start gap-2 sm:gap-3">
+                              <div className={`p-2 sm:p-2.5 rounded-xl ${active ? "bg-[#4A6D55] text-white" : "bg-gray-100 text-gray-500"}`}><Icon size={16} className="sm:w-[18px] sm:h-[18px]" /></div>
+                              <div><p className={`text-sm font-extrabold ${active ? "text-[#4A6D55]" : "text-gray-800"}`}>{item.title}</p><p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{item.desc}</p></div>
                             </div>
                           </button>
                         );
                       })}
                     </div>
-                    {formErrors.category && <p className="mt-2 text-xs font-semibold text-red-500">{formErrors.category}</p>}
+                    {formErrors.category && <p className="mt-1.5 text-xs font-semibold text-red-500">{formErrors.category}</p>}
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Visual Utama <span className="text-gray-400 font-normal">(Opsional)</span></label>
+                  <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 sm:mb-2 block">Visual Utama <span className="text-gray-400 font-normal">(Opsional)</span></label>
                   <div className={`rounded-2xl border-2 border-dashed overflow-hidden transition-all ${formErrors.imageFile ? "border-red-400 bg-red-50" : "border-gray-200 bg-gray-50 hover:border-green-400 hover:bg-green-50"}`}>
                     {imagePreview ? (
                       <div className="relative">
-                        <img src={imagePreview} alt="Preview" className="w-full h-56 object-cover bg-gray-100" />
-                        <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/70 to-transparent flex items-center justify-between gap-3">
-                          <div className="text-white min-w-0"><p className="text-sm font-bold truncate">{formData.imageFile?.name || "Gambar publikasi aktif"}</p><p className="text-xs text-white/80">Format disarankan: JPG, PNG, WEBP. Maksimal 5MB.</p></div>
-                          <button type="button" onClick={() => { setFormData((prev) => ({ ...prev, imageFile: null, imageUrl: "" })); setImagePreview(""); if (fileInputRef.current) fileInputRef.current.value = ""; }} disabled={submitting} className="shrink-0 px-3 py-2 rounded-lg bg-white text-red-600 text-xs font-bold hover:bg-red-50 transition-colors disabled:opacity-50">Hapus</button>
+                        <img src={imagePreview} alt="Preview" className="w-full h-44 sm:h-56 object-cover bg-gray-100" />
+                        <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4 bg-gradient-to-t from-black/70 to-transparent flex flex-wrap items-center justify-between gap-3">
+                          <div className="text-white min-w-0 flex-1">
+                            <p className="text-sm font-bold truncate">{formData.imageFile?.name || "Gambar publikasi aktif"}</p>
+                            <p className="text-xs text-white/80">Format: JPG, PNG, WEBP. Maks 5MB.</p>
+                          </div>
+                          <button type="button" onClick={() => { setFormData((prev) => ({ ...prev, imageFile: null, imageUrl: "" })); setImagePreview(""); if (fileInputRef.current) fileInputRef.current.value = ""; }} disabled={submitting} className="shrink-0 px-3 py-1.5 sm:py-2 rounded-lg bg-white text-red-600 text-xs font-bold hover:bg-red-50 transition-colors disabled:opacity-50">Hapus</button>
                         </div>
                       </div>
                     ) : (
-                      <button type="button" onClick={() => fileInputRef.current?.click()} disabled={submitting} className="w-full p-6 md:p-8 text-sm font-bold text-gray-500 hover:text-green-600 transition-all flex flex-col items-center justify-center gap-3 disabled:opacity-50">
-                        <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-[#4A6D55]"><ImageIcon size={26} /></div>
-                        <div className="text-center"><p>Klik untuk memilih foto unggulan</p><p className="text-xs font-medium text-gray-400 mt-1">JPG, PNG, JPEG, WEBP — maksimal 5MB</p></div>
+                      <button type="button" onClick={() => fileInputRef.current?.click()} disabled={submitting} className="w-full p-5 sm:p-6 md:p-8 text-sm font-bold text-gray-500 hover:text-green-600 transition-all flex flex-col items-center justify-center gap-2 sm:gap-3 disabled:opacity-50">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-[#4A6D55]"><ImageIcon size={22} className="sm:w-6 sm:h-6" /></div>
+                        <div className="text-center"><p>Klik untuk memilih foto unggulan</p><p className="text-xs font-medium text-gray-400 mt-0.5">JPG, PNG, JPEG, WEBP — maks 5MB</p></div>
                       </button>
                     )}
                   </div>
@@ -768,25 +768,28 @@ const openModal = (post: any = null) => {
                     reader.onload = () => setImagePreview(reader.result as string);
                     reader.readAsDataURL(file);
                   }} />
-                  {formErrors.imageFile && <p className="mt-2 text-xs font-semibold text-red-500">{formErrors.imageFile}</p>}
-                  {!formData.imageFile && imagePreview && <p className="mt-2 text-xs text-gray-500 italic">Gambar sebelumnya akan tetap digunakan jika tidak diganti.</p>}
+                  {formErrors.imageFile && <p className="mt-1.5 text-xs font-semibold text-red-500">{formErrors.imageFile}</p>}
+                  {!formData.imageFile && imagePreview && <p className="mt-1.5 text-xs text-gray-500 italic">Gambar sebelumnya akan tetap digunakan jika tidak diganti.</p>}
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-2"><label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Isi Konten <span className="text-red-500">*</span></label><span className="text-[11px] text-gray-400 font-semibold">{formData.content.length} karakter</span></div>
+                  <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                    <label className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider">Isi Konten <span className="text-red-500">*</span></label>
+                    <span className="text-[10px] sm:text-[11px] text-gray-400 font-semibold">{formData.content.length} karakter</span>
+                  </div>
                   <textarea
                     name="content"
                     value={formData.content}
                     onChange={(e) => { setFormData({ ...formData, content: e.target.value }); if (formErrors.content) setFormErrors((prev) => ({ ...prev, content: "" })); }}
-                    rows={8}
+                    rows={6}
                     placeholder="Tulis isi berita atau pengumuman secara jelas, lengkap, dan mudah dipahami..."
-                    className={`w-full p-4 bg-white border rounded-xl text-sm leading-relaxed outline-none transition-all text-gray-900 resize-none shadow-sm ${formErrors.content ? "border-red-400 focus:ring-2 focus:ring-red-500/20 focus:border-red-500" : "border-gray-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500"}`}
+                    className={`w-full p-3 sm:p-4 bg-white border rounded-xl text-sm leading-relaxed outline-none transition-all text-gray-900 resize-none shadow-sm ${formErrors.content ? "border-red-400 focus:ring-2 focus:ring-red-500/20 focus:border-red-500" : "border-gray-200 focus:ring-2 focus:ring-green-500/20 focus:border-green-500"}`}
                   />
-                  {formErrors.content && <p className="mt-2 text-xs font-semibold text-red-500">{formErrors.content}</p>}
+                  {formErrors.content && <p className="mt-1.5 text-xs font-semibold text-red-500">{formErrors.content}</p>}
                 </div>
-                <div className="pt-2 flex flex-col-reverse sm:flex-row gap-3">
-                  <button type="button" onClick={() => { if (submitting) return; setShowModal(false); setFormErrors({}); }} disabled={submitting} className="sm:flex-1 py-4 rounded-xl text-gray-600 bg-gray-100 font-bold hover:bg-gray-200 transition-all disabled:opacity-50">Batalkan</button>
-                  <button type="submit" disabled={submitting} className="sm:flex-[2] py-4 bg-[#4A6D55] text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-[#3a5643] hover:-translate-y-0.5 transition-all disabled:opacity-50">
-                    {submitting ? <><Loader2 className="animate-spin" size={20} /> Menyimpan...</> : (editingPost ? "Simpan Perubahan" : "Simpan & Publikasikan")}
+                <div className="pt-2 flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+                  <button type="button" onClick={() => { if (submitting) return; setShowModal(false); setFormErrors({}); }} disabled={submitting} className="w-full sm:flex-1 py-3 sm:py-4 rounded-xl text-gray-600 bg-gray-100 font-bold hover:bg-gray-200 transition-all disabled:opacity-50">Batalkan</button>
+                  <button type="submit" disabled={submitting} className="w-full sm:flex-[2] py-3 sm:py-4 bg-[#4A6D55] text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-[#3a5643] hover:-translate-y-0.5 transition-all disabled:opacity-50">
+                    {submitting ? <><Loader2 className="animate-spin" size={18} /> Menyimpan...</> : (editingPost ? "Simpan Perubahan" : "Simpan & Publikasikan")}
                   </button>
                 </div>
               </form>
@@ -798,36 +801,39 @@ const openModal = (post: any = null) => {
       {/* DETAIL MODAL */}
       <AnimatePresence>
         {showDetailModal && viewingPost && (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-[24px] shadow-2xl w-full max-w-3xl overflow-hidden my-auto border border-white/20"
+              className="bg-white rounded-2xl sm:rounded-[24px] shadow-2xl w-full max-w-3xl overflow-hidden my-auto border border-white/20 max-h-[95vh] flex flex-col"
             >
-              <div className="px-8 py-6 border-b flex justify-between items-center bg-gray-50/50">
-                <div><h2 className="font-extrabold text-xl text-gray-900">Preview Publikasi</h2><p className="text-xs text-gray-500 mt-1 font-medium">Pratinjau tampilan konten untuk pembaca.</p></div>
-                <button onClick={() => setShowDetailModal(false)} className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors"><X size={20} /></button>
-              </div>
-              <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                <div className="flex items-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-widest">
-                  <span className={`inline-flex items-center px-3 py-1.5 rounded-lg border shadow-sm ${getCategoryBadge(viewingPost.category).bg} ${getCategoryBadge(viewingPost.category).text} ${getCategoryBadge(viewingPost.category).border}`}>{viewingPost.category}</span>
-                  <span className="flex items-center gap-1.5"><Calendar size={15} />{new Date(viewingPost.createdAt || Date.now()).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span>
+              <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 border-b flex justify-between items-center bg-gray-50/50 shrink-0">
+                <div>
+                  <h2 className="font-extrabold text-lg sm:text-xl text-gray-900">Preview Publikasi</h2>
+                  <p className="text-xs text-gray-500 mt-0.5 font-medium">Pratinjau tampilan konten untuk pembaca.</p>
                 </div>
-                <h1 className="text-3xl md:text-4xl font-black text-gray-900 leading-tight">{viewingPost.title}</h1>
+                <button onClick={() => setShowDetailModal(false)} className="p-2 sm:p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-full transition-colors"><X size={18} className="sm:w-5 sm:h-5" /></button>
+              </div>
+              <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
+                <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-lg border shadow-sm ${getCategoryBadge(viewingPost.category).bg} ${getCategoryBadge(viewingPost.category).text} ${getCategoryBadge(viewingPost.category).border}`}>{viewingPost.category}</span>
+                  <span className="flex items-center gap-1.5"><Calendar size={14} />{new Date(viewingPost.createdAt || Date.now()).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 leading-tight">{viewingPost.title}</h1>
                 {(viewingPost.imageUrl || viewingPost.image_url) && (
                   <div className="w-full rounded-2xl overflow-hidden bg-gray-100 border border-gray-100 shadow-sm aspect-video">
                     <img src={resolveImageUrl(viewingPost.imageUrl || viewingPost.image_url)} className="w-full h-full object-cover" alt={viewingPost.title} />
                   </div>
                 )}
-                <div className="text-gray-700 leading-loose text-base md:text-lg whitespace-pre-wrap font-medium">{viewingPost.content}</div>
+                <div className="text-gray-700 leading-loose text-sm sm:text-base md:text-lg whitespace-pre-wrap font-medium">{viewingPost.content}</div>
               </div>
-                <div className="p-6 bg-gray-50 border-t flex gap-4">
+              <div className="p-4 sm:p-5 md:p-6 bg-gray-50 border-t flex gap-3 shrink-0">
                 <button
                   onClick={() => setShowDetailModal(false)}
-                  className="flex-1 py-3.5 bg-[#4A6D55] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#3a5643] shadow-md hover:shadow-lg transition-all"
+                  className="flex-1 py-3 sm:py-3.5 bg-[#4A6D55] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#3a5643] shadow-md hover:shadow-lg transition-all"
                 >
-                  <X size={18} /> Tutup Detail
+                  <X size={16} /> Tutup Detail
                 </button>
               </div>
             </motion.div>

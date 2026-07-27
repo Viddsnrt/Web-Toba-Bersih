@@ -422,7 +422,8 @@ export default function ManageTruk() {
   ========================= */
 
   return (
-  <div className="w-full space-y-6 md:space-y-8 p-4 md:p-6 text-black">
+    // Container utama dengan pembatas lebar maksimum dan padding responsif
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-black">
 
       {/* ─── ALERT SYSTEM ──────────────────────────────────────────── */}
 
@@ -469,32 +470,36 @@ export default function ManageTruk() {
       />
 
       {/* HEADER */}
-      <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-[24px] p-8 shadow-sm border border-white/50 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-[24px] p-5 sm:p-6 md:p-8 shadow-sm border border-white/50 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full -mr-10 -mt-10 blur-2xl" />
-        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 md:gap-6">
           <div>
-            <span className="bg-white/60 text-[#4A6D55] px-4 py-1.5 rounded-full text-xs font-medium tracking-wider uppercase inline-block mb-3">
+            <span className="bg-white/60 text-[#4A6D55] px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-medium tracking-wider uppercase inline-block mb-2 md:mb-3">
               Data & Operasional
             </span>
-            <h1 className="text-3xl font-extrabold text-[#1A2E35] tracking-tight uppercase">Manajemen Armada</h1>
-            <p className="text-[#5B7078] mt-2 font-medium">Kelola unit armada pengangkut sampah operasional real-time.</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#1A2E35] tracking-tight uppercase">
+              Manajemen Armada
+            </h1>
+            <p className="text-sm md:text-base text-[#5B7078] mt-1 md:mt-2 font-medium">
+              Kelola unit armada pengangkut sampah operasional real-time.
+            </p>
           </div>
         </div>
       </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {[
           { label: "Total Armada",  val: trukList.length,                                         color: "text-gray-600",  bg: "bg-gray-50",  icon: Truck         },
           { label: "Tersedia",      val: trukList.filter((t) => t.status === "AVAILABLE").length,  color: "text-green-600", bg: "bg-green-50", icon: CheckCircle2  },
           { label: "Bertugas",      val: trukList.filter((t) => t.status === "BUSY").length,       color: "text-blue-600",  bg: "bg-blue-50",  icon: RefreshCw     },
           { label: "Maintenance",   val: trukList.filter((t) => t.status === "MAINTENANCE").length, color: "text-red-600",  bg: "bg-red-50",   icon: AlertCircle   },
         ].map((stat, i) => (
-          <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+          <div key={i} className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-3 sm:gap-4 hover:shadow-md transition-all">
             <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}><stat.icon size={24} /></div>
-            <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{stat.label}</p>
-              <p className="text-2xl font-black text-gray-900 mt-0.5">{stat.val}</p>
+            <div className="text-center sm:text-left">
+              <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">{stat.label}</p>
+              <p className="text-xl sm:text-2xl font-black text-gray-900 mt-0.5">{stat.val}</p>
             </div>
           </div>
         ))}
@@ -504,7 +509,7 @@ export default function ManageTruk() {
       <div className="flex justify-end">
         <button
           onClick={openCreateModal}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#4A6D55] text-white text-sm font-bold shadow-lg transition-all hover:bg-[#395542] active:scale-95"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-3 rounded-2xl bg-[#4A6D55] text-white text-sm sm:text-base font-bold shadow-lg transition-all hover:bg-[#395542] active:scale-95"
         >
           <Plus size={18} /> Tambah Unit Baru
         </button>
@@ -520,7 +525,7 @@ export default function ManageTruk() {
               placeholder="Cari nopol, kode, merek, tipe, atau supir..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500/20 outline-none text-black text-sm"
+              className="w-full pl-11 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500/20 outline-none text-black text-sm md:text-base"
             />
           </div>
         </div>
@@ -534,18 +539,18 @@ export default function ManageTruk() {
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[800px]">
               <thead>
-              <tr className="bg-gray-50 text-gray-400 text-[10px] font-bold uppercase tracking-widest border-b border-gray-50">
-              <th className="px-6 py-4 text-center w-14">No</th>
-              <th className="px-6 py-4 w-[280px]">Nomor Polisi / Detail</th>
-              <th className="px-6 py-4 w-[220px]">Operator</th>
-              <th className="px-6 py-4 w-[140px] text-center">Status</th>
-              <th className="px-6 py-4 w-[130px] text-right">Aksi</th>
-            </tr>
+                <tr className="bg-gray-50 text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest border-b border-gray-50">
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 text-center w-14">No</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 w-[280px]">Nomor Polisi / Detail</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 w-[220px]">Operator</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 w-[140px] text-center">Status</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 w-[130px] text-right">Aksi</th>
+                </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredTruk.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic text-sm">
+                    <td colSpan={5} className="px-4 sm:px-6 py-12 text-center text-gray-400 italic text-sm">
                       Tidak ada armada yang sesuai.
                     </td>
                   </tr>
@@ -556,16 +561,16 @@ export default function ManageTruk() {
 
                     return (
                       <tr key={truk.id} className="hover:bg-gray-50/50 transition-colors group">
-                        <td className="px-6 py-5 text-center text-sm font-bold text-gray-400">{idx + 1}</td>
-                        <td className="px-6 py-5">
+                        <td className="px-4 sm:px-6 py-3 sm:py-5 text-center text-sm font-bold text-gray-400">{idx + 1}</td>
+                        <td className="px-4 sm:px-6 py-3 sm:py-5">
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-green-50 group-hover:text-[#4A6D55] border border-gray-100 transition-colors">
+                            <div className="h-10 w-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-green-50 group-hover:text-[#4A6D55] border border-gray-100 transition-colors shrink-0">
                               <Truck size={20} />
                             </div>
                             <div>
-                              <p className="font-bold text-gray-900 leading-none">{truk.plateNumber}</p>
-                              <div className="text-xs text-gray-500 mt-1.5 space-x-1 flex items-center">
-                                <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-gray-600 border border-gray-200/50">
+                              <p className="font-bold text-gray-900 leading-none text-sm sm:text-base">{truk.plateNumber}</p>
+                              <div className="text-[10px] sm:text-xs text-gray-500 mt-1.5 space-x-1 flex items-center flex-wrap">
+                                <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-mono font-bold text-gray-600 border border-gray-200/50">
                                   {truk.unitCode || "-"}
                                 </span>
                                 <span>{truk.brand || "-"}</span>
@@ -574,43 +579,43 @@ export default function ManageTruk() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-5">
+                        <td className="px-4 sm:px-6 py-3 sm:py-5">
                           {truk.operator ? (
                             <div>
                               <p className="text-sm font-bold text-gray-800">{truk.operator.fullName}</p>
-                              <p className="text-[11px] text-gray-400 flex items-center gap-1 font-mono">
+                              <p className="text-[10px] sm:text-[11px] text-gray-400 flex items-center gap-1 font-mono">
                                 <Phone size={10} className="text-emerald-500" />
                                 {truk.operator.phoneNumber || "-"}
                               </p>
                             </div>
                           ) : (
-                            <span className="text-xs italic text-gray-400 px-2 py-0.5 bg-gray-50 rounded border">Kosong</span>
+                            <span className="text-[10px] sm:text-xs italic text-gray-400 px-2 py-0.5 bg-gray-50 rounded border">Kosong</span>
                           )}
                         </td>
-                      <td className="px-6 py-5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${status.bg} ${status.text}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${status.text.replace("text", "bg")}`} />
-                          {status.label.toUpperCase()}
-                        </span>
-                      </td>
-                        <td className="px-6 py-5 text-right space-x-1.5">
+                        <td className="px-4 sm:px-6 py-3 sm:py-5 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold ${status.bg} ${status.text}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${status.text.replace("text", "bg")}`} />
+                            {status.label.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 sm:px-6 py-3 sm:py-5 text-right space-x-1 sm:space-x-1.5">
                           <button
                             onClick={() => setViewingTruk(truk)}
-                            className="p-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors shadow-sm inline-flex"
+                            className="p-1.5 sm:p-2 text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors shadow-sm inline-flex"
                             title="Lihat Detail"
                           >
                             <Eye size={14} />
                           </button>
                           <button
                             onClick={() => openEditModal(truk)}
-                            className="p-2 text-white bg-yellow-400 rounded-lg hover:bg-yellow-500 transition-colors shadow-sm inline-flex"
+                            className="p-1.5 sm:p-2 text-white bg-yellow-400 rounded-lg hover:bg-yellow-500 transition-colors shadow-sm inline-flex"
                             title="Edit"
                           >
                             <Edit size={14} />
                           </button>
                           <button
                             onClick={() => openDeleteConfirm(truk)}
-                            className="p-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors shadow-sm inline-flex"
+                            className="p-1.5 sm:p-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors shadow-sm inline-flex"
                             title={deleteReason || "Hapus"}
                           >
                             <Trash2 size={14} />
@@ -629,16 +634,16 @@ export default function ManageTruk() {
       {/* FORM MODAL */}
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ duration: 0.2 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden my-auto border border-gray-100 flex flex-col"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden my-auto border border-gray-100 flex flex-col max-h-[90vh]"
             >
-              <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/70">
-                <h3 className="font-extrabold text-gray-800 flex items-center gap-2.5 tracking-tight">
+              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/70">
+                <h3 className="font-extrabold text-gray-800 flex items-center gap-2.5 tracking-tight text-sm sm:text-base">
                   <div className={`p-1.5 rounded-lg ${editingTruk ? "bg-amber-50 text-amber-600" : "bg-green-50 text-[#4A6D55]"}`}>
                     <Truck size={18} />
                   </div>
@@ -652,7 +657,7 @@ export default function ManageTruk() {
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Nomor Plat */}
                   <div className="flex flex-col space-y-1.5">
@@ -828,19 +833,19 @@ export default function ManageTruk() {
                 )}
 
                 {/* Action Buttons */}
-                <div className="pt-4 flex items-center gap-3 w-full">
+                <div className="pt-4 flex flex-col sm:flex-row items-center gap-3 w-full">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
                     disabled={submitting}
-                    className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 active:scale-[0.99] text-gray-600 rounded-xl font-bold transition-all text-sm text-center disabled:opacity-50"
+                    className="w-full sm:flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 active:scale-[0.99] text-gray-600 rounded-xl font-bold transition-all text-sm text-center disabled:opacity-50"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 py-3.5 bg-[#4A6D55] hover:bg-[#3d5a46] active:scale-[0.99] text-white rounded-xl font-bold shadow-md shadow-green-900/10 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+                    className="w-full sm:flex-1 py-3.5 bg-[#4A6D55] hover:bg-[#3d5a46] active:scale-[0.99] text-white rounded-xl font-bold shadow-md shadow-green-900/10 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
                   >
                     {submitting ? (
                       <><Loader2 size={16} className="animate-spin" /><span>Menyimpan...</span></>
@@ -858,20 +863,20 @@ export default function ManageTruk() {
       {/* DETAIL MODAL — tidak berubah */}
       <AnimatePresence>
         {viewingTruk && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ duration: 0.2 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden my-auto border border-gray-100 flex flex-col text-sm"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden my-auto border border-gray-100 flex flex-col max-h-[90vh] text-sm"
             >
-              <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/70">
+              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/70">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><Truck size={20} /></div>
                   <div>
                     <h3 className="font-extrabold text-gray-900 text-base leading-none">Detail Spesifikasi Armada</h3>
-                    <p className="text-xs text-gray-400 mt-1 font-mono">ID: {viewingTruk.id}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-1 font-mono">ID: {viewingTruk.id}</p>
                   </div>
                 </div>
                 <button
@@ -882,12 +887,12 @@ export default function ManageTruk() {
                 </button>
               </div>
 
-              <div className="p-6 space-y-6 overflow-y-auto max-h-[75vh]">
+              <div className="p-4 sm:p-6 space-y-6 overflow-y-auto">
                 <div>
                   <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                     <Truck size={14} />Data Kendaraan
                   </h4>
-                  <div className="bg-gray-50 p-4 rounded-2xl grid grid-cols-2 gap-4 border border-gray-100">
+                  <div className="bg-gray-50 p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 border border-gray-100">
                     <div><p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Nomor Polisi</p><p className="font-bold text-gray-900 mt-0.5">{viewingTruk.plateNumber}</p></div>
                     <div><p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Kode Unit</p><p className="font-bold text-gray-900 mt-0.5">{viewingTruk.unitCode || "-"}</p></div>
                     <div><p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Merek Armada</p><p className="font-bold text-gray-900 mt-0.5">{viewingTruk.brand || "-"}</p></div>
@@ -948,7 +953,7 @@ export default function ManageTruk() {
                 </div>
               </div>
 
-              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
                 <button
                   onClick={() => setViewingTruk(null)}
                   className="px-5 py-2.5 bg-gray-800 text-white text-sm font-bold rounded-xl hover:bg-gray-700 transition-colors"

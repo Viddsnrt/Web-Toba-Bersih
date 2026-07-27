@@ -2,10 +2,23 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
+import Footer from "../components/Footer";
 import {
-  Clock, ArrowRight, ArrowLeft, ChevronRight, ChevronLeft,
-  Newspaper, Menu, X, MapPin, Phone, Mail, Facebook, Instagram, Leaf,
-} from 'lucide-react';
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  ChevronRight,
+  Calendar,
+  Leaf,
+  Mail,
+  Instagram,
+  Facebook,
+  MapPin,
+  Phone,
+  Menu,
+  X,
+} from "lucide-react";
+import { motion } from "framer-motion";
 
 interface Post {
   id: number;
@@ -18,79 +31,103 @@ interface Post {
   date?: string;
 }
 
-const PENGUMUMAN_CATEGORIES = ['pengumuman', 'PENGUMUMAN', 'Pengumuman'];
-const isPengumuman = (cat?: string) => PENGUMUMAN_CATEGORIES.includes(cat || '');
-const FALLBACK_IMG = 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=500';
-
-const fmtDate = (v?: string) => {
-  if (!v) return '';
-  try { return new Date(v).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }); }
-  catch { return v; }
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
 };
-const stripHtml = (html?: string) => html?.replace(/<[^>]+>/g, '') ?? '';
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
+};
 
-type TabType = 'semua' | 'berita' | 'pengumuman';
-const ITEMS_PER_PAGE = 9;
+const stripHtml = (html?: string) => html?.replace(/<[^>]+>/g, "") ?? "";
+const fmtDate = (v?: string) => {
+  if (!v) return "";
+  try {
+    return new Date(v).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return v;
+  }
+};
 
-const NAV_LINKS = ['Tentang', 'Edukasi', 'Berita', 'Galeri'];
+const FALLBACK_IMG =
+  "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=800";
+
+const NAV_LINKS = ["Tentang", "Edukasi", "Berita", "Galeri"];
 const navHref = (item: string) => {
   const key = item.toLowerCase();
-  if (key === 'berita') return '/berita';
-  if (key === 'edukasi') return '/edukasi';
-  if (key === 'galeri') return '/galeri';
+  if (key === "berita") return "/berita";
+  if (key === "edukasi") return "/edukasi";
+  if (key === "galeri") return "/galeri";
   return `/#${key}`;
 };
 
 export default function BeritaPage() {
-  const [posts, setPosts]       = useState<Post[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>('semua');
-  const [page, setPage]         = useState(1);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      setLoading(true);
-      const rawBase = process.env.NEXT_PUBLIC_API_URL || '';
-      const BASE = rawBase ? rawBase.replace(/\/$/, '') + '/api' : '/api';
-      try {
-        const res = await axios.get(`${BASE}/posts`);
-        const raw = res.data;
-        const list: Post[] = Array.isArray(raw) ? raw : (raw?.data ?? []);
-        setPosts(list);
-      } catch (err) {}
-      setLoading(false);
-    };
-    fetchPosts();
+    const fn = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", fn);
+    return () => window.removeEventListener("scroll", fn);
   }, []);
+
+  const fetchPosts = async () => {
+    setLoading(true);
+    const rawBase = process.env.NEXT_PUBLIC_API_URL || "";
+    const BASE = rawBase ? rawBase.replace(/\/$/, "") + "/api" : "/api";
+
+    try {
+      const res = await axios.get(`${BASE}/posts`);
+      const allPosts = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
+      const beritaPosts = allPosts.filter((p: Post) => {
+        const cat = p.category || "";
+        return !["pengumuman", "PENGUMUMAN", "Pengumuman"].includes(cat);
+      });
+      setPosts(beritaPosts);
+    } catch (err) {
+      console.error("Error fetching posts", err);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fn = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', fn);
-    return () => window.removeEventListener('scroll', fn);
+    fetchPosts();
   }, []);
-
-  useEffect(() => { setPage(1); }, [activeTab]);
-
-  const filtered = posts.filter(p => {
-    if (activeTab === 'berita') return !isPengumuman(p.category);
-    if (activeTab === 'pengumuman') return isPengumuman(p.category);
-    return true;
-  });
-
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated  = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-  const featured   = paginated[0];
-  const rest       = paginated.slice(1);
-
-  const beritaCount     = posts.filter(p => !isPengumuman(p.category)).length;
-  const pengumumanCount = posts.filter(p =>  isPengumuman(p.category)).length;
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+        :root {
+          --forest: #0D3D2B;
+          --forest-mid: #155235;
+          --lime: #4ADE80;
+          --lime-dim: #86EFAC;
+          --cream: #F8FAF7;
+          --warm-white: #FFFFFF;
+          --slate-900: #0F172A;
+          --slate-700: #334155;
+          --slate-500: #64748B;
+          --slate-200: #E2E8F0;
+          --slate-100: #F1F5F9;
+          --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+          --radius-sm: 10px;
+          --radius-md: 16px;
+          --radius-lg: 24px;
+          --radius-xl: 32px;
+          --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(13,61,43,0.08);
+          --shadow-hover: 0 8px 32px rgba(13,61,43,0.15);
+          --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
         * { box-sizing: border-box; }
         body { font-family: var(--font); background: var(--cream); color: var(--slate-900); margin: 0; -webkit-font-smoothing: antialiased; }
 
@@ -360,21 +397,6 @@ export default function BeritaPage() {
           max-width: 520px;
           margin: 0 0 32px;
         }
-          .breadcrumb {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          color: rgba(255,255,255,0.5);
-          margin-bottom: 24px;
-        }
-        .breadcrumb a {
-          color: rgba(255,255,255,0.7);
-          text-decoration: none;
-          transition: color var(--transition);
-        }
-        .breadcrumb a:hover { color: white; }
-        .breadcrumb svg { color: rgba(255,255,255,0.3); }
 
         /* ── SECTION ── */
         .section {
@@ -543,116 +565,6 @@ export default function BeritaPage() {
         }
         .card-link:hover { gap: 10px; color: #0D5C3F; }
 
-        /* ── FEATURED CARD ── */
-        .featured-card {
-          display: block;
-          background: white;
-          border-radius: var(--radius-xl);
-          border: 1px solid var(--slate-200);
-          overflow: hidden;
-          box-shadow: var(--shadow-card);
-          transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-          margin-bottom: 40px;
-          text-decoration: none;
-        }
-        .featured-card:hover {
-          box-shadow: var(--shadow-hover);
-          border-color: var(--lime-dim);
-        }
-        .featured-card-inner {
-          display: flex;
-          flex-direction: column;
-        }
-        @media (min-width: 768px) {
-          .featured-card-inner { flex-direction: row; align-items: stretch; }
-        }
-        .featured-card-img {
-          position: relative;
-          overflow: hidden;
-          background: var(--slate-100);
-          height: 260px;
-          aspect-ratio: 4 / 3;
-        }
-        @media (min-width: 768px) {
-          .featured-card-img {
-            width: 50%;
-            height: auto;
-            aspect-ratio: unset;
-            min-height: 320px;
-            max-height: 420px;
-          }
-        }
-        .featured-card-img img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center 55%;
-          transition: transform 0.6s ease;
-        }
-        .featured-card:hover .featured-card-img img { transform: scale(1.05); }
-        .featured-badge {
-          position: absolute;
-          top: 16px;
-          left: 16px;
-          font-size: 10px;
-          font-weight: 800;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          background: var(--forest);
-          color: white;
-          padding: 6px 14px;
-          border-radius: 100px;
-        }
-        .featured-card-body {
-          padding: 40px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-        @media (min-width: 768px) {
-          .featured-card-body { width: 50%; }
-        }
-        .featured-card-body h2 {
-          font-size: clamp(22px, 3vw, 30px);
-          font-weight: 800;
-          color: var(--slate-900);
-          line-height: 1.3;
-          margin: 0 0 16px;
-          letter-spacing: -0.01em;
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          transition: color var(--transition);
-        }
-        .featured-card:hover .featured-card-body h2 { color: var(--forest); }
-        .featured-card-body p {
-          font-size: 15px;
-          color: var(--slate-500);
-          line-height: 1.7;
-          margin: 0 0 24px;
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        .featured-card-footer {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-
-        /* ── VARIAN AMBER (Pengumuman) ── */
-        .berita-card-tag.tag-amber,
-        .featured-badge.badge-amber {
-          color: #B45309;
-          background: rgba(245,158,11,0.12);
-        }
-        .berita-meta.meta-amber { color: #B45309; }
-        .berita-meta.meta-amber svg { color: #B45309; }
-
         /* ── LOADING ── */
         .spinner {
           display: flex;
@@ -670,18 +582,6 @@ export default function BeritaPage() {
         }
         @keyframes spin {
           to { transform: rotate(360deg); }
-        }
-
-        /* ── SKELETON ── */
-        .skeleton {
-          background: linear-gradient(90deg, var(--slate-100) 25%, var(--slate-200) 50%, var(--slate-100) 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s infinite;
-          border-radius: 12px;
-        }
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
         }
 
         /* ── EMPTY STATE ── */
@@ -896,7 +796,6 @@ export default function BeritaPage() {
         }
       `}</style>
 
-
       {/* ── MOBILE MENU ── */}
       {mobileMenuOpen && (
         <div className="mobile-menu animate-fade-in">
@@ -908,23 +807,16 @@ export default function BeritaPage() {
                 <p>Kabupaten Toba</p>
               </div>
             </div>
-          <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+            <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
               <X size={24} color="var(--slate-900)" />
             </button>
           </div>
-
-          {NAV_LINKS.map(item => (
-            <Link
-              key={item}
-              href={navHref(item)}
-              onClick={() => setMobileMenuOpen(false)}
-              className="mobile-nav-link"
-            >
+          {NAV_LINKS.map((item) => (
+            <Link key={item} href={navHref(item)} className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
               {item} <ChevronRight size={18} />
             </Link>
           ))}
-
-        <div style={{ padding: '16px 0', borderTop: '1px solid var(--slate-200)', marginTop: '8px', display: 'flex', gap: '12px' }}>
+          <div style={{ padding: '16px 0', borderTop: '1px solid var(--slate-200)', marginTop: '8px', display: 'flex', gap: '12px' }}>
             <Link href="/login" className="btn-ghost-green" style={{ flex: 1, justifyContent: 'center' }}>Login</Link>
             <Link href="/Warga" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }}>Lapor Sekarang</Link>
           </div>
@@ -943,12 +835,7 @@ export default function BeritaPage() {
           </Link>
           <div className="nav-links">
             {NAV_LINKS.map((item) => (
-              <Link
-                key={item}
-                href={navHref(item)}
-                className="nav-link"
-                style={item === 'Berita' ? { color: 'var(--lime)' } : undefined}
-              >
+              <Link key={item} href={navHref(item)} className="nav-link">
                 {item}
               </Link>
             ))}
@@ -958,215 +845,100 @@ export default function BeritaPage() {
             <Link href="/Warga" className="btn-primary">
               <Leaf size={14} /> Lapor
             </Link>
-            <button
-              className="menu-toggle"
-              aria-label="Buka Menu"
-              onClick={() => setMobileMenuOpen(true)}
-            >
+            <button className="menu-toggle" onClick={() => setMobileMenuOpen(true)} aria-label="Buka Menu">
               <Menu size={24} color="white" />
             </button>
           </div>
         </div>
       </nav>
 
- {/* ── HERO ── */}
+      {/* ── HERO ── */}
       <header className="hero">
         <div className="hero-bg" />
         <div className="hero-overlay" />
         <div className="hero-inner">
           <div className="hero-eyebrow">
-            <Newspaper size={14} /> Pusat Informasi
+            <Leaf size={14} /> Berita Terkini
           </div>
           <h1 className="hero-title">
-            Berita &amp; <span>Pengumuman</span>
+            Berita <span>Lingkungan</span>
           </h1>
           <p className="hero-desc">
-            Informasi terkini seputar kegiatan, program, dan pengumuman resmi dari Dinas Lingkungan Hidup Kabupaten Toba.
+            Dapatkan informasi terkini tentang kegiatan dan inisiatif Dinas Lingkungan Hidup Kabupaten Toba dalam menjaga kelestarian alam.
           </p>
         </div>
       </header>
 
-      {/* FILTER TABS (tanpa search bar) */}
-      <div className="sticky top-20 z-40 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-1">
-          <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
-         {(['semua', 'berita', 'pengumuman'] as TabType[]).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-5 py-2 rounded-lg font-bold text-sm capitalize transition-all ${
-                activeTab === tab ? 'text-white shadow-sm' : 'text-slate-600 hover:text-slate-800'
-              }`}
-              style={
-                activeTab === tab
-                  ? { background: tab === 'pengumuman' ? '#F59E0B' : 'var(--forest)' }
-                  : undefined
-              }
-            >
-              {tab === 'semua' ? 'Semua' : tab === 'berita' ? 'Berita' : 'Pengumuman'}
-            </button>
-          ))}
-          </div>
-        </div>
-      </div>
-
-      {/* MAIN CONTENT */}
-      <section className="section" style={{ paddingTop: '48px' }}>
+      {/* ── SECTION BERITA ── */}
+      <section className="section">
         <div className="section-inner">
+          <div className="section-header center">
+            <span className="section-eyebrow">Informasi</span>
+            <h2 className="section-title">Berita <em>Terbaru</em></h2>
+            <p className="section-subtitle">
+              Berbagai kegiatan, program, dan kebijakan terkait lingkungan hidup di Kabupaten Toba.
+            </p>
+          </div>
+
           {loading ? (
-            <div className="berita-grid">
-              {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} style={{ borderRadius: '24px', overflow: 'hidden', border: '1px solid var(--slate-200)' }}>
-                  <div className="skeleton" style={{ height: '200px', borderRadius: 0 }} />
-                  <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div className="skeleton" style={{ height: '12px', width: '60px' }} />
-                    <div className="skeleton" style={{ height: '20px' }} />
-                    <div className="skeleton" style={{ height: '14px', width: '80%' }} />
-                  </div>
-                </div>
-              ))}
+            <div className="spinner">
+              <div />
             </div>
-          ) : filtered.length === 0 ? (
+          ) : posts.length === 0 ? (
             <div className="empty-state">
-              <Newspaper size={48} />
-              <p>Belum ada konten tersedia</p>
+              <BookOpen size={48} />
+              <p>Belum ada berita tersedia.</p>
             </div>
           ) : (
             <>
-              {/* Featured Post */}
-              {featured && (
-                <Link href={`/berita/${featured.slug || featured.id}`} className="featured-card animate-fade-up">
-                  <div className="featured-card-inner">
-                    <div className="featured-card-img">
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={staggerContainer}
+                className="berita-grid"
+              >
+                {posts.map((post, i) => (
+                  <motion.div
+                    key={post.id}
+                    variants={fadeUp}
+                    className="berita-card"
+                  >
+                    <div className="berita-card-img">
                       <img
-                        src={featured.imageUrl || FALLBACK_IMG}
-                        alt={featured.title}
-                        onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
+                        src={post.imageUrl || FALLBACK_IMG}
+                        alt={post.title}
+                        onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
                       />
-                      <span className={`featured-badge ${isPengumuman(featured.category) ? 'badge-amber' : ''}`}>Utama</span>
                     </div>
-                    <div className="featured-card-body">
-                      <span className={`berita-card-tag ${isPengumuman(featured.category) ? 'tag-amber' : ''}`}>
-                        {featured.category || 'Berita'}
-                      </span>
-                      <h2>{featured.title}</h2>
-                      <p>{stripHtml(featured.content)}</p>
-                      <div className="featured-card-footer">
-                        <p className={`berita-meta ${isPengumuman(featured.category) ? 'meta-amber' : ''}`} style={{ margin: 0, border: 'none', padding: 0 }}>
-                          <Clock size={12} /> {fmtDate(featured.createdAt || featured.date)}
-                        </p>
-                        <span className="card-link" style={{ marginTop: 0 }}>
-                          Baca Selengkapnya <ArrowRight size={15} />
-                        </span>
+                    <div className="berita-card-body">
+                      <span className="berita-card-tag">Berita</span>
+                      <h3>{post.title}</h3>
+                      <p>{stripHtml(post.content)}</p>
+                      <div className="berita-meta">
+                        <Calendar size={14} />
+                        <span>{fmtDate(post.createdAt)}</span>
                       </div>
+                      <Link
+                        href={`/berita/${post.slug || post.id}`}
+                        className="card-link"
+                      >
+                        Baca Selengkapnya <ArrowRight size={15} />
+                      </Link>
                     </div>
-                  </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+              <div className="section-footer">
+                <Link href="/#berita" className="btn-section">
+                  <ArrowLeft size={16} /> Kembali ke Beranda
                 </Link>
-              )}
-
-              {/* Grid Posts */}
-              {rest.length > 0 && (
-                <div className="berita-grid">
-                  {rest.map((post, i) => (
-                    <Link
-                      key={post.id}
-                      href={`/berita/${post.slug || post.id}`}
-                      className="berita-card animate-fade-up"
-                      style={{ animationDelay: `${(i % 6) * 0.1}s` }}
-                    >
-                      <div className="berita-card-img">
-                        <img
-                          src={post.imageUrl || FALLBACK_IMG}
-                          alt={post.title}
-                          onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }}
-                        />
-                      </div>
-                      <div className="berita-card-body">
-                        <span className={`berita-card-tag ${isPengumuman(post.category) ? 'tag-amber' : ''}`}>
-                          {post.category || 'Berita'}
-                        </span>
-                        <h3>{post.title}</h3>
-                        <p>{stripHtml(post.content)}</p>
-                        <div className={`berita-meta ${isPengumuman(post.category) ? 'meta-amber' : ''}`}>
-                          <Clock size={14} /> {fmtDate(post.createdAt || post.date)}
-                        </div>
-                        <span className="card-link">
-                          Baca Selengkapnya <ArrowRight size={15} />
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
+              </div>
             </>
           )}
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer className="footer">
-        <div className="footer-inner">
-          <div className="footer-grid">
-            <div>
-              <div className="footer-logo">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg" alt="Logo" />
-                <div>
-                  <div className="footer-logo-name">DLH TOBA</div>
-                  <div className="footer-logo-sub">Kabupaten Toba</div>
-                </div>
-              </div>
-              <p className="footer-desc">
-                Dinas Lingkungan Hidup Kabupaten Toba berkomitmen menjaga kelestarian alam dan kebersihan lingkungan untuk generasi mendatang.
-              </p>
-            </div>
-            <div className="footer-col">
-              <h4>Tautan Cepat</h4>
-              <ul className="footer-links">
-                {NAV_LINKS.map((item) => (
-                  <li key={item}>
-                    <Link href={navHref(item)}>
-                      <ChevronRight size={14} />{item}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="footer-col">
-              <h4>Sumber Daya</h4>
-              <ul className="footer-links">
-                {[
-                  { name: 'Tugas Pokok dan Fungsi', path: 'https://dislindup.tobakab.go.id/tugas-pokok-dan-fungsi/' },
-                  { name: 'RPJMD', path: 'https://dislindup.tobakab.go.id/rpjmd/' },
-                  { name: 'RENSTRA', path: 'https://dislindup.tobakab.go.id/renstra/' },
-                  { name: 'Struktur Organisasi', path: 'https://dislindup.tobakab.go.id/struktur-organisasi/' }
-                ].map((l) => (
-                  <li key={l.name}><Link href={l.path}><ChevronRight size={14} />{l.name}</Link></li>
-                ))}
-              </ul>
-            </div>
-            <div className="footer-col">
-              <h4>Hubungi Kami</h4>
-              <ul className="footer-contact">
-                <li><MapPin size={16} />Jl. Hutabulu Mejan No. 14, Sibola Hotangsas, Kec. Balige, Toba, Sumatera Utara</li>
-                <li><Phone size={16} />(0632) 123-4567</li>
-                <li><Mail size={16} />dislindup@tobakab.go.id</li>
-              </ul>
-              <div className="footer-socials">
-                <a href="#" className="footer-social" aria-label="Facebook"><Facebook size={18} /></a>
-                <a href="#" className="footer-social" aria-label="Instagram"><Instagram size={18} /></a>
-                <a href="mailto:dislindup@tobakab.go.id" className="footer-social" aria-label="Email"><Mail size={18} /></a>
-              </div>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            <p>© 2026 <strong style={{ color: 'rgba(255,255,255,0.6)' }}>Dinas Lingkungan Hidup Kabupaten Toba</strong>. Seluruh hak cipta dilindungi.</p>
-            <div className="footer-bottom-links">
-              <Link href="/privasi">Kebijakan Privasi</Link>
-              <Link href="/syarat">Syarat &amp; Ketentuan</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }

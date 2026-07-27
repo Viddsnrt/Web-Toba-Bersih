@@ -27,7 +27,8 @@ export default function GalleriesPage() {
     try {
       setLoading(true);
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-      const res = await axios.get('/api/galleries/albums', {
+      const apiUrl = '/api/galleries/albums';
+      const res = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -56,7 +57,7 @@ export default function GalleriesPage() {
           <p className="mt-3 text-gray-500 text-sm">Memuat galeri...</p>
         </div>
       </div>
-    );
+    );  
   }
 
   return <ManageGalleries galleries={galleries} onGalleriesUpdate={fetchGalleries} />;

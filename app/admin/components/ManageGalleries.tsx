@@ -61,6 +61,80 @@ const defaultStatusAlert: StatusAlertState = {
   description: "",
 };
 
+function getStoredToken() {
+  if (typeof window === "undefined") return "";
+
+  const tokenFromStorage = localStorage.getItem("token");
+  if (tokenFromStorage && tokenFromStorage !== "undefined" && tokenFromStorage !== "null") {
+    return tokenFromStorage;
+  }
+
+  const cookieMatch = document.cookie.match(/(?:^|;\s*)token=([^;]+)/);
+  if (cookieMatch) {
+    return decodeURIComponent(cookieMatch[1]);
+  }
+
+  return "";
+}
+
+function getAuthConfig() {
+  const token = getStoredToken();
+  return {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    withCredentials: true as const,
+  };
+}
+
+function buildAlbumPayload(formData: { title: string; description: string }, coverUrl: string) {
+  const title = formData.title.trim();
+  return {
+    title,
+    name: title,
+    description: formData.description?.trim() || "",
+    coverUrl: coverUrl || null,
+    coverImageUrl: coverUrl || null,
+    imageUrl: coverUrl || null,
+  };
+}
+
+function buildPhotoPayload(url: string) {
+  return {
+    imageUrl: url,
+    url,
+    fileUrl: url,
+    caption: "",
+  };
+}
+
+async function requestGallery(method: string, path: string, data?: unknown) {
+  const normalizedPath = path.startsWith("/albums") ? path : `/albums${path === "" ? "" : path}`;
+  const endpoints = [
+    `/api/galleries${normalizedPath}`,
+    `/api/admin/galleries${normalizedPath}`,
+    `/api/galleries${normalizedPath === "/albums" ? "" : normalizedPath}`,
+  ];
+
+  let lastError: unknown;
+  for (const endpoint of endpoints) {
+    try {
+      return await axios({
+        method,
+        url: endpoint,
+        ...(data !== undefined ? { data } : {}),
+        ...getAuthConfig(),
+      });
+    } catch (error: unknown) {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      if (![404, 405, 307, 308].includes(status ?? 0)) {
+        throw error;
+      }
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
+
 // --- MAIN COMPONENT ---
 
 export default function ManageGalleries({ galleries, onGalleriesUpdate }: ManageGalleriesProps) {
@@ -68,7 +142,7 @@ export default function ManageGalleries({ galleries, onGalleriesUpdate }: Manage
   const [view, setView] = useState<"albums" | "album-detail" | "upload-photos">("albums");
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
 
-// Form States
+  // Form States
   const [showAlbumModal, setShowAlbumModal] = useState(false);
   const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
   const [albumForm, setAlbumForm] = useState({ title: "", description: "" });
@@ -77,13 +151,6 @@ export default function ManageGalleries({ galleries, onGalleriesUpdate }: Manage
   const [uploadingCover, setUploadingCover] = useState(false);
   const [savingAlbum, setSavingAlbum] = useState(false);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
-
-  // FIX: Simpan data awal saat edit untuk deteksi perubahan (sama seperti ManagePosts)
-  const [originalAlbumData, setOriginalAlbumData] = useState<{
-    title: string;
-    description: string;
-    coverUrl: string;
-  } | null>(null);
 
   // Upload States
   const [photoFiles, setPhotoFiles] = useState<PhotoItem[]>([]);
@@ -103,13 +170,8 @@ export default function ManageGalleries({ galleries, onGalleriesUpdate }: Manage
   const [deletingType, setDeletingType] = useState<"album" | "photo" | null>(null);
 
   // API Config
-  const API_ROOT = process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
-    : '';
-  const API_BASE_URL = `${API_ROOT}/api/galleries`;
-  const UPLOAD_URL = `${API_ROOT}/api/upload`;
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
-  const authHeader = { headers: token ? { Authorization: `Bearer ${token}` } : {} };
+  const API_BASE_URL = "/api/galleries";
+  const UPLOAD_URL = "/api/upload";
 
   // --- ALERT HANDLERS (konsisten dengan ManageTruk) ---
   const closeStatusAlert = () => {
@@ -166,14 +228,22 @@ export default function ManageGalleries({ galleries, onGalleriesUpdate }: Manage
   const resolveImageUrl = (url?: string) => {
     if (!url) return "";
     if (url.startsWith("http") || url.startsWith("data:image")) return url;
-    return `${API_ROOT}${url.startsWith("/") ? "" : "/"}${url}`;
+    if (typeof window === "undefined") return url;
+    return `${window.location.origin}${url.startsWith("/") ? "" : "/"}${url}`;
   };
 
   const uploadFile = useCallback(async (file: File): Promise<string> => {
     const fd = new FormData(); fd.append("image", file);
-    const res = await axios.post(UPLOAD_URL, fd, { headers: { "Content-Type": "multipart/form-data", ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
-    return res.data.imageUrl;
-  }, [UPLOAD_URL, token]);
+    const authConfig = getAuthConfig();
+    const res = await axios.post(UPLOAD_URL, fd, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        ...(authConfig.headers as Record<string, string>),
+      },
+      withCredentials: true,
+    });
+    return res.data?.imageUrl || res.data?.url || res.data?.data?.imageUrl || "";
+  }, []);
 
   const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -235,23 +305,11 @@ export default function ManageGalleries({ galleries, onGalleriesUpdate }: Manage
   };
 
   // --- ALBUM & PHOTO CRUD ---
-const openAlbumModal = (album: Album | null = null) => {
+  const openAlbumModal = (album: Album | null = null) => {
     setEditingAlbum(album);
     setAlbumForm({ title: album?.title || "", description: album?.description || "" });
     setCoverPreview(album?.coverUrl ? resolveImageUrl(album.coverUrl) : null);
     setCoverUrl(album?.coverUrl || "");
-
-    // FIX: simpan data asli untuk deteksi perubahan
-    if (album) {
-      setOriginalAlbumData({
-        title: album.title || "",
-        description: album.description || "",
-        coverUrl: album.coverUrl || "",
-      });
-    } else {
-      setOriginalAlbumData(null);
-    }
-
     setShowAlbumModal(true);
   };
 
@@ -268,24 +326,6 @@ const openAlbumModal = (album: Album | null = null) => {
       return;
     }
 
-    // FIX: Cek apakah ada perubahan saat edit (sama seperti ManagePosts)
-    if (editingAlbum && originalAlbumData) {
-      const hasChanged =
-        albumForm.title.trim() !== originalAlbumData.title ||
-        albumForm.description.trim() !== originalAlbumData.description ||
-        (coverUrl || "") !== (originalAlbumData.coverUrl || "");
-
-      if (!hasChanged) {
-        setShowAlbumModal(false);
-        showResult(
-          "info",
-          "Tidak Ada Perubahan",
-          "Album tidak mengalami perubahan apapun. Silakan ubah data terlebih dahulu sebelum menyimpan."
-        );
-        return;
-      }
-    }
-
     setSavingAlbum(true);
     showLoadingAlert(
       editingAlbum ? "Menyimpan Perubahan" : "Membuat Album",
@@ -293,36 +333,35 @@ const openAlbumModal = (album: Album | null = null) => {
     );
 
     try {
-      const data = { ...albumForm, coverUrl: coverUrl || null };
+      const data = buildAlbumPayload(albumForm, coverUrl);
       const savedAlbumTitle = albumForm.title.trim();
 
       if (editingAlbum) {
-        await axios.put(`${API_BASE_URL}/albums/${editingAlbum.id}`, data, authHeader);
+        await requestGallery("put", `/albums/${editingAlbum.id}`, data);
         setShowAlbumModal(false);
         setEditingAlbum(null);
         showResult(
-          "success", // konsisten dengan ManageTruk
+          "success",
           "Album Berhasil Diperbarui",
           `Album "${savedAlbumTitle}" berhasil diperbarui.`,
           onGalleriesUpdate
         );
       } else {
-        await axios.post(`${API_BASE_URL}/albums`, data, authHeader);
+        await requestGallery("post", "/albums", data);
         setShowAlbumModal(false);
         setEditingAlbum(null);
         showResult(
-          "success", // konsisten dengan ManageTruk
+          "success",
           "Album Berhasil Dibuat",
           `Album "${savedAlbumTitle}" berhasil dibuat.`,
           onGalleriesUpdate
         );
       }
-    } catch (err: any) {
-      showResult(
-        "error",
-        "Gagal Menyimpan",
-        err?.response?.data?.message || "Gagal menyimpan album."
-      );
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.message || "Gagal menyimpan album."
+        : "Gagal menyimpan album.";
+      showResult("error", "Gagal Menyimpan", message);
     } finally {
       setSavingAlbum(false);
     }
@@ -351,20 +390,15 @@ const openAlbumModal = (album: Album | null = null) => {
       const albumId = selectedAlbum?.id;
 
       await Promise.all(
-        readyFiles.map((p) =>
-          axios.post(
-            `${API_BASE_URL}/albums/${albumId}/photos`,
-            { imageUrl: p.url, caption: "" },
-            authHeader
-          )
-        )
+        readyFiles.map((p) => requestGallery("post", `/albums/${albumId}/photos`, buildPhotoPayload(p.url)))
       );
 
       setPhotoFiles([]);
 
       try {
         if (albumId) {
-          setSelectedAlbum((await axios.get(`${API_BASE_URL}/albums/${albumId}`, authHeader)).data);
+          const res = await requestGallery("get", `/albums/${albumId}`);
+          setSelectedAlbum(res.data?.data ?? res.data);
         }
       } catch {}
 
@@ -376,28 +410,35 @@ const openAlbumModal = (album: Album | null = null) => {
         `${readyFiles.length} foto berhasil ditambahkan ke album.`,
         onGalleriesUpdate
       );
-    } catch (err: any) {
-      showResult(
-        "error",
-        "Gagal Upload",
-        err.response?.data?.message || "Gagal menyimpan foto."
-      );
+    } catch (err: unknown) {
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.message || "Gagal menyimpan foto."
+        : "Gagal menyimpan foto.";
+      showResult("error", "Gagal Upload", message);
     } finally {
       setSavingPhotos(false);
     }
   };
 
   const openAlbumDetail = async (album: Album) => {
-    try { setSelectedAlbum((await axios.get(`${API_BASE_URL}/albums/${album.id}`, authHeader)).data); } 
-    catch { setSelectedAlbum(album); }
+    try {
+      const res = await requestGallery("get", `/albums/${album.id}`);
+      setSelectedAlbum(res.data?.data ?? res.data);
+    } catch {
+      setSelectedAlbum(album);
+    }
     setView("album-detail");
   };
 
   // --- DELETE LOGIC & MODALS ---
   const deleteWithFallback = async (url: string) => {
-    try { await axios.delete(url, authHeader); } 
-    catch (err: any) {
-      if ([404, 405, 307, 308].includes(err?.response?.status)) { await axios.delete(`${url}/`, authHeader); return; }
+    try {
+      await axios.delete(url, getAuthConfig());
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && [404, 405, 307, 308].includes(err.response?.status ?? 0)) {
+        await axios.delete(`${url}/`, getAuthConfig());
+        return;
+      }
       throw err;
     }
   };
@@ -440,9 +481,7 @@ const openAlbumModal = (album: Album | null = null) => {
 
     try {
       if (albumId) {
-        axios
-          .get(`${API_BASE_URL}/albums/${albumId}`, authHeader)
-          .then((res) => setSelectedAlbum(res.data));
+        requestGallery("get", `/albums/${albumId}`).then((res) => setSelectedAlbum(res.data?.data ?? res.data));
       }
     } catch {}
   };
@@ -482,15 +521,12 @@ const openAlbumModal = (album: Album | null = null) => {
           onGalleriesUpdate
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setDeleteModal(null);
-      showResult(
-        "error",
-        "Gagal Menghapus",
-        err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          "Terjadi kesalahan saat menghapus data."
-      );
+      const message = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.response?.data?.error || "Terjadi kesalahan saat menghapus data."
+        : "Terjadi kesalahan saat menghapus data.";
+      showResult("error", "Gagal Menghapus", message);
     } finally {
       setDeletingId(null);
       setDeletingType(null);
@@ -661,6 +697,10 @@ const openAlbumModal = (album: Album | null = null) => {
         {renderDeleteModal()}
 
         <div className="bg-white rounded-3xl shadow-sm overflow-hidden border border-gray-100">
+          <div className="px-6 py-4 border-b border-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50/50">
+            <button type="button" onClick={() => setView("albums")} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-gray-600 rounded-xl hover:bg-gray-100 transition-colors font-bold text-sm shadow-sm border border-gray-200"><ArrowLeft size={16} /> Kembali ke Galeri</button>
+            <button type="button" onClick={() => openAlbumModal(selectedAlbum)} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors"><Edit size={16} /> Edit Detail Album</button>
+          </div>
           <div className="relative w-full bg-gray-100 overflow-hidden" style={{ height: "360px" }}>
             {selectedAlbum.coverUrl ? <img src={resolveImageUrl(selectedAlbum.coverUrl)} alt={selectedAlbum.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-[#DDE9E1] to-[#E8F1EB] flex items-center justify-center"><Images size={80} className="text-[#4A6D55]/30" /></div>}
             <div className="absolute inset-0 bg-gradient-to-t from-[#1A2E35]/90 via-[#1A2E35]/40 to-transparent" />
@@ -671,20 +711,22 @@ const openAlbumModal = (album: Album | null = null) => {
             </div>
           </div>
           <div className="p-6 md:p-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
               <div className="text-center sm:text-left"><h2 className="text-2xl font-extrabold text-gray-900">Koleksi Foto</h2><p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{photos.length} Media Tersimpan</p></div>
+              {photos.length > 0 && (<button type="button" onClick={() => setView("upload-photos")} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-[#4A6D55] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#3a5643] transition-colors hover:-translate-y-0.5"><Plus size={18} /> Tambah Foto</button>)}
             </div>
             {photos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-3xl border-2 border-gray-200 border-dashed">
-                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 text-gray-300"><Camera size={32} /></div>
+                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 relative text-gray-300"><Camera size={32} /><div className="absolute -bottom-1 -right-1 w-8 h-8 bg-[#4A6D55] rounded-full flex items-center justify-center shadow-md border-2 border-white"><Plus size={16} className="text-white" /></div></div>
                 <h3 className="text-xl font-bold text-gray-700 mb-2">Album Masih Kosong</h3>
-                <p className="text-gray-500 text-sm text-center max-w-sm">Belum ada foto yang tersimpan pada album ini.</p>
+                <p className="text-gray-500 text-sm text-center max-w-sm mb-6">Mulai tambahkan foto untuk mendokumentasikan kegiatan ke dalam album ini.</p>
+                <button type="button" onClick={() => setView("upload-photos")} className="flex items-center justify-center gap-2 bg-[#4A6D55] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:bg-[#3a5643] transition-all hover:-translate-y-0.5"><Upload size={18} /> Upload Foto Pertama</button>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {photos.map((photo, index) => (
                   <div key={photo.id} className={`group relative overflow-hidden rounded-2xl bg-gray-100 aspect-square shadow-sm hover:shadow-lg transition-all ${index === 0 ? "col-span-2 row-span-2" : ""}`}>
-                    <img src={resolveImageUrl(photo.imageUrl)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/400x400?text=Error"; }} />
+                    <img src={resolveImageUrl(photo.imageUrl)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={(e) => { (e.target as HTMLImageElement).src = "https://via.placeholder.com/400x400?text=Error"; }} />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 backdrop-blur-[1px]">
                       <button type="button" onClick={() => setLightboxImg(resolveImageUrl(photo.imageUrl))} className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-800 hover:scale-110 transition-all shadow-lg"><Eye size={18} /></button>
                       <button type="button" disabled={deletingType === "photo" && deletingId === photo.id} onClick={(e) => { e.preventDefault(); e.stopPropagation(); openDeletePhotoModal(photo.id); }} className="w-10 h-10 bg-red-500/90 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:scale-110 hover:bg-red-500 transition-all shadow-lg disabled:opacity-50">
@@ -693,19 +735,12 @@ const openAlbumModal = (album: Album | null = null) => {
                     </div>
                   </div>
                 ))}
+                <div className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#4A6D55] hover:text-[#4A6D55] hover:bg-[#DDE9E1]/30 transition-all cursor-pointer group bg-gray-50" onClick={() => setView("upload-photos")}>
+                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform"><Plus size={20} /></div>
+                  <span className="text-xs font-bold mt-1">Tambah Foto</span>
+                </div>
               </div>
             )}
-          </div>
-
-          {/* FOOTER: Tutup Detail — di paling bawah, sesuai pola ManagePosts */}
-          <div className="p-6 bg-gray-50 border-t flex gap-4">
-            <button
-              type="button"
-              onClick={() => setView("albums")}
-              className="flex-1 py-3.5 bg-[#4A6D55] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#3a5643] shadow-md hover:shadow-lg transition-all"
-            >
-              <X size={18} /> Tutup Detail
-            </button>
           </div>
         </div>
 

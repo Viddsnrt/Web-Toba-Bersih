@@ -27,7 +27,8 @@ export default function GaleriPage() {
     try {
       setLoading(true);
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-      const res = await axios.get('/api/galleries/albums', {
+      const apiUrl = '/api/galleries/albums';
+      const res = await axios.get(apiUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Normalize: response bisa { data: [...] } atau langsung array

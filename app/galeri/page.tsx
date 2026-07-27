@@ -93,9 +93,7 @@ export default function GaleriPage() {
     const fetchAlbums = async () => {
       setLoading(true);
       try {
-        const rawBase = process.env.NEXT_PUBLIC_API_URL || "";
-        const BASE = rawBase ? rawBase.replace(/\/$/, "") + "/api" : "/api";
-        const res = await axios.get(`${BASE}/galleries/albums`);
+        const res = await axios.get('/api/galleries/albums');
         const raw = res.data;
         const list: Album[] = Array.isArray(raw) ? raw : raw?.data ?? [];
         setAlbums(list);
@@ -112,9 +110,7 @@ export default function GaleriPage() {
     setLoadingDetail(true);
     setSelectedAlbum(album);
     try {
-      const rawBase = process.env.NEXT_PUBLIC_API_URL || "";
-      const BASE = rawBase ? rawBase.replace(/\/$/, "") + "/api" : "/api";
-      const res = await axios.get(`${BASE}/galleries/albums/${album.id}`);
+      const res = await axios.get(`/api/galleries/albums/${album.id}`);
       const raw = res.data;
       setSelectedAlbum(raw?.data ?? raw);
     } catch {

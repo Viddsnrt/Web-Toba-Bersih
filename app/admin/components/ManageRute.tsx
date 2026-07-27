@@ -305,11 +305,11 @@ function StatCard({ label, value, icon: Icon, color, bg }: {
   label: string; value: number; icon: any; color: string; bg: string;
 }) {
   return (
-    <div className="bg-white p-4 md:p-5 rounded-2xl border border-gray-100 flex items-center gap-3 shadow-sm">
+    <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 flex flex-col sm:flex-row items-center gap-3 shadow-sm">
       <div className={`p-3 rounded-xl ${bg} ${color}`}><Icon size={22} /></div>
-      <div>
+      <div className="text-center sm:text-left">
         <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">{label}</p>
-        <p className="text-2xl font-bold text-gray-800">{value}</p>
+        <p className="text-xl sm:text-2xl font-bold text-gray-800">{value}</p>
       </div>
     </div>
   );
@@ -334,7 +334,7 @@ function BadgeStatus({ aktif }: { aktif: boolean }) {
   );
 }
 
-/** Kartu metrik kecil di header rute: ikon + label + nilai (Titik Angkut, Jarak Est., dst). */
+/** Kartu metrik kecil di header rute: ikon + label + nilai (Titik Angkut, Jarak Est., dst.) */
 function MetricPill({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
   return (
     <div className="text-center px-3">
@@ -451,7 +451,7 @@ function PaginationBar({
   }, [page, totalPages]);
 
   return (
-    <div className="px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white rounded-2xl shadow-sm">
+    <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white rounded-2xl shadow-sm">
       <p className="text-xs text-gray-400 font-medium">
         Menampilkan{" "}
         <span className="font-semibold text-gray-600">
@@ -841,8 +841,8 @@ export default function ManajemenRute() {
    * RENDER
    * ════════════════════════════════════════════════════════════════════ */
 
-return (
-  <div className="w-full space-y-6 md:space-y-8 p-4 md:p-6 text-black">
+  return (
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-black">
 
       <AlertDialog open={alertConfig.open} type={alertConfig.type} title={alertConfig.title}
         description={alertConfig.description} detailText={alertConfig.detailText} onClose={closeAlert} />
@@ -860,14 +860,14 @@ return (
       />
 
       {/* ── HEADER ── */}
-      <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-[24px] p-8 shadow-sm border border-white/50 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-[24px] p-5 sm:p-6 md:p-8 shadow-sm border border-white/50 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full -mr-10 -mt-10 blur-2xl" />
         <div className="relative z-10">
-          <span className="bg-white/60 text-[#4A6D55] px-4 py-1.5 rounded-full text-xs font-medium tracking-wider uppercase inline-block mb-3">
+          <span className="bg-white/60 text-[#4A6D55] px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-medium tracking-wider uppercase inline-block mb-2 md:mb-3">
             Logistik & Navigasi
           </span>
-          <h1 className="text-3xl font-extrabold text-[#1A2E35] tracking-tight uppercase">Manajemen Rute Armada</h1>
-          <p className="text-[#5B7078] mt-2 font-medium">Atur titik angkut sampah dan alur perjalanan truk operasional.</p>
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#1A2E35] tracking-tight uppercase">Manajemen Rute Armada</h1>
+          <p className="text-sm md:text-base text-[#5B7078] mt-1 md:mt-2 font-medium">Atur titik angkut sampah dan alur perjalanan truk operasional.</p>
         </div>
       </div>
 
@@ -882,7 +882,7 @@ return (
       <div className="flex justify-end">
         <button
           onClick={() => { tutupWaypointEditor(); setExpandedId(null); setShowModalRute(true); }}
-          className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-[#4A6D55] text-white font-semibold shadow hover:bg-[#3a5643] transition-all flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-5 sm:px-6 py-3 rounded-2xl bg-[#4A6D55] text-white font-semibold shadow hover:bg-[#3a5643] transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
         >
           <Plus size={18} /> Buat Rute Baru
         </button>
@@ -911,7 +911,7 @@ return (
             <button
               key={h}
               onClick={() => setFilterHari(h)}
-              className={`px-3 py-2 rounded-xl text-[10px] font-semibold transition-all whitespace-nowrap ${
+              className={`px-2.5 sm:px-3 py-2 rounded-xl text-[10px] font-semibold transition-all whitespace-nowrap ${
                 filterHari === h ? "bg-[#4A6D55] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
               }`}
             >
@@ -950,7 +950,7 @@ return (
                 }`}
               >
                 {/* ── Card Header ── */}
-                <div className="p-5 md:p-6 flex flex-wrap items-center gap-3">
+                <div className="p-4 sm:p-6 flex flex-wrap items-center gap-3">
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : rute.id)}
                     className={`p-2 rounded-xl transition-colors shrink-0 ${isExpanded ? "bg-gray-100 text-gray-600" : "text-gray-300 hover:bg-gray-50 hover:text-gray-500"}`}
@@ -986,7 +986,7 @@ return (
                     </div>
                   </div>
 
-                  {/* Metrik ringkas: titik angkut, jarak estimasi, status */}
+                  {/* Metrik ringkas: titik angkut, jarak estimasi, status (hanya di desktop) */}
                   <div className="hidden md:flex items-center divide-x divide-gray-100 shrink-0">
                     <MetricPill icon={MapPin} label="Titik Angkut" value={`${jumlahTitik}`} />
                     <MetricPill icon={Ruler} label="Jarak Est." value={jarakKm > 0 ? `${jarakKm.toFixed(1)} km` : "—"} />
@@ -1002,7 +1002,7 @@ return (
                           disabled={savingWp}
                           className="px-3 py-1.5 bg-[#4A6D55] text-white rounded-lg hover:bg-[#3a5643] transition-colors shadow-sm inline-flex items-center gap-1 text-[10px] font-semibold whitespace-nowrap disabled:opacity-50"
                         >
-                          {savingWp ? <RefreshCw size={11} className="animate-spin" /> : <Save size={11} />} Simpan Perubahan
+                          {savingWp ? <RefreshCw size={11} className="animate-spin" /> : <Save size={11} />} Simpan
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); tutupWaypointEditor(); }}
@@ -1059,10 +1059,10 @@ return (
 
                 {/* ── Card Body (expanded) ── */}
                 {isExpanded && (
-                  <div className="border-t border-gray-100 p-6 md:p-8 bg-gray-50/40 rounded-b-[24px]">
+                  <div className="border-t border-gray-100 p-4 sm:p-6 md:p-8 bg-gray-50/40 rounded-b-[24px]">
                     {isEditing ? (
                       /* ── EDIT WAYPOINT ── */
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
                         {/* KIRI: Peta + Form */}
                         <div className="space-y-5">
                           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Konfigurasi Jalur Peta</p>
@@ -1077,7 +1077,7 @@ return (
                             {/* Cari lokasi */}
                             <div>
                               <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Cari Lokasi</label>
-                              <div className="flex gap-2">
+                              <div className="flex flex-col sm:flex-row gap-2">
                                 <div className="relative flex-1">
                                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                                   <input
@@ -1093,7 +1093,7 @@ return (
                                   type="button"
                                   onClick={handleSearchWaypoint}
                                   disabled={wpSearching || !wpSearchQuery.trim()}
-                                  className="px-4 bg-blue-500 text-white rounded-xl font-semibold text-sm hover:bg-blue-600 transition-colors shadow flex items-center gap-2 disabled:opacity-50"
+                                  className="w-full sm:w-auto px-4 bg-blue-500 text-white rounded-xl font-semibold text-sm hover:bg-blue-600 transition-colors shadow flex items-center justify-center gap-2 disabled:opacity-50 py-3 sm:py-3"
                                 >
                                   {wpSearching ? <RefreshCw size={13} className="animate-spin" /> : <Search size={13} />} Cari
                                 </button>
@@ -1143,7 +1143,7 @@ return (
 
                         {/* KANAN: Daftar Titik */}
                         <div className="flex flex-col h-full">
-                          <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
                               Daftar Titik Operasional ({localWaypoints.length} Lokasi)
                             </p>
@@ -1157,7 +1157,7 @@ return (
                             </button>
                           </div>
 
-                          <div className="flex-1 space-y-2 overflow-y-auto max-h-[520px] pr-1">
+                          <div className="flex-1 space-y-2 overflow-y-auto max-h-[300px] sm:max-h-[520px] pr-1">
                             {localWaypoints.length === 0 ? (
                               <div className="py-14 text-center border-2 border-dashed border-gray-200 rounded-2xl">
                                 <p className="text-sm text-gray-400">Belum ada titik yang ditambahkan</p>
@@ -1206,7 +1206,7 @@ return (
                     ) : (
                       /* ── LIHAT WAYPOINT ── */
                       <div className="space-y-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
                           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
                             Titik Perjalanan ({rute.waypoints.length})
                           </p>
@@ -1257,9 +1257,9 @@ return (
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden my-auto border border-gray-100 flex flex-col"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden my-auto border border-gray-100 flex flex-col max-h-[90vh]"
             >
-              <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/60">
+              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/60">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-sky-50 text-sky-600 rounded-xl"><Route size={18} /></div>
                   <div>
@@ -1272,7 +1272,7 @@ return (
                 </button>
               </div>
 
-              <div className="p-6 space-y-6 overflow-y-auto max-h-[80vh]">
+              <div className="p-4 sm:p-6 space-y-6 overflow-y-auto">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
                     { label: "Hari", value: viewingRute.dayOfWeek },
@@ -1329,9 +1329,9 @@ return (
                 )}
               </div>
 
-              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end">
                 <button onClick={() => setViewingRute(null)}
-                  className="px-6 py-2.5 bg-gray-800 text-white text-sm font-semibold rounded-xl hover:bg-gray-700 transition-colors">
+                  className="w-full sm:w-auto px-6 py-2.5 bg-gray-800 text-white text-sm font-semibold rounded-xl hover:bg-gray-700 transition-colors">
                   Tutup
                 </button>
               </div>
@@ -1350,11 +1350,11 @@ return (
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-none sm:rounded-3xl shadow-2xl w-full max-w-md min-h-screen sm:min-h-0 overflow-hidden my-auto flex flex-col"
             >
-              <div className="px-6 py-5 border-b flex justify-between items-center bg-gray-50">
-                <h3 className="font-bold text-lg text-gray-800">Registrasi Rute Baru</h3>
+              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b flex justify-between items-center bg-gray-50">
+                <h3 className="font-bold text-base sm:text-lg text-gray-800">Registrasi Rute Baru</h3>
                 <button onClick={() => setShowModalRute(false)} className="p-2 text-gray-400 hover:bg-gray-200 rounded-full transition-colors"><X size={18} /></button>
               </div>
-              <form onSubmit={handleBuatRute} className="p-6 space-y-5 flex-1 overflow-y-auto">
+              <form onSubmit={handleBuatRute} className="p-4 sm:p-6 space-y-5 flex-1 overflow-y-auto">
                 <div>
                   <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Pilih Armada <span className="text-red-500">*</span></label>
                   <div className="relative">
@@ -1401,7 +1401,7 @@ return (
 
                 <div>
                   <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 block">Hari Operasional <span className="text-red-500">*</span></label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                     {HARI_LIST.map((h) => (
                       <button key={h} type="button"
                         onClick={() => {
@@ -1438,172 +1438,171 @@ return (
       </AnimatePresence>
 
       {/* ── MODAL: EDIT INFO RUTE ── */}
-  {/* ── MODAL: EDIT INFO RUTE ── */}
-<AnimatePresence>
-  {showModalEditRute && editingRuteInfo && (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-none sm:rounded-3xl shadow-2xl w-full max-w-2xl min-h-screen sm:min-h-0 overflow-hidden my-auto flex flex-col"
-      >
-        {/* Header */}
-        <div className="px-6 py-5 border-b flex justify-between items-center bg-gray-50">
-          <div>
-            <h3 className="font-bold text-lg text-gray-800">Edit Info Rute</h3>
-            <p className="text-[11px] text-gray-400 mt-0.5">Ubah armada, hari, nama, atau status rute</p>
-          </div>
-          <button
-            onClick={() => { setShowModalEditRute(false); setEditingRuteInfo(null); }}
-            className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Info box rute yang diedit — netral, tidak mencolok */}
-        <div className="px-6 pt-5">
-          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#4A6D55]/10 rounded-xl flex items-center justify-center shrink-0">
-              <Navigation size={15} className="text-[#4A6D55]" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Rute yang diedit</p>
-              <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{editingRuteInfo.name}</p>
-            </div>
-          </div>
-        </div>
-
-        <form onSubmit={handleSimpanEditRute} className="p-6 space-y-5 flex-1 overflow-y-auto">
-          {/* Baris 1: Armada & Wilayah berdampingan */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Armada Truk</label>
-              <div className="relative">
-                <Truck className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-                <select
-                  value={formEditRute.truckId}
-                  onChange={(e) => {
-                    const truk = trukList.find((t) => t.id === e.target.value);
-                    setFormEditRute((p) => ({ ...p, truckId: e.target.value, name: truk ? `Rute ${truk.plateNumber} - ${p.dayOfWeek}` : p.name }));
-                  }}
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-amber-300/30 focus:border-amber-300 outline-none text-sm font-medium appearance-none"
-                >
-                  <option value="">Pilih armada</option>
-                  {trukList.map((t) => {
-                    const driver = t.operator?.fullName || t.driver?.fullName || null;
-                    return (
-                      <option key={t.id} value={t.id}>
-                        {t.plateNumber}{driver ? ` — ${driver}` : " — (Belum ada supir)"}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Wilayah / Lokasi</label>
-              <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-                <select
-                  value={formEditRute.locationId}
-                  onChange={(e) => setFormEditRute((p) => ({ ...p, locationId: e.target.value }))}
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-amber-300/30 focus:border-amber-300 outline-none text-sm font-medium appearance-none"
-                >
-                  <option value="">Pilih wilayah</option>
-                  {wilayahList.map((w) => (
-                    <option key={w.id} value={w.id}>{w.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Hari Operasional — full width, 7 hari sebaris */}
-          <div>
-            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 block">Hari Operasional</label>
-            <div className="grid grid-cols-7 gap-2">
-              {HARI_LIST.map((h) => (
+      <AnimatePresence>
+        {showModalEditRute && editingRuteInfo && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-none sm:rounded-3xl shadow-2xl w-full max-w-2xl min-h-screen sm:min-h-0 overflow-hidden my-auto flex flex-col"
+            >
+              {/* Header */}
+              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b flex justify-between items-center bg-gray-50">
+                <div>
+                  <h3 className="font-bold text-base sm:text-lg text-gray-800">Edit Info Rute</h3>
+                  <p className="text-[11px] text-gray-400 mt-0.5">Ubah armada, hari, nama, atau status rute</p>
+                </div>
                 <button
-                  key={h}
-                  type="button"
-                  onClick={() => {
-                    const truk = trukList.find((t) => t.id === formEditRute.truckId);
-                    setFormEditRute((p) => ({ ...p, dayOfWeek: h, name: truk ? `Rute ${truk.plateNumber} - ${h}` : p.name }));
-                  }}
-                  className={`py-2.5 text-[10px] font-bold rounded-xl border transition-all ${
-                    formEditRute.dayOfWeek === h
-                      ? "border-[#4A6D55] bg-[#4A6D55]/10 text-[#4A6D55] shadow-sm"
-                      : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200"
-                  }`}
+                  onClick={() => { setShowModalEditRute(false); setEditingRuteInfo(null); }}
+                  className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
                 >
-                  {h.slice(0, 3)}
+                  <X size={18} />
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Baris 2: Nama Rute & Status berdampingan */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">
-                Nama Rute <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <Navigation className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-                <input
-                  type="text"
-                  value={formEditRute.name}
-                  onChange={(e) => setFormEditRute((p) => ({ ...p, name: e.target.value }))}
-                  required
-                  placeholder="Rute BK 1234 AB - SENIN"
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-amber-300/30 focus:border-amber-300 outline-none text-sm font-medium transition-all"
-                />
               </div>
-            </div>
 
-            <div>
-              <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Status Rute</label>
-              <div className="relative">
-                <Power className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-                <select
-                  value={formEditRute.isActive ? "true" : "false"}
-                  onChange={(e) => setFormEditRute((p) => ({ ...p, isActive: e.target.value === "true" }))}
-                  className="w-full pl-11 pr-10 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-amber-300/30 focus:border-amber-300 outline-none text-sm font-medium appearance-none"
-                >
-                  <option value="true">Aktif</option>
-                  <option value="false">Nonaktif</option>
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={15} />
+              {/* Info box rute yang diedit — netral, tidak mencolok */}
+              <div className="px-4 sm:px-6 pt-5">
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[#4A6D55]/10 rounded-xl flex items-center justify-center shrink-0">
+                    <Navigation size={15} className="text-[#4A6D55]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Rute yang diedit</p>
+                    <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{editingRuteInfo.name}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Tombol aksi */}
-          <div className="pt-2 flex gap-3">
-            <button
-              type="button"
-              onClick={() => { setShowModalEditRute(false); setEditingRuteInfo(null); }}
-              className="flex-1 px-5 py-3.5 rounded-xl text-gray-500 font-semibold hover:bg-gray-100 transition-all border border-gray-200 text-sm"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={savingEditRute}
-              className="flex-[2] py-3.5 bg-[#4A6D55] text-white rounded-2xl font-semibold shadow hover:bg-[#3a5643] transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
-            >
-              {savingEditRute ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
-              {savingEditRute ? "Menyimpan..." : "Simpan Perubahan"}
-            </button>
+              <form onSubmit={handleSimpanEditRute} className="p-4 sm:p-6 space-y-5 flex-1 overflow-y-auto">
+                {/* Baris 1: Armada & Wilayah berdampingan */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Armada Truk</label>
+                    <div className="relative">
+                      <Truck className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                      <select
+                        value={formEditRute.truckId}
+                        onChange={(e) => {
+                          const truk = trukList.find((t) => t.id === e.target.value);
+                          setFormEditRute((p) => ({ ...p, truckId: e.target.value, name: truk ? `Rute ${truk.plateNumber} - ${p.dayOfWeek}` : p.name }));
+                        }}
+                        className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-amber-300/30 focus:border-amber-300 outline-none text-sm font-medium appearance-none"
+                      >
+                        <option value="">Pilih armada</option>
+                        {trukList.map((t) => {
+                          const driver = t.operator?.fullName || t.driver?.fullName || null;
+                          return (
+                            <option key={t.id} value={t.id}>
+                              {t.plateNumber}{driver ? ` — ${driver}` : " — (Belum ada supir)"}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Wilayah / Lokasi</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                      <select
+                        value={formEditRute.locationId}
+                        onChange={(e) => setFormEditRute((p) => ({ ...p, locationId: e.target.value }))}
+                        className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-amber-300/30 focus:border-amber-300 outline-none text-sm font-medium appearance-none"
+                      >
+                        <option value="">Pilih wilayah</option>
+                        {wilayahList.map((w) => (
+                          <option key={w.id} value={w.id}>{w.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hari Operasional — full width, 7 hari sebaris */}
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 block">Hari Operasional</label>
+                  <div className="grid grid-cols-7 gap-2">
+                    {HARI_LIST.map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => {
+                          const truk = trukList.find((t) => t.id === formEditRute.truckId);
+                          setFormEditRute((p) => ({ ...p, dayOfWeek: h, name: truk ? `Rute ${truk.plateNumber} - ${h}` : p.name }));
+                        }}
+                        className={`py-2.5 text-[10px] font-bold rounded-xl border transition-all ${
+                          formEditRute.dayOfWeek === h
+                            ? "border-[#4A6D55] bg-[#4A6D55]/10 text-[#4A6D55] shadow-sm"
+                            : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200"
+                        }`}
+                      >
+                        {h.slice(0, 3)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Baris 2: Nama Rute & Status berdampingan */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">
+                      Nama Rute <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Navigation className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                      <input
+                        type="text"
+                        value={formEditRute.name}
+                        onChange={(e) => setFormEditRute((p) => ({ ...p, name: e.target.value }))}
+                        required
+                        placeholder="Rute BK 1234 AB - SENIN"
+                        className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-amber-300/30 focus:border-amber-300 outline-none text-sm font-medium transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Status Rute</label>
+                    <div className="relative">
+                      <Power className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                      <select
+                        value={formEditRute.isActive ? "true" : "false"}
+                        onChange={(e) => setFormEditRute((p) => ({ ...p, isActive: e.target.value === "true" }))}
+                        className="w-full pl-11 pr-10 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-amber-300/30 focus:border-amber-300 outline-none text-sm font-medium appearance-none"
+                      >
+                        <option value="true">Aktif</option>
+                        <option value="false">Nonaktif</option>
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={15} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tombol aksi */}
+                <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setShowModalEditRute(false); setEditingRuteInfo(null); }}
+                    className="w-full sm:flex-1 px-5 py-3.5 rounded-xl text-gray-500 font-semibold hover:bg-gray-100 transition-all border border-gray-200 text-sm"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingEditRute}
+                    className="w-full sm:flex-[2] py-3.5 bg-[#4A6D55] text-white rounded-2xl font-semibold shadow hover:bg-[#3a5643] transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+                  >
+                    {savingEditRute ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+                    {savingEditRute ? "Menyimpan..." : "Simpan Perubahan"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
           </div>
-        </form>
-      </motion.div>
-    </div>
-  )}
-</AnimatePresence>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

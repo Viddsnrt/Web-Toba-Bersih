@@ -250,8 +250,7 @@ export default function ManagePosts({ posts = [], onPostsUpdate }: ManagePostsPr
                       alt={post.title}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://placehold.co/300x200?text=No+Image';
-                      }}
+ (e.target as HTMLImageElement).src = 'https://placehold.co/300x200?text=No+Image';                      }}
                     />
                   </div>
                 )}

@@ -44,9 +44,80 @@ interface AlertState {
   detailText?: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
-  ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '') + '/api'
-  : '/api';
+const API_BASE_URL = '/api';
+
+function getStoredToken() {
+  if (typeof window === 'undefined') return '';
+
+  const tokenFromStorage = localStorage.getItem('token');
+  if (tokenFromStorage && tokenFromStorage !== 'undefined' && tokenFromStorage !== 'null') {
+    return tokenFromStorage;
+  }
+
+  const cookieMatch = document.cookie.match(/(?:^|;\s*)token=([^;]+)/);
+  if (cookieMatch) {
+    return decodeURIComponent(cookieMatch[1]);
+  }
+
+  return '';
+}
+
+function getAuthHeaders() {
+  const token = getStoredToken();
+  return {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    withCredentials: true,
+  };
+}
+
+function buildWilayahCode(name: string, code: string) {
+  const trimmedCode = code?.trim().toUpperCase();
+  if (trimmedCode) return trimmedCode;
+
+  const cleanName = name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
+  const randomNum = Math.floor(100 + Math.random() * 900);
+  return cleanName ? `${cleanName}-${randomNum}` : `WIL-${randomNum}`;
+}
+
+function normalizeWilayahPayload(formData: { name: string; code: string; address: string; latitude: string; longitude: string; radius: string; isActive: boolean }) {
+  const radiusValue = Number.parseInt(formData.radius, 10);
+  const latitudeValue = Number.parseFloat(formData.latitude);
+  const longitudeValue = Number.parseFloat(formData.longitude);
+
+  return {
+    name: formData.name.trim(),
+    code: buildWilayahCode(formData.name, formData.code),
+    address: formData.address?.trim() || formData.name.trim(),
+    latitude: Number.isFinite(latitudeValue) ? latitudeValue : null,
+    longitude: Number.isFinite(longitudeValue) ? longitudeValue : null,
+    radius: Number.isFinite(radiusValue) && radiusValue > 0 ? radiusValue : 5000,
+    isActive: Boolean(formData.isActive),
+  };
+}
+
+async function requestWilayah(method: string, path: string, data?: unknown) {
+  const endpoints = [`${API_BASE_URL}/wilayah${path}`, `${API_BASE_URL}/admin/wilayah${path}`];
+  let lastError: unknown;
+
+  for (const endpoint of endpoints) {
+    try {
+      return await axios({
+        method,
+        url: endpoint,
+        ...(data !== undefined ? { data } : {}),
+        ...getAuthHeaders(),
+      });
+    } catch (error) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (![404, 405, 307, 308].includes(status ?? 0)) {
+        throw error;
+      }
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
 
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -149,15 +220,13 @@ export default function ManageWilayah() {
   const fetchWilayah = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = getStoredToken();
       if (!token) {
         showAlert('error', 'Sesi Tidak Valid', 'Token belum ditemukan.', 'Silakan login ulang untuk melanjutkan.');
         setWilayahList([]);
         return;
       }
-      const res = await axios.get(`${API_BASE_URL}/wilayah`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await requestWilayah('get', '');
       const extractWilayahList = (payload: unknown): Wilayah[] => {
         if (!payload) return [];
         if (Array.isArray(payload)) return payload as Wilayah[];
@@ -227,8 +296,7 @@ export default function ManageWilayah() {
 
   const toggleStatus = async (wilayah: Wilayah) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`${API_BASE_URL}/wilayah/${wilayah.id}/toggle`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await requestWilayah('patch', `/${wilayah.id}/toggle`, {});
       showAlert(
         'success',
         'Status Berhasil Diperbarui',
@@ -263,10 +331,7 @@ export default function ManageWilayah() {
     setDeleting(true);
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/wilayah/${deleteTarget.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await requestWilayah('delete', `/${deleteTarget.id}`);
       setSubmitting(false);
       setDeleting(false);
       showAlert(
@@ -316,34 +381,27 @@ export default function ManageWilayah() {
 
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
-      const payload = {
-        ...formData,
-        latitude: parseFloat(formData.latitude),
-        longitude: parseFloat(formData.longitude),
-        radius: parseInt(formData.radius) || 5000,
-      };
-      if (editingWilayah) {
-        await axios.put(`${API_BASE_URL}/wilayah/${editingWilayah.id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
-        showAlert(
-          'edit',
-          'Wilayah Berhasil Diperbarui',
-          'Perubahan konfigurasi wilayah berhasil disimpan ke dalam sistem.',
-          'Informasi wilayah telah diperbarui.'
-        );
-      } else {
-        await axios.post(`${API_BASE_URL}/wilayah`, payload, { headers: { Authorization: `Bearer ${token}` } });
-        showAlert(
-          'success',
-          'Wilayah Berhasil Ditambahkan',
-          'Wilayah baru berhasil terdaftar dan dapat digunakan.',
-          'Data wilayah telah tersimpan ke dalam sistem.'
-        );
-      }
+      const payload = normalizeWilayahPayload(formData);
+      const targetPath = editingWilayah ? `/${editingWilayah.id}` : '';
+      const method = editingWilayah ? 'put' : 'post';
+
+      await requestWilayah(method, targetPath, payload);
+
+      showAlert(
+        editingWilayah ? 'edit' : 'success',
+        editingWilayah ? 'Wilayah Berhasil Diperbarui' : 'Wilayah Berhasil Ditambahkan',
+        editingWilayah
+          ? 'Perubahan konfigurasi wilayah berhasil disimpan ke dalam sistem.'
+          : 'Wilayah baru berhasil terdaftar dan dapat digunakan.',
+        editingWilayah ? 'Informasi wilayah telah diperbarui.' : 'Data wilayah telah tersimpan ke dalam sistem.'
+      );
       setShowModal(false);
       fetchWilayah();
-    } catch {
-      showFormAlert('error', 'Gagal menyimpan. Periksa koneksi atau data Anda.');
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+        || (error as { message?: string })?.message
+        || 'Gagal menyimpan. Periksa koneksi atau data Anda.';
+      showFormAlert('error', message);
     } finally {
       setSubmitting(false);
     }
@@ -368,8 +426,10 @@ export default function ManageWilayah() {
     warning: 'bg-yellow-50 border-yellow-200 text-yellow-700',
   };
 
-return (
-  <div className="w-full space-y-6 md:space-y-8 p-4 md:p-6 text-black">
+  return (
+    // Container utama dengan pembatas lebar maksimum dan padding responsif
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-black">
+      
       {/* AlertDialog */}
       <AlertDialog
         open={alertState.open}
@@ -408,39 +468,42 @@ return (
       />
 
       {/* --- HEADER --- */}
-      <div className="mb-8">
-        <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-[24px] p-8 shadow-sm border border-white/50">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div>
-              <span className="bg-white/60 text-[#4A6D55] px-4 py-1.5 rounded-full text-xs font-medium tracking-wider uppercase inline-block mb-3">
-                Data & Operasional
-              </span>
-              <h1 className="text-3xl font-extrabold text-[#1A2E35] tracking-tight uppercase">Manajemen Data Wilayah Operasional</h1>
-              <p className="text-[#5B7078] mt-2 font-medium">
-                Kelola status, koordinat, dan radius operasional cakupan wilayah.
-              </p>
-            </div>
+      <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-[24px] p-5 sm:p-6 md:p-8 shadow-sm border border-white/50 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full -mr-10 -mt-10 blur-2xl" />
+        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 md:gap-6">
+          <div>
+            <span className="bg-white/60 text-[#4A6D55] px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-medium tracking-wider uppercase inline-block mb-2 md:mb-3">
+              Data & Operasional
+            </span>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#1A2E35] tracking-tight uppercase">
+              Manajemen Data Wilayah Operasional
+            </h1>
+            <p className="text-sm md:text-base text-[#5B7078] mt-1 md:mt-2 font-medium">
+              Kelola status, koordinat, dan radius operasional cakupan wilayah.
+            </p>
           </div>
         </div>
       </div>
 
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-  {[
-    { label: 'Total', val: stats.total, icon: Building2, color: 'text-gray-600', bg: 'bg-gray-50' },
-    { label: 'Aktif', val: stats.active, icon: CircleCheck, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Nonaktif', val: stats.inactive, icon: PowerOff, color: 'text-red-600', bg: 'bg-red-50' },
-    { label: 'Total Luas', val: formatArea(stats.totalArea), icon: Map, color: 'text-purple-600', bg: 'bg-purple-50' },
-  ].map((s, i) => (
-    <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
-      <div className={`p-3 rounded-xl ${s.bg} ${s.color}`}><s.icon size={24} /></div>
-      <div className="min-w-0">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{s.label}</p>
-        <p className="text-2xl font-black text-gray-900 mt-0.5 truncate">{s.val}</p>
+      {/* STATS CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        {[
+          { label: 'Total', val: stats.total, icon: Building2, color: 'text-gray-600', bg: 'bg-gray-50' },
+          { label: 'Aktif', val: stats.active, icon: CircleCheck, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Nonaktif', val: stats.inactive, icon: PowerOff, color: 'text-red-600', bg: 'bg-red-50' },
+          { label: 'Total Luas', val: formatArea(stats.totalArea), icon: Map, color: 'text-purple-600', bg: 'bg-purple-50' },
+        ].map((s, i) => (
+          <div key={i} className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-3 sm:gap-4 hover:shadow-md transition-all">
+            <div className={`p-3 rounded-xl ${s.bg} ${s.color}`}><s.icon size={24} /></div>
+            <div className="text-center sm:text-left min-w-0">
+              <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">{s.label}</p>
+              <p className="text-xl sm:text-2xl font-black text-gray-900 mt-0.5 truncate">{s.val}</p>
+            </div>
+          </div>
+        ))}
       </div>
-    </div>
-  ))}
-</div>
 
+      {/* ADD BUTTON */}
       <div className="flex justify-end">
         <button
           onClick={() => {
@@ -450,27 +513,32 @@ return (
             setFormData({ name: '', code: '', address: '', latitude: '-6.200000', longitude: '106.816666', radius: '5000', isActive: true });
             setShowModal(true);
           }}
-          className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-[#4A6D55] text-white font-bold shadow-lg hover:bg-[#3a5643] transition-all flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-5 sm:px-6 py-3 rounded-2xl bg-[#4A6D55] text-white font-bold shadow-lg hover:bg-[#3a5643] transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
         >
           <Plus size={18} /> Tambah Wilayah
         </button>
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="bg-white rounded-2xl border-none shadow-sm p-3 md:p-4 flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
+      {/* SEARCH & FILTER BAR */}
+      <div className="bg-white rounded-2xl border-none shadow-sm p-3 md:p-4 flex flex-col lg:flex-row gap-3 md:gap-4 justify-between items-stretch lg:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
-            type="text" placeholder="Cari nama atau kode..." value={searchTerm}
+            type="text"
+            placeholder="Cari nama atau kode..."
+            value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500/20 outline-none text-sm"
+            className="w-full pl-11 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500/20 outline-none text-sm md:text-base"
           />
         </div>
-        <div className="flex gap-1 overflow-x-auto">
+        <div className="flex flex-wrap gap-1 md:gap-2 overflow-x-auto">
           {['ALL', 'ACTIVE', 'INACTIVE'].map((f) => (
             <button
-              key={f} onClick={() => setStatusFilter(f)}
-              className={`px-4 py-2 rounded-xl text-[10px] md:text-xs font-bold transition-all whitespace-nowrap ${statusFilter === f ? 'bg-black text-white' : 'bg-gray-100 text-gray-500'}`}
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={`px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-xs font-bold transition-all whitespace-nowrap ${
+                statusFilter === f ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
             >
               {f === 'ALL' ? 'Semua' : f === 'ACTIVE' ? 'Aktif' : 'Nonaktif'}
             </button>
@@ -478,88 +546,129 @@ return (
         </div>
       </div>
 
-      {/* TABLE SECTION */}
+      {/* TABLE */}
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm overflow-x-auto border-none">
         <table className="w-full text-left border-spacing-0 min-w-[850px]">
           <thead>
-            <tr className="bg-gray-50 text-gray-400 text-[12px] font-bold uppercase tracking-widest">
-              <th className="px-6 py-4">Nama & Lokasi</th>
-              <th className="px-4 md:px-6 py-4">Radius</th>
-              <th className="hidden md:table-cell px-4 md:px-6 py-4">Luas Cakupan</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Aksi</th>
+            <tr className="bg-gray-50 text-gray-400 text-[10px] sm:text-xs font-bold uppercase tracking-widest">
+              <th className="px-4 sm:px-6 py-3 sm:py-4">Nama & Lokasi</th>
+              <th className="px-4 sm:px-6 py-3 sm:py-4">Radius</th>
+              <th className="hidden md:table-cell px-4 sm:px-6 py-3 sm:py-4">Luas Cakupan</th>
+              <th className="px-4 sm:px-6 py-3 sm:py-4">Status</th>
+              <th className="px-4 sm:px-6 py-3 sm:py-4 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? (
-              <tr><td colSpan={5} className="px-6 py-10 text-center text-gray-400 italic">Memuat data wilayah...</td></tr>
-            ) : filteredWilayah.map((w) => (
-              <tr key={w.id} className="hover:bg-gray-50/50 transition-colors group">
-                <td className="px-6 py-4">
-                  <div className="flex flex-col gap-0.5">
-                    <p className="font-bold text-gray-900 text-base">{w.name}</p>
-                    <p className="text-xs text-blue-600 font-mono mb-1.5 flex items-center gap-1">
-                      <Hash size={10} /> {w.code}
-                    </p>
-                    <div className="flex items-center gap-1.5 text-xs font-mono text-gray-400 bg-gray-50 w-fit px-2 py-0.5 rounded border border-gray-100">
-                      <MapPin size={10} className="text-red-400" />
-                      <span>{parseFloat(w.latitude).toFixed(6)}, {parseFloat(w.longitude).toFixed(6)}</span>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 md:px-6 py-4">
-                  <span className="text-xs md:text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
-                    {w.radius}m
-                  </span>
-                </td>
-                <td className="hidden md:table-cell px-4 md:px-6 py-4">
-                  <p className="text-sm font-bold text-blue-600">{formatArea(w.area || 0)}</p>
-                </td>
-                <td className="px-6 py-4">
-                  <span
-                    className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold ${
-                      w.isActive
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}
-                  >
-                    {w.isActive ? <Power size={12} /> : <PowerOff size={12} />}
-                    {w.isActive ? 'AKTIF' : 'NONAKTIF'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right space-x-2">
-                  <button onClick={() => setViewingWilayah(w)} className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors inline-flex"><Eye size={14} /></button>
-                  <button onClick={() => {
-                    const editData = {
-                      ...w,
-                      code: w.code || '',
-                      address: w.address || '',
-                      radius: w.radius?.toString() || '5000'
-                    };
-                    setEditingWilayah(w);
-                    setOriginalData(editData);
-                    setFormData(editData);
-                    setShowModal(true);
-                  }} className="p-2 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition-colors inline-flex"><Edit size={14} /></button>
-                  <button onClick={() => handleDeleteClick(w)} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors inline-flex"><Trash2 size={14} /></button>
+              <tr>
+                <td colSpan={5} className="px-4 sm:px-6 py-12 text-center text-gray-400 italic text-sm">
+                  Memuat data wilayah...
                 </td>
               </tr>
-            ))}
+            ) : filteredWilayah.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 sm:px-6 py-12 text-center text-gray-400 italic text-sm">
+                  Tidak ada wilayah yang sesuai.
+                </td>
+              </tr>
+            ) : (
+              filteredWilayah.map((w) => (
+                <tr key={w.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <td className="px-4 sm:px-6 py-3 sm:py-4">
+                    <div className="flex flex-col gap-0.5">
+                      <p className="font-bold text-gray-900 text-sm sm:text-base">{w.name}</p>
+                      <p className="text-[10px] sm:text-xs text-blue-600 font-mono mb-1.5 flex items-center gap-1">
+                        <Hash size={10} /> {w.code}
+                      </p>
+                      <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-mono text-gray-400 bg-gray-50 w-fit px-2 py-0.5 rounded border border-gray-100">
+                        <MapPin size={10} className="text-red-400" />
+                        <span>{parseFloat(w.latitude).toFixed(6)}, {parseFloat(w.longitude).toFixed(6)}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-4">
+                    <span className="text-xs sm:text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
+                      {w.radius}m
+                    </span>
+                  </td>
+                  <td className="hidden md:table-cell px-4 sm:px-6 py-3 sm:py-4">
+                    <p className="text-sm font-bold text-blue-600">{formatArea(w.area || 0)}</p>
+                  </td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-4">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold ${
+                        w.isActive
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      {w.isActive ? <Power size={10} /> : <PowerOff size={10} />}
+                      {w.isActive ? 'AKTIF' : 'NONAKTIF'}
+                    </span>
+                  </td>
+                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-right space-x-1 sm:space-x-2">
+                    <button
+                      onClick={() => setViewingWilayah(w)}
+                      className="p-1.5 sm:p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors inline-flex"
+                      title="Lihat Detail"
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const editData = {
+                          ...w,
+                          code: w.code || '',
+                          address: w.address || '',
+                          radius: w.radius?.toString() || '5000'
+                        };
+                        setEditingWilayah(w);
+                        setOriginalData(editData);
+                        setFormData(editData);
+                        setShowModal(true);
+                      }}
+                      className="p-1.5 sm:p-2 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition-colors inline-flex"
+                      title="Edit"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(w)}
+                      className="p-1.5 sm:p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors inline-flex"
+                      title="Hapus"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Modal Form */}
+      {/* FORM MODAL */}
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-none sm:rounded-3xl shadow-2xl w-full max-w-2xl min-h-screen sm:min-h-0 overflow-hidden my-auto">
-              <div className="px-6 py-5 border-b flex justify-between items-center bg-gray-50">
-                <h3 className="font-bold text-lg">{editingWilayah ? 'Edit Wilayah' : 'Tambah Wilayah Baru'}</h3>
-                <button onClick={() => setShowModal(false)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"><X /></button>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden my-auto border border-gray-100 flex flex-col max-h-[90vh]"
+            >
+              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b flex justify-between items-center bg-gray-50/70">
+                <h3 className="font-bold text-sm sm:text-lg">
+                  {editingWilayah ? 'Edit Wilayah' : 'Tambah Wilayah Baru'}
+                </h3>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <form onSubmit={handleSubmit} className="p-6 space-y-4">
-
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto">
                 <AnimatePresence>
                   {formAlert && (
                     <motion.div
@@ -589,12 +698,23 @@ return (
                   )}
                 </AnimatePresence>
 
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                    <input placeholder="Cari nama lokasi/jalan di peta..." className="w-full pl-10 p-3 border rounded-xl outline-none text-sm focus:border-blue-500 transition-colors" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <input
+                      placeholder="Cari nama lokasi/jalan di peta..."
+                      className="w-full pl-10 p-3 border rounded-xl outline-none text-sm focus:border-blue-500 transition-colors"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
-                  <button type="button" onClick={handleSearchOSM} className="bg-blue-600 text-white px-6 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors shadow-md">Cari</button>
+                  <button
+                    type="button"
+                    onClick={handleSearchOSM}
+                    className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors shadow-md"
+                  >
+                    Cari
+                  </button>
                 </div>
 
                 <div className="h-56 border border-gray-100 rounded-2xl overflow-hidden bg-gray-50 relative group">
@@ -610,30 +730,44 @@ return (
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Nama Wilayah</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
+                      Nama Wilayah
+                    </label>
                     <input
                       placeholder="Contoh: Kantor Cabang Sudirman"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className={`w-full p-3 border rounded-xl outline-none text-sm focus:ring-1 transition-colors ${duplicateWarning?.includes('nama') ? 'border-yellow-400 focus:ring-yellow-400' : 'focus:ring-green-500'
-                        }`}
+                      className={`w-full p-3 border rounded-xl outline-none text-sm focus:ring-1 transition-colors ${
+                        duplicateWarning?.includes('nama') ? 'border-yellow-400 focus:ring-yellow-400' : 'focus:ring-green-500'
+                      }`}
                       required
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Kode Wilayah</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
+                      Kode Wilayah
+                    </label>
                     <input
                       value={formData.code}
                       onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                      className={`w-full p-3 border rounded-xl bg-gray-50 font-mono text-blue-600 font-bold text-sm transition-colors ${duplicateWarning?.includes('Kode') ? 'border-yellow-400' : ''
-                        }`}
+                      className={`w-full p-3 border rounded-xl bg-gray-50 font-mono text-blue-600 font-bold text-sm transition-colors ${
+                        duplicateWarning?.includes('Kode') ? 'border-yellow-400' : ''
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Radius Operasional (Meter)</label>
-                    <input type="number" value={formData.radius} onChange={(e) => setFormData({ ...formData, radius: e.target.value })} className="w-full p-3 border rounded-xl text-sm" />
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
+                      Radius Operasional (Meter)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.radius}
+                      onChange={(e) => setFormData({ ...formData, radius: e.target.value })}
+                      className="w-full p-3 border rounded-xl text-sm"
+                      min="5000"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Minimal 5000 meter</p>
                   </div>
-
                   <div>
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
                       Status Wilayah
@@ -654,42 +788,65 @@ return (
                   </div>
                 </div>
 
-                <button
-                  disabled={submitting || !!duplicateWarning}
-                  className="w-full py-4 bg-[#4A6D55] text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#053f30] transition-all duration-200 active:scale-95"
-                >
-                  {submitting ? (
-                    <><Loader2 className="animate-spin" size={18} /> Menyimpan...</>
-                  ) : duplicateWarning ? (
-                    <><AlertTriangle size={16} /> Selesaikan Konflik Duplikat</>
-                  ) : (
-                    'Simpan Wilayah'
-                  )}
-                </button>
+                <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    disabled={submitting}
+                    className="w-full sm:flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 active:scale-[0.99] text-gray-600 rounded-xl font-bold transition-all text-sm text-center disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting || !!duplicateWarning}
+                    className={`w-full sm:flex-1 py-3.5 bg-[#4A6D55] text-white rounded-xl font-bold shadow-md shadow-green-900/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm ${
+                      duplicateWarning ? 'bg-yellow-500 hover:bg-yellow-600' : 'hover:bg-[#3d5a46]'
+                    }`}
+                  >
+                    {submitting ? (
+                      <><Loader2 className="animate-spin" size={16} /> Menyimpan...</>
+                    ) : duplicateWarning ? (
+                      <><AlertTriangle size={16} /> Selesaikan Konflik Duplikat</>
+                    ) : (
+                      'Simpan Wilayah'
+                    )}
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Modal Preview / Detail */}
+      {/* DETAIL MODAL */}
       <AnimatePresence>
         {viewingWilayah && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden my-auto">
-              <div className="px-6 py-5 border-b flex justify-between items-center bg-gray-50">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden my-auto border border-gray-100 flex flex-col max-h-[90vh]"
+            >
+              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b flex justify-between items-center bg-gray-50/70">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><Map size={20} /></div>
-                  <h3 className="font-bold text-lg">Detail Wilayah</h3>
+                  <h3 className="font-bold text-base sm:text-lg">Detail Wilayah</h3>
                 </div>
-                <button onClick={() => setViewingWilayah(null)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"><X /></button>
+                <button
+                  onClick={() => setViewingWilayah(null)}
+                  className="p-2 text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <div className="p-6 space-y-6">
-                <div className="h-64 border border-gray-100 rounded-2xl overflow-hidden bg-gray-50 shadow-inner">
+              <div className="p-4 sm:p-6 space-y-6 overflow-y-auto">
+                <div className="h-48 sm:h-64 border border-gray-100 rounded-2xl overflow-hidden bg-gray-50 shadow-inner">
                   <WilayahMap
                     markerPos={[parseFloat(viewingWilayah.latitude), parseFloat(viewingWilayah.longitude)]}
                     radius={viewingWilayah.radius || 0}
-                    onMarkerDrag={() => { }}
+                    onMarkerDrag={() => {}}
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -708,10 +865,10 @@ return (
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="col-span-2 md:col-span-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="col-span-1 md:col-span-1">
                     <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Nama & Kode</p>
-                    <p className="font-extrabold text-gray-900 leading-tight">{viewingWilayah.name}</p>
+                    <p className="font-extrabold text-gray-900 leading-tight text-sm sm:text-base">{viewingWilayah.name}</p>
                     <p className="text-xs font-mono text-blue-600">{viewingWilayah.code}</p>
                   </div>
                   <div>
@@ -748,8 +905,13 @@ return (
                   </div>
                 </div>
               </div>
-              <div className="p-6 bg-gray-50 border-t flex justify-end">
-                <button onClick={() => setViewingWilayah(null)} className="px-10 py-3 bg-black text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition-all shadow-md">Tutup Detail</button>
+              <div className="p-4 sm:p-6 bg-gray-50 border-t flex justify-end">
+                <button
+                  onClick={() => setViewingWilayah(null)}
+                  className="w-full sm:w-auto px-10 py-3 bg-black text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition-all shadow-md"
+                >
+                  Tutup Detail
+                </button>
               </div>
             </motion.div>
           </div>

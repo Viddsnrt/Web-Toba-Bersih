@@ -61,7 +61,7 @@ const ITEMS_PER_PAGE = 12;
 // KONSTANTA OPERASIONAL
 // ============================================================
 const OPERATIONAL_START = 8;   // 08:00
-const OPERATIONAL_END   = 17;  // 17:00
+const OPERATIONAL_END = 17;  // 17:00
 
 const isOperationalHours = (date: Date): boolean => {
   const hourWIB = parseInt(
@@ -278,13 +278,13 @@ function usePenugasan() {
 // ============================================================
 function StatsCard({ label, value, icon: Icon, color, bg }: any) {
   return (
-    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+    <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center gap-3 sm:gap-4 hover:shadow-md transition-all">
       <div className={`p-3 rounded-xl ${bg} ${color}`}>
         <Icon size={24} />
       </div>
-      <div>
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{label}</p>
-        <p className="text-2xl font-black text-gray-900 mt-0.5">{value}</p>
+      <div className="text-center sm:text-left">
+        <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+        <p className="text-xl sm:text-2xl font-black text-gray-900 mt-0.5">{value}</p>
       </div>
     </div>
   );
@@ -355,19 +355,19 @@ function TugaskanModal({
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="bg-white rounded-none sm:rounded-[32px] shadow-2xl w-full max-w-lg min-h-screen sm:min-h-0 overflow-hidden my-auto border border-gray-100"
       >
-        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-gray-50/50">
           <div>
-            <h2 className="font-extrabold text-lg text-gray-900">{isEdit ? "Edit Penugasan" : "Buat Penugasan Baru"}</h2>
-            <p className="text-[11px] text-gray-500 mt-1 uppercase tracking-wider font-bold">
+            <h2 className="font-extrabold text-base sm:text-lg text-gray-900">{isEdit ? "Edit Penugasan" : "Buat Penugasan Baru"}</h2>
+            <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 uppercase tracking-wider font-bold">
               {isEdit ? "Ubah armada, jadwal, atau lokasi" : "Tentukan armada dan jadwal operasional"}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-700 rounded-full transition-colors">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-700 rounded-full transition-colors self-end sm:self-auto">
             <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="p-6 space-y-6">
+        <form onSubmit={onSubmit} className="p-4 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto max-h-[70vh]">
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block ml-1">
               Armada / Truk <span className="text-red-500">*</span>
@@ -377,9 +377,8 @@ function TugaskanModal({
               name="truckId"
               value={formData.truckId}
               onChange={handleChange}
-              className={`w-full p-4 bg-gray-50/50 border rounded-2xl outline-none text-sm focus:ring-4 focus:ring-green-500/10 font-bold transition-all text-gray-700 ${
-                formErrors.truckId ? "border-red-400" : "border-gray-200 focus:border-green-500"
-              }`}
+              className={`w-full p-4 bg-gray-50/50 border rounded-2xl outline-none text-sm focus:ring-4 focus:ring-green-500/10 font-bold transition-all text-gray-700 ${formErrors.truckId ? "border-red-400" : "border-gray-200 focus:border-green-500"
+                }`}
             >
               <option value="">-- Pilih Armada Operasional --</option>
               {trukList.map((t: any) => (
@@ -401,9 +400,8 @@ function TugaskanModal({
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`border rounded-2xl p-5 ${
-                hasDriver ? "bg-emerald-50/50 border-emerald-100" : "bg-amber-50/50 border-amber-100"
-              }`}
+              className={`border rounded-2xl p-5 ${hasDriver ? "bg-emerald-50/50 border-emerald-100" : "bg-amber-50/50 border-amber-100"
+                }`}
             >
               {hasDriver ? (
                 <>
@@ -436,9 +434,8 @@ function TugaskanModal({
               value={formData.scheduledAt}
               onChange={handleChange}
               min={getCurrentDateTimeLocal()}
-              className={`w-full p-4 bg-gray-50/50 border rounded-2xl outline-none text-sm focus:ring-4 focus:ring-green-500/10 font-bold transition-all text-gray-700 ${
-                formErrors.scheduledAt ? "border-red-400" : "border-gray-200 focus:border-green-500"
-              }`}
+              className={`w-full p-4 bg-gray-50/50 border rounded-2xl outline-none text-sm focus:ring-4 focus:ring-green-500/10 font-bold transition-all text-gray-700 ${formErrors.scheduledAt ? "border-red-400" : "border-gray-200 focus:border-green-500"
+                }`}
             />
             {formErrors.scheduledAt ? (
               <p className="text-xs text-red-500 mt-2 ml-1 flex items-center gap-1.5 font-medium">
@@ -462,9 +459,8 @@ function TugaskanModal({
               rows={3}
               value={formData.location}
               onChange={handleChange}
-              className={`w-full p-4 bg-gray-50/50 border rounded-2xl outline-none text-sm focus:ring-4 focus:ring-green-500/10 font-medium transition-all text-gray-700 resize-none ${
-                formErrors.location ? "border-red-400" : "border-gray-200 focus:border-green-500"
-              }`}
+              className={`w-full p-4 bg-gray-50/50 border rounded-2xl outline-none text-sm focus:ring-4 focus:ring-green-500/10 font-medium transition-all text-gray-700 resize-none ${formErrors.location ? "border-red-400" : "border-gray-200 focus:border-green-500"
+                }`}
               placeholder="Masukkan alamat lengkap lokasi penugasan"
             />
             {formErrors.location && (
@@ -474,18 +470,18 @@ function TugaskanModal({
             )}
           </div>
 
-          <div className="pt-2 flex gap-3">
+          <div className="pt-2 flex flex-col sm:flex-row gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-4 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition-all border border-transparent"
+              className="w-full sm:flex-1 px-6 py-4 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition-all border border-transparent"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={(!hasDriver && !!formData.truckId) || submitting}
-              className="flex-[2] py-4 bg-[#4A6D55] text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-900/20 hover:bg-[#3a5643] transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+              className="w-full sm:flex-[2] py-4 bg-[#4A6D55] text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-green-900/20 hover:bg-[#3a5643] transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
             >
               {submitting && <Loader2 size={18} className="animate-spin" />}
               {isEdit ? "Simpan Perubahan" : "Konfirmasi Penugasan"}
@@ -501,7 +497,7 @@ function TugaskanModal({
 function DetailLaporanModal({ open, onClose, laporan }: any) {
   if (!open || !laporan) return null;
   return (
-    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -509,12 +505,12 @@ function DetailLaporanModal({ open, onClose, laporan }: any) {
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="relative bg-white rounded-[32px] w-full max-w-lg max-h-[90vh] shadow-2xl overflow-hidden z-10 flex flex-col"
       >
-        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-100 rounded-xl">
               <FileText size={20} className="text-emerald-700" />
             </div>
-            <h3 className="font-black text-gray-900 text-lg">Detail Laporan</h3>
+            <h3 className="font-black text-gray-900 text-base sm:text-lg">Detail Laporan</h3>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-black px-3 py-1.5 rounded-full bg-red-100 text-red-700 flex items-center gap-1.5 border border-red-200">
@@ -527,7 +523,7 @@ function DetailLaporanModal({ open, onClose, laporan }: any) {
           </div>
         </div>
 
-        <div className="overflow-y-auto p-6 space-y-6">
+        <div className="overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
           {laporan.photoUrl ? (
             <div className="rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-sm relative group">
               <img src={laporan.photoUrl} alt="Foto laporan" className="w-full h-auto max-h-64 object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -591,7 +587,7 @@ function DetailLaporanModal({ open, onClose, laporan }: any) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {laporan.report?.jenisSampah && (
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-2 ml-1">
@@ -624,12 +620,10 @@ function DetailLaporanModal({ open, onClose, laporan }: any) {
           </div>
         </div>
 
-        {/* Footer aksi akan disediakan oleh komponen induk, karena membutuhkan callback */}
-        <div className="px-6 py-5 border-t border-gray-100 bg-white flex flex-wrap sm:flex-nowrap gap-3">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-t border-gray-100 bg-white flex flex-wrap sm:flex-nowrap gap-3">
           <button onClick={onClose} className="flex-1 py-3.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-all order-3 sm:order-1">
             Tutup
           </button>
-          {/* Tombol Tolak dan Tugaskan akan diberikan dari parent melalui props tambahan */}
         </div>
       </motion.div>
     </div>
@@ -661,16 +655,16 @@ function DeleteConfirmModal({ open, onClose, onConfirm, type, name }: any) {
 function TolakConfirmModal({ open, onClose, onConfirm, name, reason, setReason, error, setError, submitting }: any) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white rounded-[24px] shadow-2xl w-full max-w-md overflow-hidden border border-gray-100"
+        className="bg-white rounded-[24px] shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 max-h-[90vh] flex flex-col"
       >
-        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
           <div>
-            <h2 className="font-bold text-lg text-gray-900">Tolak Laporan?</h2>
+            <h2 className="font-bold text-base sm:text-lg text-gray-900">Tolak Laporan?</h2>
             <p className="text-xs text-gray-500 mt-0.5">
               {name ? `Laporan "${name}" akan ditolak.` : "Laporan akan ditolak dan statusnya diubah."}
             </p>
@@ -679,7 +673,7 @@ function TolakConfirmModal({ open, onClose, onConfirm, name, reason, setReason, 
             <X size={18} />
           </button>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
           <div>
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block ml-1 mb-1">
               Alasan Penolakan <span className="text-red-500">*</span>
@@ -692,9 +686,8 @@ function TolakConfirmModal({ open, onClose, onConfirm, name, reason, setReason, 
                 if (error) setError("");
               }}
               placeholder="Contoh: Foto laporan tidak jelas, lokasi sudah ditangani sebelumnya, dll."
-              className={`w-full p-4 bg-gray-50/50 border rounded-2xl outline-none text-sm focus:ring-2 focus:ring-red-500/20 transition-all resize-none ${
-                error ? "border-red-400" : "border-gray-200 focus:border-red-500"
-              }`}
+              className={`w-full p-4 bg-gray-50/50 border rounded-2xl outline-none text-sm focus:ring-2 focus:ring-red-500/20 transition-all resize-none ${error ? "border-red-400" : "border-gray-200 focus:border-red-500"
+                }`}
             />
             {error && (
               <p className="text-xs text-red-500 mt-2 flex items-center gap-1.5 ml-1">
@@ -704,11 +697,11 @@ function TolakConfirmModal({ open, onClose, onConfirm, name, reason, setReason, 
             <p className="text-[11px] text-gray-400 mt-2 ml-1">Alasan ini akan dikirim langsung ke email pelapor.</p>
           </div>
         </div>
-        <div className="px-6 pb-6 flex gap-3">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6 flex flex-col sm:flex-row gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-6 py-3.5 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition-all"
+            className="w-full sm:flex-1 px-6 py-3.5 rounded-xl text-gray-600 font-bold hover:bg-gray-100 transition-all"
           >
             Batal
           </button>
@@ -716,7 +709,7 @@ function TolakConfirmModal({ open, onClose, onConfirm, name, reason, setReason, 
             type="button"
             onClick={onConfirm}
             disabled={submitting}
-            className="flex-1 py-3.5 bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all disabled:opacity-50"
+            className="w-full sm:flex-1 py-3.5 bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all disabled:opacity-50"
           >
             Ya, Tolak
           </button>
@@ -740,7 +733,7 @@ function Pagination({ currentPage, totalPages, setCurrentPage }: any) {
   }, [currentPage, totalPages]);
 
   return (
-    <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-gray-200/60 shadow-sm">
+    <div className="flex flex-wrap items-center justify-center sm:justify-end gap-1 bg-white p-1 rounded-2xl border border-gray-200/60 shadow-sm">
       <button
         onClick={() => setCurrentPage(1)}
         disabled={currentPage === 1}
@@ -756,7 +749,7 @@ function Pagination({ currentPage, totalPages, setCurrentPage }: any) {
         <ChevronLeft size={16} />
       </button>
 
-      <div className="flex items-center gap-1 px-2 border-x border-gray-100">
+      <div className="flex flex-wrap items-center gap-1 px-2 border-x border-gray-100">
         {pageNumbers.map((page, i) =>
           page < 0 ? (
             <span key={`e-${i}`} className="px-2 text-gray-300 text-xs font-bold select-none">…</span>
@@ -764,11 +757,10 @@ function Pagination({ currentPage, totalPages, setCurrentPage }: any) {
             <button
               key={page}
               onClick={() => setCurrentPage(page)}
-              className={`min-w-[36px] h-[36px] rounded-xl text-xs font-bold transition-all ${
-                currentPage === page
+              className={`min-w-[32px] sm:min-w-[36px] h-[32px] sm:h-[36px] rounded-xl text-[11px] sm:text-xs font-bold transition-all ${currentPage === page
                   ? "bg-[#4A6D55] text-white shadow-md shadow-green-900/10"
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-              }`}
+                }`}
             >
               {page}
             </button>
@@ -903,7 +895,7 @@ export default function ManagePenugasan() {
 
     // ═══ CEK JAM OPERASIONAL ═══
     if (formData.scheduledAt) {
-      const d = new Date(toISOWithWIBOffset(formData.scheduledAt)!); // ✅ parsing dengan offset WIB eksplisit
+      const d = new Date(toISOWithWIBOffset(formData.scheduledAt)!);
       if (!isOperationalHours(d)) {
         showAlert(
           "warning",
@@ -911,11 +903,10 @@ export default function ManagePenugasan() {
           `Jadwal yang dipilih (${d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}) berada di luar jam operasional (${OPERATIONAL_START.toString().padStart(2, '0')}:00 - ${OPERATIONAL_END.toString().padStart(2, '0')}:00 WIB).`,
           "Silakan pilih jam operasional yang tersedia."
         );
-        return; // hentikan proses submit
+        return;
       }
     }
 
-    // Lanjutkan validasi form
     if (!validateForm(isEditMode)) return;
     setSubmitting(true);
     try {
@@ -923,7 +914,7 @@ export default function ManagePenugasan() {
         reportId: formData.reportId,
         truckId: formData.truckId,
         driverId: formData.driverId,
-        scheduledAt: toISOWithWIBOffset(formData.scheduledAt), // ✅ kirim dengan offset +07:00 eksplisit
+        scheduledAt: toISOWithWIBOffset(formData.scheduledAt),
         location: formData.location.trim(),
         district: selectedItem?.district || null,
         description: selectedItem?.description || null,
@@ -1059,251 +1050,257 @@ export default function ManagePenugasan() {
     );
   };
 
-return (
-  <div className="w-full space-y-6 md:space-y-8 p-4 md:p-6 text-black">
-        {/* Alert Dialog */}
-        <AlertDialog
-          open={alert.open}
-          type={alert.type}
-          title={alert.title}
-          description={alert.description}
-          detailText={alert.detailText}
-          onClose={closeAlert}
-        />
-        <AlertDialog
-          open={submitting}
-          type="loading"
-          title="Mohon Tunggu"
-          description="Sedang memproses permintaan Anda ke server..."
-          isLoading={true}
-          disableBackdropClose={true}
-          onClose={() => {}}
-        />
+  return (
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 text-black">
+      {/* Alert Dialog */}
+      <AlertDialog
+        open={alert.open}
+        type={alert.type}
+        title={alert.title}
+        description={alert.description}
+        detailText={alert.detailText}
+        onClose={closeAlert}
+      />
+      <AlertDialog
+        open={submitting}
+        type="loading"
+        title="Mohon Tunggu"
+        description="Sedang memproses permintaan Anda ke server..."
+        isLoading={true}
+        disableBackdropClose={true}
+        onClose={() => { }}
+      />
 
-        {/* Delete Confirm */}
-        <DeleteConfirmModal
-          open={showDeleteConfirm}
-          onClose={() => setShowDeleteConfirm(false)}
-          onConfirm={handleDelete}
-          type={deleteType}
-          name={deleteName}
-        />
+      {/* Delete Confirm */}
+      <DeleteConfirmModal
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        type={deleteType}
+        name={deleteName}
+      />
 
-        {/* Tolak Confirm */}
-        <TolakConfirmModal
-          open={showTolakConfirm}
-          onClose={() => setShowTolakConfirm(false)}
-          onConfirm={handleTolak}
-          name={tolakName}
-          reason={tolakReason}
-          setReason={setTolakReason}
-          error={tolakError}
-          setError={setTolakError}
-          submitting={submitting}
-        />
+      {/* Tolak Confirm */}
+      <TolakConfirmModal
+        open={showTolakConfirm}
+        onClose={() => setShowTolakConfirm(false)}
+        onConfirm={handleTolak}
+        name={tolakName}
+        reason={tolakReason}
+        setReason={setTolakReason}
+        error={tolakError}
+        setError={setTolakError}
+        submitting={submitting}
+      />
 
-        {/* ── Header ── */}
-    <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-[24px] p-8 shadow-sm border border-white/50 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full -mr-10 -mt-10 blur-2xl" />
-      <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-        <div>
-          <span className="bg-white/60 text-[#4A6D55] px-4 py-1.5 rounded-full text-xs font-medium tracking-wider uppercase inline-block mb-3">
-            Operasional & Monitoring
-          </span>
-          <h1 className="text-3xl font-extrabold text-[#1A2E35] tracking-tight uppercase">Penugasan Aduan</h1>
-          <p className="text-[#5B7078] mt-2 font-medium">Distribusi armada dan monitoring laporan masuk secara real-time.</p>
+      {/* ── Header ── */}
+      <div className="bg-gradient-to-r from-[#DDE9E1] to-[#E8F1EB] rounded-[24px] p-5 sm:p-6 md:p-8 shadow-sm border border-white/50 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-white/20 rounded-full -mr-10 -mt-10 blur-2xl" />
+        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 md:gap-6">
+          <div>
+            <span className="bg-white/60 text-[#4A6D55] px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-medium tracking-wider uppercase inline-block mb-2 md:mb-3">
+              Operasional & Monitoring
+            </span>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#1A2E35] tracking-tight uppercase">Penugasan Aduan</h1>
+            <p className="text-sm md:text-base text-[#5B7078] mt-1 md:mt-2 font-medium">Distribusi armada dan monitoring laporan masuk secara real-time.</p>
+          </div>
         </div>
       </div>
-    </div>
 
-        {/* ── Stats ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {[
-            { label: "Total Tugas", value: stats.total, icon: ClipboardList, color: "text-slate-600", bg: "bg-slate-100/80" },
-            { label: "Laporan Baru", value: stats.laporan_baru, icon: FileText, color: "text-red-600", bg: "bg-red-50" },
-            { label: "Dalam Proses", value: stats.dalam_proses, icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
-            { label: "Selesai", value: stats.selesai, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
-            { label: "Driver Aktif", value: stats.driver_aktif, icon: User, color: "text-purple-600", bg: "bg-purple-50" },
-          ].map((s, i) => (
-            <StatsCard key={i} {...s} />
-          ))}
+      {/* ── Stats ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+        {[
+          { label: "Total Tugas", value: stats.total, icon: ClipboardList, color: "text-slate-600", bg: "bg-slate-100/80" },
+          { label: "Laporan Baru", value: stats.laporan_baru, icon: FileText, color: "text-red-600", bg: "bg-red-50" },
+          { label: "Dalam Proses", value: stats.dalam_proses, icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Selesai", value: stats.selesai, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Driver Aktif", value: stats.driver_aktif, icon: User, color: "text-purple-600", bg: "bg-purple-50" },
+        ].map((s, i) => (
+          <StatsCard key={i} {...s} />
+        ))}
+      </div>
+
+      {/* ── Search & Filter ── */}
+      <div className="bg-white rounded-[24px] shadow-sm border border-gray-200/80 p-3 flex flex-col md:flex-row gap-3 items-stretch">
+        {/* Bagian Pencarian */}
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Cari deskripsi, driver, pelapor..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-11 pr-4 py-3.5 bg-gray-50/70 border border-gray-200/60 focus:border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500/20 outline-none text-sm transition-all font-medium placeholder:text-gray-400"
+          />
         </div>
 
-        {/* ── Search & Filter ── */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100/50 p-2 flex flex-col md:flex-row gap-2 items-stretch">
-          <div className="relative flex-1">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Cari deskripsi, driver, pelapor..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3.5 bg-gray-50/50 hover:bg-gray-50 border border-transparent focus:border-gray-200 rounded-2xl focus:ring-4 focus:ring-green-500/10 outline-none text-sm transition-all font-medium"
-            />
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <select
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-5 py-3.5 rounded-2xl bg-gray-50/50 hover:bg-gray-50 border border-transparent focus:border-gray-200 outline-none text-sm focus:ring-4 focus:ring-green-500/10 font-medium text-gray-700 min-w-[180px] cursor-pointer transition-all"
-            >
-              <option value="">Semua Status</option>
-              <option value="LAPORAN_BARU">Laporan Baru</option>
-              <option value="DITUGASKAN">Ditugaskan</option>
-              <option value="BEKERJA">Bekerja</option>
-              <option value="SELESAI">Selesai</option>
-              <option value="TIDAK_DIKERJAKAN">Tidak Dikerjakan</option>
-              <option value="DITOLAK">Ditolak</option>
-            </select>
-            <button onClick={fetchData} className="px-5 py-3.5 rounded-2xl bg-gray-50 text-gray-500 font-bold hover:bg-gray-200 hover:text-gray-700 transition-all flex items-center justify-center gap-2">
-              <RefreshCw size={18} />
-            </button>
-          </div>
+        {/* Bagian Filter & Tombol Refresh */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <select
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-gray-50/70 border border-gray-200/60 focus:border-gray-300 outline-none text-sm focus:ring-2 focus:ring-green-500/20 font-medium text-gray-700 min-w-[140px] sm:min-w-[180px] cursor-pointer transition-all"
+          >
+            <option value="">Semua Status</option>
+            <option value="LAPORAN_BARU">Laporan Baru</option>
+            <option value="DITUGASKAN">Ditugaskan</option>
+            <option value="BEKERJA">Bekerja</option>
+            <option value="SELESAI">Selesai</option>
+            <option value="TIDAK_DIKERJAKAN">Tidak Dikerjakan</option>
+            <option value="DITOLAK">Ditolak</option>
+          </select>
+          <button
+            onClick={fetchData}
+            className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-gray-100/80 text-gray-600 font-bold hover:bg-gray-200 hover:text-gray-800 transition-all flex items-center justify-center gap-2 border border-gray-200/60"
+          >
+            <RefreshCw size={18} />
+          </button>
         </div>
+      </div>
 
-        {/* ── Table ── */}
-        <div className="bg-white/90 backdrop-blur-xl rounded-[32px] shadow-sm border border-gray-100/80 overflow-hidden">
-          {/* Desktop Table */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left table-fixed">
-              <colgroup>
-                <col style={{ width: "18%" }} />
-                <col style={{ width: "20%" }} />
-                <col style={{ width: "16%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "20%" }} />
-              </colgroup>
-              <thead>
-                <tr className="bg-gray-50/80 text-gray-500 text-[10px] font-bold uppercase tracking-widest border-b border-gray-100">
-                  <th className="px-6 py-5">Pelapor & Lokasi</th>
-                  <th className="px-6 py-5">Deskripsi</th>
-                  <th className="px-6 py-5">Driver & Armada</th>
-                  <th className="px-6 py-5">Jadwal</th>
-                  <th className="px-6 py-5 text-center">Status</th>
-                  <th className="px-6 py-5 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50/80">
-                {loading ? (
-                  <tr><td colSpan={6} className="text-center py-32 text-gray-400"><Loader2 className="animate-spin text-[#4A6D55] mx-auto" size={36} /><span className="block mt-3 text-sm font-medium">Memuat data penugasan...</span></td></tr>
-                ) : paginatedItems.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-32 text-gray-400 font-medium"><ClipboardList size={40} className="mx-auto text-gray-300 mb-2" />Tidak ada data ditemukan.</td></tr>
-                ) : (
-                  paginatedItems.map((item) => {
-                    const effectiveStatus = getEffectiveStatus(item);
-                    const overdue = effectiveStatus === "TIDAK_DIKERJAKAN";
-                    const isLaporanBaru = item.status === "LAPORAN_BARU";
-                    const isDitolak = item.status === "DITOLAK";
-                    return (
-                      <tr key={item.id} className={`transition-colors duration-200 group ${overdue ? "bg-orange-50/30" : "hover:bg-gray-50/50"}`}>
-                        <td className="px-6 py-5 align-top">
-                          <div className="flex items-start gap-3">
-                            <div className={`w-8 h-8 mt-0.5 rounded-full flex items-center justify-center shrink-0 ${overdue ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500 group-hover:bg-[#DDE9E1] group-hover:text-[#4A6D55]"}`}>
-                              <User size={14} />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-gray-900 truncate">{item.pelapor || item.report?.pelapor || "Anonim"}</p>
-                              {formatCoordinate(item.latitude) && formatCoordinate(item.longitude) ? (
-                                <p className="text-[11px] text-gray-400 mt-1 flex items-start gap-1"><MapPin size={12} className="shrink-0 mt-0.5" /><span className="font-mono truncate">{formatCoordinate(item.latitude)}, {formatCoordinate(item.longitude)}</span></p>
-                              ) : item.location ? (
-                                <p className="text-[11px] text-gray-400 mt-1 flex items-start gap-1"><MapPin size={12} className="shrink-0 mt-0.5" /><span className="line-clamp-2 leading-tight">{item.location}</span></p>
-                              ) : null}
-                            </div>
+      {/* ── Table ── */}
+      <div className="bg-white/90 backdrop-blur-xl rounded-[32px] shadow-sm border border-gray-100/80 overflow-hidden">
+        {/* Desktop Table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left table-fixed">
+            <colgroup>
+              <col style={{ width: "18%" }} />
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "20%" }} />
+            </colgroup>
+            <thead>
+              <tr className="bg-gray-50/80 text-gray-500 text-[10px] font-bold uppercase tracking-widest border-b border-gray-100">
+                <th className="px-4 sm:px-6 py-4 sm:py-5 text-center whitespace-nowrap">Pelapor & Lokasi</th>
+                <th className="px-4 sm:px-6 py-4 sm:py-5 text-center whitespace-nowrap">Deskripsi</th>
+                <th className="px-4 sm:px-6 py-4 sm:py-5 text-center whitespace-nowrap">Driver & Armada</th>
+                <th className="px-4 sm:px-6 py-4 sm:py-5 text-center whitespace-nowrap">Jadwal</th>
+                <th className="px-4 sm:px-6 py-4 sm:py-5 text-center whitespace-nowrap">Status</th>
+                <th className="px-4 sm:px-6 py-4 sm:py-5 text-center whitespace-nowrap">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50/80">
+              {loading ? (
+                <tr><td colSpan={6} className="text-center py-20 sm:py-32 text-gray-400"><Loader2 className="animate-spin text-[#4A6D55] mx-auto" size={36} /><span className="block mt-3 text-sm font-medium">Memuat data penugasan...</span></td></tr>
+              ) : paginatedItems.length === 0 ? (
+                <tr><td colSpan={6} className="text-center py-20 sm:py-32 text-gray-400 font-medium"><ClipboardList size={40} className="mx-auto text-gray-300 mb-2" />Tidak ada data ditemukan.</td></tr>
+              ) : (
+                paginatedItems.map((item) => {
+                  const effectiveStatus = getEffectiveStatus(item);
+                  const overdue = effectiveStatus === "TIDAK_DIKERJAKAN";
+                  const isLaporanBaru = item.status === "LAPORAN_BARU";
+                  const isDitolak = item.status === "DITOLAK";
+                  return (
+                    <tr key={item.id} className={`transition-colors duration-200 group ${overdue ? "bg-orange-50/30" : "hover:bg-gray-50/50"}`}>
+                      <td className="px-4 sm:px-6 py-4 sm:py-5 align-top">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 mt-0.5 rounded-full flex items-center justify-center shrink-0 ${overdue ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500 group-hover:bg-[#DDE9E1] group-hover:text-[#4A6D55]"}`}>
+                            <User size={14} />
                           </div>
-                        </td>
-                        <td className="px-6 py-5 align-top">{item.description || item.report?.description ? <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">{item.description || item.report?.description}</p> : <span className="text-xs italic text-gray-400">-</span>}</td>
-                        <td className="px-6 py-5 align-top">
-                          {isLaporanBaru || isDitolak ? <span className="text-xs italic text-gray-400 font-medium">{isDitolak ? "Laporan Ditolak" : "Belum Ditugaskan"}</span> : (
-                            <div><p className="text-sm font-bold text-gray-800 truncate">{item.driver?.fullName || "Tanpa Driver"}</p><span className="inline-flex items-center gap-1.5 bg-gray-100/80 px-2 py-1 rounded-md text-[10px] font-mono font-bold text-gray-600 mt-1.5 border border-gray-200/50"><Truck size={10} /> {item.truck?.plateNumber || "-"}</span></div>
-                          )}
-                        </td>
-                        <td className="px-6 py-5 align-top">
-                          {item.scheduledAt ? (
-                            <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Dijadwalkan</p><p className="text-xs font-bold text-gray-700 flex items-center gap-1.5"><Calendar size={12} className={`shrink-0 ${overdue ? "text-orange-500" : "text-gray-400"}`} /><span className={overdue ? "text-orange-600" : ""}>{new Date(item.scheduledAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>{overdue && <AlertTriangle size={12} className="text-orange-500" />}</p></div>
-                          ) : <span className="text-xs italic text-gray-400">-</span>}
-                        </td>
-                        <td className="px-6 py-5 text-center align-top"><StatusBadge status={effectiveStatus} /></td>
-                        <td className="px-6 py-5 align-top"><div className="flex justify-end items-center gap-2 flex-nowrap whitespace-nowrap">{renderRowActions(item)}</div></td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-gray-900 truncate">{item.pelapor || item.report?.pelapor || "Anonim"}</p>
+                            {formatCoordinate(item.latitude) && formatCoordinate(item.longitude) ? (
+                              <p className="text-[11px] text-gray-400 mt-1 flex items-start gap-1"><MapPin size={12} className="shrink-0 mt-0.5" /><span className="font-mono truncate">{formatCoordinate(item.latitude)}, {formatCoordinate(item.longitude)}</span></p>
+                            ) : item.location ? (
+                              <p className="text-[11px] text-gray-400 mt-1 flex items-start gap-1"><MapPin size={12} className="shrink-0 mt-0.5" /><span className="line-clamp-2 leading-tight">{item.location}</span></p>
+                            ) : null}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 sm:py-5 align-top">{item.description || item.report?.description ? <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">{item.description || item.report?.description}</p> : <span className="text-xs italic text-gray-400">-</span>}</td>
+                      <td className="px-4 sm:px-6 py-4 sm:py-5 align-top">
+                        {isLaporanBaru || isDitolak ? <span className="text-xs italic text-gray-400 font-medium">{isDitolak ? "Laporan Ditolak" : "Belum Ditugaskan"}</span> : (
+                          <div><p className="text-sm font-bold text-gray-800 truncate">{item.driver?.fullName || "Tanpa Driver"}</p><span className="inline-flex items-center gap-1.5 bg-gray-100/80 px-2 py-1 rounded-md text-[10px] font-mono font-bold text-gray-600 mt-1.5 border border-gray-200/50"><Truck size={10} /> {item.truck?.plateNumber || "-"}</span></div>
+                        )}
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 sm:py-5 align-top">
+                        {item.scheduledAt ? (
+                          <div><p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Dijadwalkan</p><p className="text-xs font-bold text-gray-700 flex items-center gap-1.5"><Calendar size={12} className={`shrink-0 ${overdue ? "text-orange-500" : "text-gray-400"}`} /><span className={overdue ? "text-orange-600" : ""}>{new Date(item.scheduledAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</span>{overdue && <AlertTriangle size={12} className="text-orange-500" />}</p></div>
+                        ) : <span className="text-xs italic text-gray-400">-</span>}
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 sm:py-5 text-center align-top"><StatusBadge status={effectiveStatus} /></td>
+                      <td className="px-4 sm:px-6 py-4 sm:py-5 align-top"><div className="flex justify-end items-center gap-2 flex-nowrap whitespace-nowrap">{renderRowActions(item)}</div></td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          {/* Mobile Card */}
-          <div className="md:hidden divide-y divide-gray-100">
-            {loading ? (
-              <div className="flex flex-col items-center gap-3 py-20 text-gray-400"><Loader2 className="animate-spin text-[#4A6D55]" size={32} /><span className="text-sm font-medium">Memuat data...</span></div>
-            ) : paginatedItems.length === 0 ? (
-              <div className="py-20 text-center text-gray-400 font-medium text-sm">Tidak ada data ditemukan.</div>
-            ) : (
-              paginatedItems.map((item) => {
-                const effectiveStatus = getEffectiveStatus(item);
-                const overdue = effectiveStatus === "TIDAK_DIKERJAKAN";
-                const isLaporanBaru = item.status === "LAPORAN_BARU";
-                const isDitolak = item.status === "DITOLAK";
-                return (
-                  <div key={item.id} className={`p-5 ${overdue ? "bg-orange-50/30" : ""}`}>
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${overdue ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}><User size={16} /></div>
-                        <span className="text-sm font-bold text-gray-900 truncate">{item.pelapor || item.report?.pelapor || "Anonim"}</span>
-                      </div>
-                      <StatusBadge status={effectiveStatus} />
+        {/* Mobile Card */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {loading ? (
+            <div className="flex flex-col items-center gap-3 py-16 text-gray-400"><Loader2 className="animate-spin text-[#4A6D55]" size={32} /><span className="text-sm font-medium">Memuat data...</span></div>
+          ) : paginatedItems.length === 0 ? (
+            <div className="py-16 text-center text-gray-400 font-medium text-sm">Tidak ada data ditemukan.</div>
+          ) : (
+            paginatedItems.map((item) => {
+              const effectiveStatus = getEffectiveStatus(item);
+              const overdue = effectiveStatus === "TIDAK_DIKERJAKAN";
+              const isLaporanBaru = item.status === "LAPORAN_BARU";
+              const isDitolak = item.status === "DITOLAK";
+              return (
+                <div key={item.id} className={`p-4 sm:p-5 ${overdue ? "bg-orange-50/30" : ""}`}>
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${overdue ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}><User size={16} /></div>
+                      <span className="text-sm font-bold text-gray-900 truncate">{item.pelapor || item.report?.pelapor || "Anonim"}</span>
                     </div>
-                    {item.location && <p className="text-[11px] text-gray-500 mb-2 flex items-start gap-1.5 bg-gray-50 p-2 rounded-lg"><MapPin size={12} className="shrink-0 mt-0.5 text-gray-400" /><span className="line-clamp-2">{item.location}</span></p>}
-                    {(item.description || item.report?.description) && <p className="text-xs text-gray-600 mb-3 leading-relaxed">{item.description || item.report?.description}</p>}
-                    {isDitolak && item.rejectionReason && <div className="bg-red-50 p-2.5 rounded-lg mb-3"><p className="text-[11px] text-red-600 leading-relaxed"><span className="font-bold">Alasan Penolakan: </span>{item.rejectionReason}</p></div>}
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-gray-500 mb-4 font-medium">
-                      {!isLaporanBaru && !isDitolak && item.driver && <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md border border-gray-100"><User size={12} /> {item.driver.fullName}</span>}
-                      {!isLaporanBaru && !isDitolak && item.truck && <span className="flex items-center gap-1 font-mono bg-gray-50 px-2 py-1 rounded-md border border-gray-100"><Truck size={12} /> {item.truck.plateNumber}</span>}
-                      {item.scheduledAt && <span className={`flex items-center gap-1 px-2 py-1 rounded-md ${overdue ? "bg-orange-50 text-orange-600 font-bold" : "bg-gray-50 border border-gray-100"}`}><Calendar size={12} />{new Date(item.scheduledAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })} {overdue && <AlertTriangle size={12} />}</span>}
-                    </div>
-                    <div className="flex gap-2 flex-nowrap w-full">{renderRowActions(item)}</div>
+                    <StatusBadge status={effectiveStatus} />
                   </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Pagination */}
-          {!loading && filteredItems.length > 0 && (
-            <div className="px-6 py-5 bg-gray-50/50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-xs text-gray-500 font-medium">
-                Menampilkan <span className="font-bold text-gray-900">{(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)}</span> dari <span className="font-bold text-gray-900">{filteredItems.length}</span> data
-              </p>
-              <Pagination currentPage={currentPage} totalPages={totalPages} setCurrentPage={setCurrentPage} />
-            </div>
+                  {item.location && <p className="text-[11px] text-gray-500 mb-2 flex items-start gap-1.5 bg-gray-50 p-2 rounded-lg"><MapPin size={12} className="shrink-0 mt-0.5 text-gray-400" /><span className="line-clamp-2">{item.location}</span></p>}
+                  {(item.description || item.report?.description) && <p className="text-xs text-gray-600 mb-3 leading-relaxed">{item.description || item.report?.description}</p>}
+                  {isDitolak && item.rejectionReason && <div className="bg-red-50 p-2.5 rounded-lg mb-3"><p className="text-[11px] text-red-600 leading-relaxed"><span className="font-bold">Alasan Penolakan: </span>{item.rejectionReason}</p></div>}
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-gray-500 mb-4 font-medium">
+                    {!isLaporanBaru && !isDitolak && item.driver && <span className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md border border-gray-100"><User size={12} /> {item.driver.fullName}</span>}
+                    {!isLaporanBaru && !isDitolak && item.truck && <span className="flex items-center gap-1 font-mono bg-gray-50 px-2 py-1 rounded-md border border-gray-100"><Truck size={12} /> {item.truck.plateNumber}</span>}
+                    {item.scheduledAt && <span className={`flex items-center gap-1 px-2 py-1 rounded-md ${overdue ? "bg-orange-50 text-orange-600 font-bold" : "bg-gray-50 border border-gray-100"}`}><Calendar size={12} />{new Date(item.scheduledAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })} {overdue && <AlertTriangle size={12} />}</span>}
+                  </div>
+                  <div className="flex gap-2 flex-wrap w-full">{renderRowActions(item)}</div>
+                </div>
+              );
+            })
           )}
         </div>
 
-        {/* ── Modal Tugaskan ── */}
-        <TugaskanModal
-          open={showTugaskanModal}
-          onClose={() => { setShowTugaskanModal(false); resetForm(); setSelectedItem(null); }}
-          isEdit={isEditMode}
-          selectedItem={selectedItem}
-          formData={formData}
-          setFormData={setFormData}
-          formErrors={formErrors}
-          trukList={trukList}
-          submitting={submitting}
-          onSubmit={handleSubmitTugaskan}
-          isTruckAvailable={isTruckAvailable}
-          getDriverFromTruck={getDriverFromTruck}
-          getCurrentDateTimeLocal={getCurrentDateTimeLocal}
-        />
+        {/* Pagination */}
+        {!loading && filteredItems.length > 0 && (
+          <div className="px-4 sm:px-6 py-4 sm:py-5 bg-gray-50/50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-gray-500 font-medium text-center sm:text-left">
+              Menampilkan <span className="font-bold text-gray-900">{(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)}</span> dari <span className="font-bold text-gray-900">{filteredItems.length}</span> data
+            </p>
+            <Pagination currentPage={currentPage} totalPages={totalPages} setCurrentPage={setCurrentPage} />
+          </div>
+        )}
+      </div>
 
-        {/* ── Modal Detail Laporan ── */}
-        <DetailLaporanModal
-          open={showDetailLaporan}
-          onClose={() => setShowDetailLaporan(false)}
-          laporan={selectedItem}
-        />
+      {/* ── Modal Tugaskan ── */}
+      <TugaskanModal
+        open={showTugaskanModal}
+        onClose={() => { setShowTugaskanModal(false); resetForm(); setSelectedItem(null); }}
+        isEdit={isEditMode}
+        selectedItem={selectedItem}
+        formData={formData}
+        setFormData={setFormData}
+        formErrors={formErrors}
+        trukList={trukList}
+        submitting={submitting}
+        onSubmit={handleSubmitTugaskan}
+        isTruckAvailable={isTruckAvailable}
+        getDriverFromTruck={getDriverFromTruck}
+        getCurrentDateTimeLocal={getCurrentDateTimeLocal}
+      />
 
-      {/* ── Modal Detail Penugasan (menggunakan komponen eksternal) ── */}
+      {/* ── Modal Detail Laporan ── */}
+      <DetailLaporanModal
+        open={showDetailLaporan}
+        onClose={() => setShowDetailLaporan(false)}
+        laporan={selectedItem}
+      />
+
+      {/* ── Modal Detail Penugasan ── */}
       {showDetailPenugasan && selectedItem && (
         <PenugasanDetail
           penugasan={selectedItem}
