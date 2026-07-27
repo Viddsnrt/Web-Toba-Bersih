@@ -37,6 +37,8 @@ import {
   Tag,
   Wand2,
   Ruler,
+  Calendar,
+  CalendarDays,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import AlertDialog, { type AlertType } from "../components/AlertDialog";
@@ -86,6 +88,14 @@ interface AlertConfig {
   detailText?: string;
 }
 
+// 🔥 BARU: satu grup = satu armada, berisi semua jadwal harinya
+interface TruckGroup {
+  truckId: string;
+  plateNumber: string;
+  driverName: string | null;
+  routes: RouteTemplate[];
+}
+
 /* ════════════════════════════════════════════════════════════════════════
  * 2. CONSTANTS
  * ════════════════════════════════════════════════════════════════════════ */
@@ -101,6 +111,13 @@ const HARI_COLOR: Record<string, string> = {
   SABTU:  "bg-slate-50 text-slate-600 border-slate-200",
   MINGGU: "bg-orange-50 text-orange-700 border-orange-200",
 };
+
+// 🔥 BARU: preset kombinasi hari yang sering dipakai, biar tidak klik satu-satu
+const PRESET_HARI: { label: string; days: string[] }[] = [
+  { label: "Senin–Jumat", days: ["SENIN", "SELASA", "RABU", "KAMIS", "JUMAT"] },
+  { label: "Senin–Sabtu", days: ["SENIN", "SELASA", "RABU", "KAMIS", "JUMAT", "SABTU"] },
+  { label: "Setiap Hari", days: [...HARI_LIST] },
+];
 
 const API = process.env.NEXT_PUBLIC_API_URL
   ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "") + "/api"
@@ -227,9 +244,14 @@ function PetaWaypoint({
       });
       if (cancelled || !containerRef.current) return;
       const map = L.map(containerRef.current, { center: [2.3333, 99.0632], zoom: 14 });
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap",
-      }).addTo(map);
+      L.tileLayer(
+        `https://{s}.api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=${process.env.NEXT_PUBLIC_TOMTOM_KEY}`,
+        {
+          subdomains: "abcd",
+          attribution: '© TomTom',
+          maxZoom: 22,
+        }
+      ).addTo(map);
       if (!readonly && onMapClick) {
         map.on("click", (e: any) => onMapClick(e.latlng.lat, e.latlng.lng));
       }
@@ -457,7 +479,7 @@ function PaginationBar({
         <span className="font-semibold text-gray-600">
           {(page - 1) * perPage + 1}–{Math.min(page * perPage, totalItems)}
         </span>{" "}
-        dari <span className="font-semibold text-gray-600">{totalItems}</span> rute
+        dari <span className="font-semibold text-gray-600">{totalItems}</span> armada
       </p>
       <div className="flex items-center gap-1">
         <button type="button" onClick={() => onChange(1)} disabled={page === 1}
@@ -505,6 +527,8 @@ export default function ManajemenRute() {
   const [trukList, setTrukList]       = useState<TrukItem[]>([]);
   const [wilayahList, setWilayahList] = useState<WilayahItem[]>([]);
   const [loading, setLoading]         = useState(true);
+  // 🔥 BARU: dua level accordion — level truk & level hari (yang lama)
+  const [expandedTruckId, setExpandedTruckId] = useState<string | null>(null);
   const [expandedId, setExpandedId]   = useState<string | null>(null);
   const [filterTruk, setFilterTruk]   = useState("");
   const [filterHari, setFilterHari]   = useState("ALL");
@@ -519,7 +543,8 @@ export default function ManajemenRute() {
 
   /* ── Modal: Buat Rute ────────────────────────────────────────────── */
   const [showModalRute, setShowModalRute] = useState(false);
-  const [formRute, setFormRute] = useState({ truckId: "", dayOfWeek: "", name: "", locationId: "" });
+  // 🔥 DIGANTI: dayOfWeek tunggal -> days array (multi-select)
+  const [formRute, setFormRute] = useState({ truckId: "", locationId: "", days: [] as string[], name: "" });
 
   /* ── Modal: Edit Info Rute ───────────────────────────────────────── */
   const [showModalEditRute, setShowModalEditRute] = useState(false);
@@ -606,30 +631,66 @@ export default function ManajemenRute() {
     [ruteList, filterTruk, filterHari]
   );
 
-  const ruteTotalPages = Math.max(1, Math.ceil(filtered.length / RUTE_PER_PAGE));
-  const paginatedRute  = useMemo(() => {
-    const start = (rutePage - 1) * RUTE_PER_PAGE;
-    return filtered.slice(start, start + RUTE_PER_PAGE);
-  }, [filtered, rutePage]);
-
-  const findOperatorName = (truckId: string) => {
+  const findOperatorName = useCallback((truckId: string) => {
     const truk = trukList.find((t) => t.id === truckId);
     return truk?.operator?.fullName || truk?.driver?.fullName || null;
-  };
+  }, [trukList]);
 
-  /* ── CRUD: Buat Rute ──────────────────────────────────────────────── */
+  // 🔥 BARU: kelompokkan rute (flat) jadi per armada, jadwal diurutkan sesuai hari dalam seminggu
+  const groupedByTruck = useMemo<TruckGroup[]>(() => {
+    const map = new Map<string, TruckGroup>();
+    filtered.forEach((r) => {
+      if (!map.has(r.truckId)) {
+        map.set(r.truckId, {
+          truckId: r.truckId,
+          plateNumber: r.truck.plateNumber,
+          driverName: findOperatorName(r.truckId),
+          routes: [],
+        });
+      }
+      map.get(r.truckId)!.routes.push(r);
+    });
+    const groups = Array.from(map.values());
+    groups.forEach((g) => {
+      g.routes.sort((a, b) => HARI_LIST.indexOf(a.dayOfWeek) - HARI_LIST.indexOf(b.dayOfWeek));
+    });
+    groups.sort((a, b) => a.plateNumber.localeCompare(b.plateNumber));
+    return groups;
+  }, [filtered, findOperatorName]);
+
+  // 🔥 DIGANTI: pagination sekarang berdasarkan jumlah ARMADA, bukan jumlah baris jadwal
+  const ruteTotalPages = Math.max(1, Math.ceil(groupedByTruck.length / RUTE_PER_PAGE));
+  const paginatedTruckGroups = useMemo(() => {
+    const start = (rutePage - 1) * RUTE_PER_PAGE;
+    return groupedByTruck.slice(start, start + RUTE_PER_PAGE);
+  }, [groupedByTruck, rutePage]);
+
+  /* ── CRUD: Buat Rute (sekarang multi-hari) ───────────────────────── */
   const handleBuatRute = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formRute.locationId) {
       showAlert("info", "Wilayah belum dipilih", "Pilih wilayah/lokasi terlebih dahulu sebelum menyimpan rute.");
       return;
     }
+    if (formRute.days.length === 0) {
+      showAlert("info", "Hari belum dipilih", "Pilih minimal satu hari operasional untuk rute ini.");
+      return;
+    }
     setSubmitting(true);
     try {
-      await axios.post(`${API}/rute`, formRute, { headers: authHeader() });
-      showAlert("success", "Rute berhasil dibuat", "Rute baru telah ditambahkan ke sistem.");
+      const res = await axios.post(
+        `${API}/rute`,
+        {
+          truckId: formRute.truckId,
+          locationId: formRute.locationId,
+          days: formRute.days,
+          name: formRute.name || undefined,
+        },
+        { headers: authHeader() }
+      );
+      showAlert("success", "Rute berhasil dibuat", res.data?.message || `Jadwal untuk ${formRute.days.length} hari telah ditambahkan.`);
       setShowModalRute(false);
-      setFormRute({ truckId: "", dayOfWeek: "", name: "", locationId: "" });
+      setFormRute({ truckId: "", locationId: "", days: [], name: "" });
       fetchRute();
     } catch (err: any) {
       showAlert("error", "Gagal membuat rute", getErr(err, "Terjadi kesalahan saat menyimpan."));
@@ -638,7 +699,19 @@ export default function ManajemenRute() {
     }
   };
 
-  /* ── CRUD: Edit Info Rute ─────────────────────────────────────────── */
+  // 🔥 BARU: toggle satu hari di form multi-select
+  const toggleHariForm = (hari: string) => {
+    setFormRute((p) => ({
+      ...p,
+      days: p.days.includes(hari) ? p.days.filter((d) => d !== hari) : [...p.days, hari],
+    }));
+  };
+
+  const pilihPresetHari = (preset: string[]) => {
+    setFormRute((p) => ({ ...p, days: preset }));
+  };
+
+  /* ── CRUD: Edit Info Rute (tetap satu hari per record, tidak berubah) ── */
   const openEditRuteModal = (rute: RouteTemplate, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingRuteInfo(rute);
@@ -716,6 +789,7 @@ export default function ManajemenRute() {
     setWpForm({ name: "", latitude: "", longitude: "" });
     setWpSearchQuery("");
     setMapFlyTo(null);
+    setExpandedTruckId(rute.truckId); // 🔥 BARU: pastikan truk induknya juga terbuka
     setExpandedId(rute.id);
     setTimeout(() => wpFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
   };
@@ -730,22 +804,25 @@ export default function ManajemenRute() {
     setWpForm((p) => ({ ...p, latitude: lat.toFixed(6), longitude: lng.toFixed(6) }));
   }, []);
 
-  const handleSearchWaypoint = async () => {
+ const handleSearchWaypoint = async () => {
     if (!wpSearchQuery.trim()) return;
     setWpSearching(true);
     try {
-      const res  = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(wpSearchQuery)}&limit=1`);
-      const data = await res.json();
+      const res = await fetch(
+        `https://api.tomtom.com/search/2/search/${encodeURIComponent(wpSearchQuery)}.json?key=${process.env.NEXT_PUBLIC_TOMTOM_KEY}&countrySet=ID&limit=1&language=id-ID`
+      );
+      const json = await res.json();
+      const data = json.results || [];
       if (data.length > 0) {
         const loc  = data[0];
-        const lat  = parseFloat(loc.lat);
-        const lng  = parseFloat(loc.lon);
-        const nama = loc.display_name.split(",")[0].trim();
+        const lat  = loc.position.lat;
+        const lng  = loc.position.lon;
+        const nama = loc.poi?.name || loc.address?.freeformAddress?.split(",")[0]?.trim() || "Lokasi";
         setWpForm({ name: nama, latitude: lat.toFixed(6), longitude: lng.toFixed(6) });
         setMapFlyTo([lat, lng]);
         showAlert("success", "Lokasi ditemukan", `"${nama}" siap ditambahkan.`);
       } else {
-        showAlert("info", "Tidak ditemukan", "Coba kata kunci lain yang lebih spesifik.");
+        showAlert("info", "Tidak ditemukan", "Coba kata kunci lain yang lebih spesifik, misal tambahkan nama kabupaten/kota.");
       }
     } catch {
       showAlert("error", "Gagal mencari", "Tidak dapat menghubungi server peta.");
@@ -921,7 +998,7 @@ return (
         </div>
       </div>
 
-      {/* ── LIST RUTE ── */}
+      {/* ── LIST RUTE (dikelompokkan per armada) ── */}
       <div className="space-y-4">
         {loading ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-14 text-center">
@@ -930,52 +1007,45 @@ return (
               <span className="text-sm font-medium">Memuat data rute...</span>
             </div>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : groupedByTruck.length === 0 ? (
           <div className="bg-white rounded-2xl border border-dashed border-gray-200 py-16 text-center text-gray-400 text-sm">
             Belum ada rute yang cocok dengan filter.
           </div>
         ) : (
-          paginatedRute.map((rute) => {
-            const isExpanded   = expandedId === rute.id;
-            const isEditing    = editingRuteId === rute.id;
-            const namaSupir    = findOperatorName(rute.truckId);
-            const jarakKm      = totalJarakRuteKm(isEditing ? localWaypoints : rute.waypoints);
-            const jumlahTitik  = isEditing ? localWaypoints.length : rute.waypoints.length;
+          paginatedTruckGroups.map((truck) => {
+            const isTruckExpanded = expandedTruckId === truck.truckId;
+            const totalAktif = truck.routes.filter((r) => r.isActive).length;
 
             return (
               <div
-                key={rute.id}
+                key={truck.truckId}
                 className={`bg-white rounded-[24px] border transition-all ${
-                  isExpanded ? "border-gray-200 shadow-md" : "border-gray-100 shadow-sm hover:border-gray-200"
+                  isTruckExpanded ? "border-gray-200 shadow-md" : "border-gray-100 shadow-sm hover:border-gray-200"
                 }`}
               >
-                {/* ── Card Header ── */}
-                <div className="p-5 md:p-6 flex flex-wrap items-center gap-3">
+                {/* ── Level 1: Header Armada ── */}
+                <div
+                  onClick={() => setExpandedTruckId(isTruckExpanded ? null : truck.truckId)}
+                  className="p-5 md:p-6 flex flex-wrap items-center gap-3 cursor-pointer"
+                >
                   <button
-                    onClick={() => setExpandedId(isExpanded ? null : rute.id)}
-                    className={`p-2 rounded-xl transition-colors shrink-0 ${isExpanded ? "bg-gray-100 text-gray-600" : "text-gray-300 hover:bg-gray-50 hover:text-gray-500"}`}
+                    className={`p-2 rounded-xl transition-colors shrink-0 ${isTruckExpanded ? "bg-gray-100 text-gray-600" : "text-gray-300 hover:bg-gray-50 hover:text-gray-500"}`}
                   >
-                    {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                    {isTruckExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                   </button>
 
                   <div className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 shrink-0">
-                    <Navigation size={16} className="text-[#4A6D55]" />
+                    <Truck size={16} className="text-[#4A6D55]" />
                   </div>
 
                   <div className="flex-1 min-w-[180px]">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <BadgeHari hari={rute.dayOfWeek} />
-                      <h3 className="font-semibold text-gray-800 text-sm truncate">{rute.name}</h3>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-[10px] text-gray-400">
-                      <span className="flex items-center gap-1.5">
-                        <Truck size={11} className="text-[#4A6D55]" />
-                        <span className="font-medium text-gray-600">{rute.truck.plateNumber}</span>
-                      </span>
-                      {namaSupir ? (
+                    <h3 className="font-semibold text-gray-800 text-sm truncate">Rute {truck.plateNumber}</h3>
+                    <div className="flex flex-wrap items-center gap-3 text-[10px] text-gray-400 mt-1">
+                      <span className="font-medium text-gray-600">{truck.plateNumber}</span>
+                      {truck.driverName ? (
                         <span className="flex items-center gap-1.5">
                           <Navigation size={11} className="text-[#4A6D55]" />
-                          <span className="font-medium text-gray-600">{namaSupir}</span>
+                          <span className="font-medium text-gray-600">{truck.driverName}</span>
                         </span>
                       ) : (
                         <span className="flex items-center gap-1.5 text-red-400">
@@ -986,250 +1056,305 @@ return (
                     </div>
                   </div>
 
-                  {/* Metrik ringkas: titik angkut, jarak estimasi, status */}
+                  {/* Ringkasan: jumlah hari terjadwal & aktif — TIDAK menampilkan daftar hari satu-satu */}
                   <div className="hidden md:flex items-center divide-x divide-gray-100 shrink-0">
-                    <MetricPill icon={MapPin} label="Titik Angkut" value={`${jumlahTitik}`} />
-                    <MetricPill icon={Ruler} label="Jarak Est." value={jarakKm > 0 ? `${jarakKm.toFixed(1)} km` : "—"} />
-                    <div className="px-3"><BadgeStatus aktif={rute.isActive} /></div>
+                    <MetricPill icon={CalendarDays} label="Hari Terjadwal" value={`${truck.routes.length}`} />
+                    <MetricPill icon={Power} label="Aktif" value={`${totalAktif}/${truck.routes.length}`} />
                   </div>
 
-                  {/* Aksi */}
-                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end ml-auto">
-                    {isEditing ? (
-                      <>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleSimpanWaypoints(); }}
-                          disabled={savingWp}
-                          className="px-3 py-1.5 bg-[#4A6D55] text-white rounded-lg hover:bg-[#3a5643] transition-colors shadow-sm inline-flex items-center gap-1 text-[10px] font-semibold whitespace-nowrap disabled:opacity-50"
-                        >
-                          {savingWp ? <RefreshCw size={11} className="animate-spin" /> : <Save size={11} />} Simpan Perubahan
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); tutupWaypointEditor(); }}
-                          className="px-3 py-1.5 bg-white border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50 transition-colors text-[10px] font-semibold whitespace-nowrap"
-                        >
-                          Batal
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openWaypointEditor(rute); }}
-                          className="px-2.5 py-1.5 bg-[#4A6D55] text-white rounded-lg hover:bg-[#3a5643] transition-colors shadow-sm inline-flex items-center gap-1 text-[10px] font-semibold whitespace-nowrap"
-                          title="Kelola Titik Rute"
-                        >
-                          <MapPin size={11} /> Kelola Titik
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setViewingRute(rute); }}
-                          className="p-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors shadow-sm inline-flex"
-                          title="Lihat Detail Rute"
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
-                          onClick={(e) => openEditRuteModal(rute, e)}
-                          className="p-2 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition-colors shadow-sm inline-flex"
-                          title="Edit Info Rute"
-                        >
-                          <Edit3 size={14} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openDeleteConfirm(rute.id, rute.name); }}
-                          className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm inline-flex"
-                          title="Hapus Rute"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFormRute({ truckId: truck.truckId, locationId: truck.routes[0]?.locationId ?? "", days: [], name: "" });
+                      setShowModalRute(true);
+                    }}
+                    className="p-2 bg-[#4A6D55]/10 text-[#4A6D55] rounded-lg hover:bg-[#4A6D55]/20 transition-colors shrink-0"
+                    title="Tambah Jadwal Hari Baru"
+                  >
+                    <Plus size={16} />
+                  </button>
 
-                  {/* Metrik versi mobile (di bawah baris utama) */}
                   <div className="flex md:hidden items-center gap-4 w-full pl-12 -mt-1">
                     <span className="text-[10px] text-gray-500 font-semibold flex items-center gap-1">
-                      <MapPin size={11} className="text-[#4A6D55]" /> {jumlahTitik} Titik
+                      <CalendarDays size={11} className="text-[#4A6D55]" /> {truck.routes.length} Hari
                     </span>
                     <span className="text-[10px] text-gray-500 font-semibold flex items-center gap-1">
-                      <Ruler size={11} className="text-[#4A6D55]" /> {jarakKm > 0 ? `${jarakKm.toFixed(1)} km` : "—"}
+                      <Power size={11} className="text-[#4A6D55]" /> {totalAktif}/{truck.routes.length} Aktif
                     </span>
-                    <BadgeStatus aktif={rute.isActive} />
                   </div>
                 </div>
 
-                {/* ── Card Body (expanded) ── */}
-                {isExpanded && (
-                  <div className="border-t border-gray-100 p-6 md:p-8 bg-gray-50/40 rounded-b-[24px]">
-                    {isEditing ? (
-                      /* ── EDIT WAYPOINT ── */
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10">
-                        {/* KIRI: Peta + Form */}
-                        <div className="space-y-5">
-                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Konfigurasi Jalur Peta</p>
-                          <PetaWaypoint
-                            key={editingRuteId ?? "peta"}
-                            waypoints={localWaypoints}
-                            onMapClick={handleMapClick}
-                            selectedIdx={selectedWpIdx}
-                            flyTo={mapFlyTo}
-                          />
-                          <div ref={wpFormRef} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                            {/* Cari lokasi */}
-                            <div>
-                              <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Cari Lokasi</label>
-                              <div className="flex gap-2">
-                                <div className="relative flex-1">
-                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
-                                  <input
-                                    type="text"
-                                    placeholder="Simpang Sibulele, Pasar Horas..."
-                                    value={wpSearchQuery}
-                                    onChange={(e) => setWpSearchQuery(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearchWaypoint(); } }}
-                                    className="w-full pl-9 pr-4 py-3 bg-gray-50 border-none rounded-xl outline-none text-sm font-medium focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                  />
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={handleSearchWaypoint}
-                                  disabled={wpSearching || !wpSearchQuery.trim()}
-                                  className="px-4 bg-blue-500 text-white rounded-xl font-semibold text-sm hover:bg-blue-600 transition-colors shadow flex items-center gap-2 disabled:opacity-50"
-                                >
-                                  {wpSearching ? <RefreshCw size={13} className="animate-spin" /> : <Search size={13} />} Cari
-                                </button>
-                              </div>
+                {/* ── Level 2: Daftar Hari Terjadwal (muncul setelah truk di-klik) ── */}
+                {isTruckExpanded && (
+                  <div className="border-t border-gray-100 divide-y divide-gray-50">
+                    {truck.routes.map((rute) => {
+                      const isExpanded = expandedId === rute.id;
+                      const isEditing  = editingRuteId === rute.id;
+                      const jarakKm     = totalJarakRuteKm(isEditing ? localWaypoints : rute.waypoints);
+                      const jumlahTitik = isEditing ? localWaypoints.length : rute.waypoints.length;
+
+                      return (
+                        <div key={rute.id} className="p-5 md:p-6 bg-gray-50/30">
+                          {/* Baris hari */}
+                          <div className="flex flex-wrap items-center gap-3">
+                            <button
+                              onClick={() => setExpandedId(isExpanded ? null : rute.id)}
+                              className={`p-2 rounded-xl transition-colors shrink-0 ${isExpanded ? "bg-gray-100 text-gray-600" : "text-gray-300 hover:bg-gray-50 hover:text-gray-500"}`}
+                            >
+                              {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                            </button>
+
+                            <div className="flex-1 min-w-[160px] flex items-center gap-2 flex-wrap">
+                              <BadgeHari hari={rute.dayOfWeek} />
+                              <span className="text-xs font-medium text-gray-500 truncate">{rute.name}</span>
                             </div>
-                            <div className="border-t border-gray-100" />
-                            {/* Nama */}
-                            <div>
-                              <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">Nama Lokasi</label>
-                              <input
-                                type="text"
-                                placeholder="Simpang Sibulele"
-                                value={wpForm.name}
-                                onChange={(e) => setWpForm((p) => ({ ...p, name: e.target.value }))}
-                                className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl outline-none text-sm font-medium focus:ring-2 focus:ring-green-500/20 transition-all"
-                              />
-                              {wpForm.name && (
-                                <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-                                  <Tag size={9} /> Terdeteksi sebagai: <span className="font-semibold text-gray-500">{tebakTipeLokasi(wpForm.name)}</span>
-                                </p>
+
+                            <div className="hidden md:flex items-center divide-x divide-gray-100 shrink-0">
+                              <MetricPill icon={MapPin} label="Titik Angkut" value={`${jumlahTitik}`} />
+                              <MetricPill icon={Ruler} label="Jarak Est." value={jarakKm > 0 ? `${jarakKm.toFixed(1)} km` : "—"} />
+                              <div className="px-3"><BadgeStatus aktif={rute.isActive} /></div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end ml-auto">
+                              {isEditing ? (
+                                <>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleSimpanWaypoints(); }}
+                                    disabled={savingWp}
+                                    className="px-3 py-1.5 bg-[#4A6D55] text-white rounded-lg hover:bg-[#3a5643] transition-colors shadow-sm inline-flex items-center gap-1 text-[10px] font-semibold whitespace-nowrap disabled:opacity-50"
+                                  >
+                                    {savingWp ? <RefreshCw size={11} className="animate-spin" /> : <Save size={11} />} Simpan Perubahan
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); tutupWaypointEditor(); }}
+                                    className="px-3 py-1.5 bg-white border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50 transition-colors text-[10px] font-semibold whitespace-nowrap"
+                                  >
+                                    Batal
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openWaypointEditor(rute); }}
+                                    className="px-2.5 py-1.5 bg-[#4A6D55] text-white rounded-lg hover:bg-[#3a5643] transition-colors shadow-sm inline-flex items-center gap-1 text-[10px] font-semibold whitespace-nowrap"
+                                    title="Kelola Titik Rute"
+                                  >
+                                    <MapPin size={11} /> Kelola Titik
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setViewingRute(rute); }}
+                                    className="p-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors shadow-sm inline-flex"
+                                    title="Lihat Detail Rute"
+                                  >
+                                    <Eye size={14} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => openEditRuteModal(rute, e)}
+                                    className="p-2 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition-colors shadow-sm inline-flex"
+                                    title="Edit Info Rute"
+                                  >
+                                    <Edit3 size={14} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openDeleteConfirm(rute.id, rute.name); }}
+                                    className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-sm inline-flex"
+                                    title="Hapus Rute"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </>
                               )}
                             </div>
-                            {/* Lat & Lng */}
-                            <div className="grid grid-cols-2 gap-3">
-                              {(["latitude", "longitude"] as const).map((field) => (
-                                <div key={field}>
-                                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">{field}</label>
-                                  <input
-                                    type="text"
-                                    placeholder={field === "latitude" ? "-6.200000" : "106.816666"}
-                                    value={wpForm[field]}
-                                    onChange={(e) => setWpForm((p) => ({ ...p, [field]: e.target.value }))}
-                                    className="w-full px-4 py-3 bg-gray-50 rounded-xl text-xs font-mono text-gray-700 border border-gray-100 outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
-                                  />
-                                </div>
-                              ))}
+
+                            <div className="flex md:hidden items-center gap-4 w-full pl-9 -mt-1">
+                              <span className="text-[10px] text-gray-500 font-semibold flex items-center gap-1">
+                                <MapPin size={11} className="text-[#4A6D55]" /> {jumlahTitik} Titik
+                              </span>
+                              <span className="text-[10px] text-gray-500 font-semibold flex items-center gap-1">
+                                <Ruler size={11} className="text-[#4A6D55]" /> {jarakKm > 0 ? `${jarakKm.toFixed(1)} km` : "—"}
+                              </span>
+                              <BadgeStatus aktif={rute.isActive} />
                             </div>
-                            <button
-                              type="button"
-                              onClick={handleTambahWpLokal}
-                              className="w-full py-3 bg-[#4A6D55] text-white rounded-2xl text-sm font-semibold hover:bg-[#3a5643] transition-all flex items-center justify-center gap-2 shadow"
-                            >
-                              <Plus size={16} /> Tambah ke Daftar
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* KANAN: Daftar Titik */}
-                        <div className="flex flex-col h-full">
-                          <div className="flex items-center justify-between mb-4">
-                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-                              Daftar Titik Operasional ({localWaypoints.length} Lokasi)
-                            </p>
-                            <button
-                              type="button"
-                              onClick={handleOptimasiRute}
-                              className="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-colors inline-flex items-center gap-1.5"
-                              title="Urutkan titik berdasarkan jarak terdekat"
-                            >
-                              <Wand2 size={12} /> Optimasi Rute
-                            </button>
                           </div>
 
-                          <div className="flex-1 space-y-2 overflow-y-auto max-h-[520px] pr-1">
-                            {localWaypoints.length === 0 ? (
-                              <div className="py-14 text-center border-2 border-dashed border-gray-200 rounded-2xl">
-                                <p className="text-sm text-gray-400">Belum ada titik yang ditambahkan</p>
-                              </div>
-                            ) : localWaypoints.map((wp, idx) => (
-                              <WaypointEditItem
-                                key={wp.id}
-                                wp={wp}
-                                idx={idx}
-                                total={localWaypoints.length}
-                                selected={selectedWpIdx === idx}
-                                onSelect={() => setSelectedWpIdx(idx)}
-                                onMoveUp={() => moveWp(idx, "up")}
-                                onMoveDown={() => moveWp(idx, "down")}
-                                onDelete={() => handleHapusWpLokal(idx)}
-                                isDragOver={dragOverIdx === idx}
-                                onDragStart={() => setDragIdx(idx)}
-                                onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
-                                onDrop={(e) => {
-                                  e.preventDefault();
-                                  if (dragIdx !== null) reorderWp(dragIdx, idx);
-                                  setDragIdx(null);
-                                  setDragOverIdx(null);
-                                }}
-                              />
-                            ))}
-                          </div>
+                          {/* ── Level 3: Body waypoint (desain sama persis seperti sebelumnya) ── */}
+                          {isExpanded && (
+                            <div className="mt-5 pt-5 border-t border-gray-100">
+                              {isEditing ? (
+                                /* ── EDIT WAYPOINT ── */
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10">
+                                  {/* KIRI: Peta + Form */}
+                                  <div className="space-y-5">
+                                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Konfigurasi Jalur Peta</p>
+                                    <PetaWaypoint
+                                      key={editingRuteId ?? "peta"}
+                                      waypoints={localWaypoints}
+                                      onMapClick={handleMapClick}
+                                      selectedIdx={selectedWpIdx}
+                                      flyTo={mapFlyTo}
+                                    />
+                                    <div ref={wpFormRef} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                                      {/* Cari lokasi */}
+                                      <div>
+                                        <label className="text-[10px] font-semibold text-gray-800 uppercase tracking-wider mb-1.5 block">Cari Lokasi</label>
+                                        <div className="flex gap-2">
+                                          <div className="relative flex-1">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                                            <input
+                                              type="text"
+                                              placeholder="Cari"
+                                              value={wpSearchQuery}
+                                              onChange={(e) => setWpSearchQuery(e.target.value)}
+                                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSearchWaypoint(); } }}
+                                              className="w-full pl-9 pr-4 py-3 bg-gray-50 border-none rounded-xl outline-none text-sm font-medium focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            />
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={handleSearchWaypoint}
+                                            disabled={wpSearching || !wpSearchQuery.trim()}
+                                            className="px-4 bg-blue-500 text-white rounded-xl font-semibold text-sm hover:bg-blue-600 transition-colors shadow flex items-center gap-2 disabled:opacity-50"
+                                          >
+                                            {wpSearching ? <RefreshCw size={13} className="animate-spin" /> : <Search size={13} />} Cari
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div className="border-t border-gray-100" />
+                                      {/* Nama */}
+                                      <div>
+                                        <label className="text-[10px] font-semibold text-gray-800 uppercase tracking-wider mb-1 block">Nama Lokasi</label>
+                                        <input
+                                          type="text"
+                                          placeholder="Nama Lokasi"
+                                          value={wpForm.name}
+                                          onChange={(e) => setWpForm((p) => ({ ...p, name: e.target.value }))}
+                                          className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl outline-none text-sm font-medium focus:ring-2 focus:ring-green-500/20 transition-all"
+                                        />
+                                        {wpForm.name && (
+                                          <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                                            <Tag size={9} /> Terdeteksi sebagai: <span className="font-semibold text-gray-500">{tebakTipeLokasi(wpForm.name)}</span>
+                                          </p>
+                                        )}
+                                      </div>
+                                      {/* Lat & Lng */}
+                                      <div className="grid grid-cols-2 gap-3">
+                                        {(["latitude", "longitude"] as const).map((field) => (
+                                          <div key={field}>
+                                            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1 block">{field}</label>
+                                            <input
+                                              type="text"
+                                              placeholder={field === "latitude" ? "-6.200000" : "106.816666"}
+                                              value={wpForm[field]}
+                                              onChange={(e) => setWpForm((p) => ({ ...p, [field]: e.target.value }))}
+                                              className="w-full px-4 py-3 bg-gray-50 rounded-xl text-xs font-mono text-gray-700 border border-gray-100 outline-none focus:ring-2 focus:ring-green-500/20 transition-all"
+                                            />
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={handleTambahWpLokal}
+                                        className="w-full py-3 bg-[#4A6D55] text-white rounded-2xl text-sm font-semibold hover:bg-[#3a5643] transition-all flex items-center justify-center gap-2 shadow"
+                                      >
+                                        <Plus size={16} /> Tambah ke Daftar
+                                      </button>
+                                    </div>
+                                  </div>
 
-                          <div className="mt-5 flex flex-col sm:flex-row gap-3">
-                            <button
-                              type="button"
-                              onClick={handleSimpanWaypoints}
-                              disabled={savingWp}
-                              className="flex-[2] py-3.5 bg-[#4A6D55] hover:bg-[#3a5643] text-white rounded-2xl font-semibold shadow transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                              {savingWp ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
-                              {savingWp ? "Menyimpan..." : "Simpan Waypoint"}
-                            </button>
-                            <button type="button" onClick={tutupWaypointEditor}
-                              className="flex-1 py-3.5 bg-white border border-gray-200 text-gray-500 rounded-2xl font-semibold hover:bg-gray-50 transition-all">
-                              Batal
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      /* ── LIHAT WAYPOINT ── */
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
-                            Titik Perjalanan ({rute.waypoints.length})
-                          </p>
-                          {rute.waypoints.length > 0 && (
-                            <p className="text-[10px] font-semibold text-gray-400 flex items-center gap-1">
-                              <Ruler size={11} className="text-[#4A6D55]" /> Estimasi jarak {jarakKm.toFixed(1)} km
-                            </p>
+                                  {/* KANAN: Daftar Titik */}
+                                  <div className="flex flex-col h-full">
+                                    <div className="flex items-center justify-between mb-4">
+                                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+                                        Daftar Titik Operasional ({localWaypoints.length} Lokasi)
+                                      </p>
+                                      <button
+                                        type="button"
+                                        onClick={handleOptimasiRute}
+                                        className="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-colors inline-flex items-center gap-1.5"
+                                        title="Urutkan titik berdasarkan jarak terdekat"
+                                      >
+                                        <Wand2 size={12} /> Optimasi Rute
+                                      </button>
+                                    </div>
+
+                                    <div className="flex-1 space-y-2 overflow-y-auto max-h-[520px] pr-1">
+                                      {localWaypoints.length === 0 ? (
+                                        <div className="py-14 text-center border-2 border-dashed border-gray-200 rounded-2xl">
+                                          <p className="text-sm text-gray-400">Belum ada titik yang ditambahkan</p>
+                                        </div>
+                                      ) : localWaypoints.map((wp, idx) => (
+                                        <WaypointEditItem
+                                          key={wp.id}
+                                          wp={wp}
+                                          idx={idx}
+                                          total={localWaypoints.length}
+                                          selected={selectedWpIdx === idx}
+                                          onSelect={() => setSelectedWpIdx(idx)}
+                                          onMoveUp={() => moveWp(idx, "up")}
+                                          onMoveDown={() => moveWp(idx, "down")}
+                                          onDelete={() => handleHapusWpLokal(idx)}
+                                          isDragOver={dragOverIdx === idx}
+                                          onDragStart={() => setDragIdx(idx)}
+                                          onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
+                                          onDrop={(e) => {
+                                            e.preventDefault();
+                                            if (dragIdx !== null) reorderWp(dragIdx, idx);
+                                            setDragIdx(null);
+                                            setDragOverIdx(null);
+                                          }}
+                                        />
+                                      ))}
+                                    </div>
+
+                                    <div className="mt-5 flex flex-col sm:flex-row gap-3">
+                                      <button
+                                        type="button"
+                                        onClick={handleSimpanWaypoints}
+                                        disabled={savingWp}
+                                        className="flex-[2] py-3.5 bg-[#4A6D55] hover:bg-[#3a5643] text-white rounded-2xl font-semibold shadow transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                      >
+                                        {savingWp ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+                                        {savingWp ? "Menyimpan..." : "Simpan Waypoint"}
+                                      </button>
+                                      <button type="button" onClick={tutupWaypointEditor}
+                                        className="flex-1 py-3.5 bg-white border border-gray-200 text-gray-500 rounded-2xl font-semibold hover:bg-gray-50 transition-all">
+                                        Batal
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* ── LIHAT WAYPOINT ── */
+                                <div className="space-y-4">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+                                      Titik Perjalanan ({rute.waypoints.length})
+                                    </p>
+                                    {rute.waypoints.length > 0 && (
+                                      <p className="text-[10px] font-semibold text-gray-400 flex items-center gap-1">
+                                        <Ruler size={11} className="text-[#4A6D55]" /> Estimasi jarak {jarakKm.toFixed(1)} km
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                    {rute.waypoints.map((wp, idx) => (
+                                      <WaypointViewItem key={wp.id} wp={wp} idx={idx} />
+                                    ))}
+                                    <button
+                                      type="button"
+                                      onClick={() => openWaypointEditor(rute)}
+                                      className="flex items-center justify-center gap-2 p-3.5 rounded-[18px] border border-dashed border-gray-300 text-gray-500 text-sm font-medium hover:bg-gray-50 hover:border-[#4A6D55] hover:text-[#4A6D55] transition-all"
+                                    >
+                                      <MapPin size={15} /> Kelola Titik Rute
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                          {rute.waypoints.map((wp, idx) => (
-                            <WaypointViewItem key={wp.id} wp={wp} idx={idx} />
-                          ))}
-                          <button
-                            type="button"
-                            onClick={() => openWaypointEditor(rute)}
-                            className="flex items-center justify-center gap-2 p-3.5 rounded-[18px] border border-dashed border-gray-300 text-gray-500 text-sm font-medium hover:bg-gray-50 hover:border-[#4A6D55] hover:text-[#4A6D55] transition-all"
-                          >
-                            <MapPin size={15} /> Kelola Titik Rute
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1239,11 +1364,11 @@ return (
       </div>
 
       {/* ── PAGINATION ── */}
-      {!loading && filtered.length > 0 && (
+      {!loading && groupedByTruck.length > 0 && (
         <PaginationBar
           page={rutePage}
           totalPages={ruteTotalPages}
-          totalItems={filtered.length}
+          totalItems={groupedByTruck.length}
           perPage={RUTE_PER_PAGE}
           onChange={setRutePage}
         />
@@ -1340,7 +1465,7 @@ return (
         )}
       </AnimatePresence>
 
-      {/* ── MODAL: BUAT RUTE BARU ── */}
+      {/* ── MODAL: BUAT RUTE BARU (sekarang multi-hari) ── */}
       <AnimatePresence>
         {showModalRute && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
@@ -1361,10 +1486,7 @@ return (
                     <Truck className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                     <select
                       value={formRute.truckId}
-                      onChange={(e) => {
-                        const truk = trukList.find((t) => t.id === e.target.value);
-                        setFormRute((p) => ({ ...p, truckId: e.target.value, name: truk && p.dayOfWeek ? `Rute ${truk.plateNumber} - ${p.dayOfWeek}` : p.name }));
-                      }}
+                      onChange={(e) => setFormRute((p) => ({ ...p, truckId: e.target.value }))}
                       required
                       className="w-full pl-11 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500/20 outline-none text-sm font-medium appearance-none"
                     >
@@ -1399,32 +1521,71 @@ return (
                   </div>
                 </div>
 
+                {/* 🔥 BARU: preset cepat kombinasi hari */}
                 <div>
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 block">Hari Operasional <span className="text-red-500">*</span></label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {HARI_LIST.map((h) => (
-                      <button key={h} type="button"
-                        onClick={() => {
-                          const truk = trukList.find((t) => t.id === formRute.truckId);
-                          setFormRute((p) => ({ ...p, dayOfWeek: h, name: truk ? `Rute ${truk.plateNumber} - ${h}` : p.name }));
-                        }}
-                        className={`py-2.5 text-[10px] font-bold rounded-xl border transition-all ${
-                          formRute.dayOfWeek === h ? "border-[#4A6D55] bg-[#4A6D55] text-white shadow" : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200"
-                        }`}
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 block">Pilih Cepat</label>
+                  <div className="flex flex-wrap gap-2">
+                    {PRESET_HARI.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => pilihPresetHari(preset.days)}
+                        className="px-3 py-1.5 text-[10px] font-semibold rounded-lg border border-gray-200 bg-gray-50 text-gray-600 hover:border-[#4A6D55] hover:text-[#4A6D55] transition-all"
                       >
-                        {h.slice(0, 3)}
+                        {preset.label}
                       </button>
                     ))}
+                    {formRute.days.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setFormRute((p) => ({ ...p, days: [] }))}
+                        className="px-3 py-1.5 text-[10px] font-semibold rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 transition-all"
+                      >
+                        Bersihkan
+                      </button>
+                    )}
                   </div>
                 </div>
+
+                {/* 🔥 DIGANTI: dari single-select jadi multi-select toggle */}
                 <div>
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">Nama Rute <span className="text-red-500">*</span></label>
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 block">
+                    Hari Operasional <span className="text-red-500">*</span>
+                    <span className="normal-case font-normal text-gray-400"> — bisa pilih lebih dari satu</span>
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {HARI_LIST.map((h) => {
+                      const aktif = formRute.days.includes(h);
+                      return (
+                        <button key={h} type="button"
+                          onClick={() => toggleHariForm(h)}
+                          className={`py-2.5 text-[10px] font-bold rounded-xl border transition-all ${
+                            aktif ? "border-[#4A6D55] bg-[#4A6D55] text-white shadow" : "border-gray-100 bg-gray-50 text-gray-500 hover:border-gray-200"
+                          }`}
+                        >
+                          {h.slice(0, 3)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {formRute.days.length > 0 && (
+                    <p className="text-[10px] text-gray-400 mt-2">
+                      {formRute.days.length} hari dipilih — akan membuat {formRute.days.length} jadwal sekaligus.
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5 block">
+                    Nama Dasar Rute <span className="normal-case font-normal text-gray-400">(opsional)</span>
+                  </label>
                   <div className="relative">
                     <Navigation className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
-                    <input type="text" value={formRute.name} onChange={(e) => setFormRute((p) => ({ ...p, name: e.target.value }))} required
-                      placeholder="Rute BK 1234 AB - SENIN"
+                    <input type="text" value={formRute.name} onChange={(e) => setFormRute((p) => ({ ...p, name: e.target.value }))}
+                      placeholder="Kosongkan untuk pakai default: Rute {plat}"
                       className="w-full pl-11 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500/20 outline-none text-sm font-medium transition-all" />
                   </div>
+                  <p className="text-[10px] text-gray-400 mt-1">Nama hari akan otomatis ditambahkan di belakang, contoh: "Rute BB 1234 - SENIN".</p>
                 </div>
                 <div className="pt-2">
                   <button type="submit" className="w-full py-4 bg-[#4A6D55] text-white rounded-2xl font-semibold shadow hover:bg-[#3a5643] transition-all flex items-center justify-center gap-2">
@@ -1437,8 +1598,7 @@ return (
         )}
       </AnimatePresence>
 
-      {/* ── MODAL: EDIT INFO RUTE ── */}
-  {/* ── MODAL: EDIT INFO RUTE ── */}
+      {/* ── MODAL: EDIT INFO RUTE (tetap satu hari, tidak berubah) ── */}
 <AnimatePresence>
   {showModalEditRute && editingRuteInfo && (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">

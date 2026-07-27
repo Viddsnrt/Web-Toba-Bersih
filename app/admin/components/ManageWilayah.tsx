@@ -3,11 +3,14 @@ import { useState, useEffect, useMemo } from 'react';
 
 import axios from 'axios';
 import dynamic from 'next/dynamic';
+import * as turf from '@turf/turf';
+import osmtogeojson from 'osmtogeojson';
 import {
   Plus, Edit, Trash2, Search, MapPin,
   Building2, Map, X, Loader2,
   CircleCheck, Eye, Power, PowerOff,
-  Calendar, Hash, Navigation, Globe, AlertTriangle
+  Calendar, Hash, Navigation, Globe, AlertTriangle,
+  Shapes // ikon untuk tombol ambil poligon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -27,6 +30,7 @@ interface Wilayah {
   latitude: string;
   longitude: string;
   radius: number | null;
+  boundaryGeoJson?: any | null; 
   createdAt: string;
   area?: number;
 }
@@ -38,7 +42,7 @@ interface InlineAlert {
 
 interface AlertState {
   open: boolean;
-  type: "success" | "error" | "delete" | "loading" | "edit" | "info"    
+  type: "success" | "error" | "delete" | "loading" | "edit" | "info"
   title: string;
   description: string;
   detailText?: string;
@@ -48,6 +52,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
   ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '') + '/api'
   : '/api';
 
+// 🔧 FIX: fungsi ini hilang di revisi sebelumnya padahal masih dipanggil
+// oleh checkDuplicate() — itu penyebab "getDistanceMeters is not defined".
 function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -60,6 +66,27 @@ function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: numbe
     Math.sin(dLon / 2);
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+const queryOverpass = async (query: string) => {
+  const res = await fetch('/api/osm-boundary', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(json?.error || `Gagal (HTTP ${res.status})`);
+  }
+  return json;
+};
+
+const emptyFormData = () => ({
+  name: '', code: '', address: '',
+  latitude: '-6.200000', longitude: '106.816666', radius: '5000', isActive: true,
+  boundaryGeoJson: null as any,
+  boundaryQuery: '',
+  includedVillages: [] as string[]
+});
 
 export default function ManageWilayah() {
   const [wilayahList, setWilayahList] = useState<Wilayah[]>([]);
@@ -76,6 +103,10 @@ export default function ManageWilayah() {
   const [submitting, setSubmitting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [tomtomResults, setTomtomResults] = useState<any[]>([]);
+
+  // state untuk proses ambil poligon dari OSM/Overpass
+  const [fetchingBoundary, setFetchingBoundary] = useState(false);
 
   // ── AlertState ──
   const [alertState, setAlertState] = useState<AlertState>({
@@ -89,10 +120,7 @@ export default function ManageWilayah() {
   const [formAlert, setFormAlert] = useState<InlineAlert | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
-    name: '', code: '', address: '',
-    latitude: '-6.200000', longitude: '106.816666', radius: '5000', isActive: true
-  });
+  const [formData, setFormData] = useState(emptyFormData());
 
   const showAlert = (
     type: "success" | "error" | "delete" | "edit" | "info",
@@ -112,7 +140,19 @@ export default function ManageWilayah() {
     setTimeout(() => setFormAlert(null), 5000);
   };
 
-  const calculateArea = (radius: number): number => {
+  // Hitung luas dari poligon asli (Turf) kalau ada, fallback ke rumus lingkaran kalau tidak
+  const calculateArea = (radius: number, boundaryGeoJson?: any): number => {
+    if (boundaryGeoJson) {
+      try {
+        const feature = boundaryGeoJson.type === 'Feature'
+          ? boundaryGeoJson
+          : turf.feature(boundaryGeoJson);
+        const areaM2 = turf.area(feature as any);
+        if (areaM2 > 0) return areaM2 / 1_000_000; // m² → km²
+      } catch {
+        // kalau geojson invalid, jatuh ke perhitungan radius di bawah
+      }
+    }
     if (!radius || radius <= 0) return 0;
     const radiusInKm = radius / 1000;
     return Math.PI * radiusInKm * radiusInKm;
@@ -181,7 +221,11 @@ export default function ManageWilayah() {
         setWilayahList([]);
         return;
       }
-      setWilayahList(wilayahListRaw.map((w: Wilayah) => ({ ...w, area: calculateArea(w.radius ?? 0) })));
+      // Kalau backend sudah kirim area terhitung, pakai itu; kalau tidak, hitung ulang di sini (fallback)
+      setWilayahList(wilayahListRaw.map((w: Wilayah) => ({
+        ...w,
+        area: w.area ?? calculateArea(w.radius ?? 0, w.boundaryGeoJson)
+      })));
     } catch (error: any) {
       const msg = error?.response?.data?.message || error?.message || 'Data wilayah tidak dapat dimuat.';
       showAlert('error', 'Gagal Memuat Data', msg, 'Silakan coba beberapa saat lagi.');
@@ -208,20 +252,139 @@ export default function ManageWilayah() {
     setDuplicateWarning(checkDuplicate(formData.name, formData.code, formData.latitude, formData.longitude, editingWilayah?.id));
   }, [formData.name, formData.code, formData.latitude, formData.longitude, wilayahList]);
 
-  const handleSearchOSM = async () => {
+  // Search lokasi/pin di peta — TETAP pakai TomTom (bagian ini sudah bekerja baik
+  // untuk mencari alamat/titik/POI, tidak diganti).
+  const handleSearchTomTom = async () => {
     if (!searchQuery) return;
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}`);
-      const data = await res.json();
+      const res = await fetch(
+        `https://api.tomtom.com/search/2/search/${encodeURIComponent(searchQuery)}.json?key=${process.env.NEXT_PUBLIC_TOMTOM_KEY}&countrySet=ID&limit=8&language=id-ID`
+      );
+      const json = await res.json();
+      const data = json.results || [];
       if (data.length > 0) {
-        const loc = data[0];
-        setFormData(prev => ({ ...prev, latitude: loc.lat, longitude: loc.lon, address: loc.display_name, name: loc.display_name.split(',')[0] }));
-        showFormAlert('success', 'Lokasi ditemukan dan diperbarui.');
+        setTomtomResults(data);
+        showFormAlert('success', `${data.length} lokasi ditemukan, silakan pilih.`);
       } else {
-        showFormAlert('error', 'Lokasi tidak ditemukan. Coba kata kunci lain.');
+        setTomtomResults([]);
+        showFormAlert('error', 'Lokasi tidak ditemukan. Coba kata kunci lain, misal tambahkan nama kabupaten/kota.');
       }
     } catch {
       showFormAlert('error', 'Gagal menghubungi server peta.');
+    }
+  };
+
+  // Saat admin pilih salah satu hasil pencarian TomTom: isi koordinat + nama,
+  // lalu OTOMATIS coba ambil batas kecamatan dari OSM/Overpass pakai nama kecamatan
+  // (address.municipality), BUKAN nama POI — supaya query batas wilayah akurat.
+  const selectTomTomResult = (loc: any) => {
+    const freeformAddress = loc.address?.freeformAddress || '';
+    const suggestedName = loc.poi?.name || freeformAddress.split(',')[0] || '';
+
+    // municipality = level KECAMATAN di konvensi TomTom Indonesia,
+    // municipalitySubdivision = level DESA/KELURAHAN. Kita ambil level kecamatan
+    // supaya poligon yang didapat lebih besar dan otomatis mencakup semua desa di dalamnya.
+    const kecamatanName = loc.address?.municipality || suggestedName;
+
+    setFormData(prev => ({
+      ...prev,
+      latitude: loc.position.lat.toString(),
+      longitude: loc.position.lon.toString(),
+      address: freeformAddress,
+      name: suggestedName,
+      boundaryQuery: kecamatanName
+    }));
+    setTomtomResults([]);
+    setSearchQuery('');
+
+    if (kecamatanName) fetchBoundaryFromOSM(kecamatanName);
+  };
+
+  // 🔧 FIX AKAR MASALAH: query ke Overpass sekarang lewat backend sendiri
+// (/api/osm-boundary), BUKAN langsung dari browser ke overpass-api.de.
+// Fetch langsung dari browser gagal karena CORS — request diblokir sebelum
+// sempat dapat response, jadi perbaikan pesan error sebelumnya tidak pernah
+// terpakai (fetch() throw duluan sebelum res.ok sempat dicek).
+const queryOverpass = async (query: string) => {
+  const res = await fetch('/api/osm-boundary', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(json?.error || `Gagal (HTTP ${res.status})`);
+  }
+  return json;
+};
+
+  const fetchBoundaryFromOSM = async (queryOverride?: string) => {
+    const name = typeof queryOverride === 'string' ? queryOverride : (formData.boundaryQuery || formData.name);
+
+    if (!name) {
+      showFormAlert('error', 'Isi nama kecamatan dulu sebelum ambil batas wilayah.');
+      return;
+    }
+    setFetchingBoundary(true);
+    try {
+      // Step 1: cari relation KECAMATAN
+      const kecamatanQuery = `
+        [out:json][timeout:25];
+        relation["name"~"${name}",i]["admin_level"="7"]["boundary"="administrative"];
+        out geom;
+      `;
+      const kecamatanJson = await queryOverpass(kecamatanQuery);
+      const kecamatanRelation = kecamatanJson.elements?.[0];
+
+      if (!kecamatanRelation) {
+        showFormAlert('warning', `Kecamatan "${name}" tidak ditemukan di OpenStreetMap. Sistem pakai radius manual sebagai gantinya.`);
+        setFetchingBoundary(false);
+        return;
+      }
+
+      // Konversi hasil Overpass (format node/way/relation OSM) → GeoJSON polygon standar
+      const kecamatanGeoJson = osmtogeojson(kecamatanJson);
+      const polygonFeature = kecamatanGeoJson.features.find(
+        (f: any) => f.geometry?.type === 'Polygon' || f.geometry?.type === 'MultiPolygon'
+      );
+
+      if (!polygonFeature) {
+        showFormAlert('error', `Data "${name}" ditemukan tapi tidak punya bentuk poligon lengkap di OSM.`);
+        setFetchingBoundary(false);
+        return;
+      }
+
+      // Step 2: cari semua DESA/KELURAHAN (admin_level=8) DI DALAM area kecamatan tsb.
+      // Konversi relation id → area id (+3600000000) adalah konvensi standar Overpass.
+      const areaId = 3600000000 + kecamatanRelation.id;
+      const desaQuery = `
+        [out:json][timeout:25];
+        area(${areaId})->.kec;
+        relation["admin_level"="8"](area.kec);
+        out tags center;
+      `;
+      const desaJson = await queryOverpass(desaQuery);
+      const desaNames: string[] = (desaJson.elements || [])
+        .map((el: any) => el.tags?.name)
+        .filter(Boolean);
+
+      setFormData(prev => ({
+        ...prev,
+        boundaryGeoJson: polygonFeature.geometry,
+        includedVillages: desaNames
+      }));
+
+      showFormAlert(
+        'success',
+        desaNames.length > 0
+          ? `Batas Kecamatan ${name} berhasil diambil dari OpenStreetMap — mencakup ${desaNames.length} desa/kelurahan.`
+          : `Batas Kecamatan ${name} berhasil diambil, tapi daftar desa tidak tersedia di data OSM untuk area ini.`
+      );
+} catch (err: any) {
+  console.error(err);
+  showFormAlert('error', `Gagal menghubungi OpenStreetMap: ${err?.message || 'Coba lagi beberapa saat.'}`);
+    } finally {
+      setFetchingBoundary(false);
     }
   };
 
@@ -242,14 +405,17 @@ export default function ManageWilayah() {
     }
   };
 
-  // 🔥 MODIFIKASI: Cegah hapus jika radius < 5000
+  // Larangan hapus berdasarkan radius kecil HANYA relevan untuk wilayah yang masih murni
+  // radius (tidak punya poligon). Kalau wilayah sudah punya poligon asli, angka radius
+  // cuma fallback dan tidak boleh menghalangi operasional (hapus/edit) wilayah itu.
   const handleDeleteClick = (wilayah: Wilayah) => {
-    if (wilayah.radius && wilayah.radius < 5000) {
+    const isRadiusOnly = !wilayah.boundaryGeoJson;
+    if (isRadiusOnly && wilayah.radius && wilayah.radius < 5000) {
       showAlert(
         'error',
         'Tidak Dapat Dihapus',
         'Wilayah dengan radius di bawah 5000 meter tidak dapat dihapus.',
-        'Radius harus ≥ 5000.'
+        'Radius harus ≥ 5000 (berlaku untuk wilayah yang belum punya poligon batas asli).'
       );
       return;
     }
@@ -278,19 +444,24 @@ export default function ManageWilayah() {
     } catch (error: any) {
       setSubmitting(false);
       setDeleting(false);
-      const msg = error?.response?.data?.message || error?.message || 'Gagal menghapus wilayah.';
-      showAlert('error', 'Gagal Menghapus Wilayah Karena Masih Ada Pelanggan yang Terkait', msg);
+      const status = error?.response?.status;
+      const msg = error?.response?.data?.error || error?.message || 'Gagal menghapus wilayah.';
+      const title = status === 409 ? 'Wilayah Masih Terkait Data Lain' : 'Gagal Menghapus Wilayah';
+      showAlert('error', title, msg);
     }
   };
 
-  // 🔥 MODIFIKASI: Tambahkan validasi radius minimum 5000
+  // Validasi radius minimum 5000 sekarang HANYA berlaku kalau wilayah ini TIDAK punya
+  // boundaryGeoJson. Kalau sudah punya poligon, radius jadi nilai fallback opsional dan
+  // boleh berapa saja, karena geofencing yang sebenarnya dipakai adalah bentuk poligon asli.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validasi radius minimum
+    const hasPolygon = !!formData.boundaryGeoJson;
     const radiusNum = parseInt(formData.radius) || 0;
-    if (radiusNum < 5000) {
-      showFormAlert('error', 'Radius minimal 5000 meter.');
+
+    if (!hasPolygon && radiusNum < 5000) {
+      showFormAlert('error', 'Radius minimal 5000 meter (berlaku selama belum ada poligon batas kecamatan).');
       return;
     }
 
@@ -305,7 +476,8 @@ export default function ManageWilayah() {
         formData.latitude !== originalData.latitude ||
         formData.longitude !== originalData.longitude ||
         formData.radius !== originalData.radius ||
-        formData.isActive !== originalData.isActive;
+        formData.isActive !== originalData.isActive ||
+        JSON.stringify(formData.boundaryGeoJson) !== JSON.stringify(originalData.boundaryGeoJson);
 
       if (!hasChanged) {
         setShowModal(false);
@@ -317,11 +489,15 @@ export default function ManageWilayah() {
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
+      // boundaryQuery & includedVillages adalah field bantu UI saja — tidak dikirim ke backend
+      // karena belum ada kolomnya di skema Prisma saat ini.
+      const { boundaryQuery, includedVillages, ...formDataForSubmit } = formData;
       const payload = {
-        ...formData,
+        ...formDataForSubmit,
         latitude: parseFloat(formData.latitude),
         longitude: parseFloat(formData.longitude),
-        radius: parseInt(formData.radius) || 5000,
+        radius: radiusNum || 5000,
+        boundaryGeoJson: formData.boundaryGeoJson ?? null,
       };
       if (editingWilayah) {
         await axios.put(`${API_BASE_URL}/wilayah/${editingWilayah.id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
@@ -368,8 +544,8 @@ export default function ManageWilayah() {
     warning: 'bg-yellow-50 border-yellow-200 text-yellow-700',
   };
 
-return (
-  <div className="w-full space-y-6 md:space-y-8 p-4 md:p-6 text-black">
+  return (
+    <div className="w-full space-y-6 md:space-y-8 p-4 md:p-6 text-black">
       {/* AlertDialog */}
       <AlertDialog
         open={alertState.open}
@@ -417,29 +593,29 @@ return (
               </span>
               <h1 className="text-3xl font-extrabold text-[#1A2E35] tracking-tight uppercase">Manajemen Data Wilayah Operasional</h1>
               <p className="text-[#5B7078] mt-2 font-medium">
-                Kelola status, koordinat, dan radius operasional cakupan wilayah.
+                Kelola status, koordinat, dan cakupan wilayah (radius atau poligon batas asli).
               </p>
             </div>
           </div>
         </div>
       </div>
 
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-  {[
-    { label: 'Total', val: stats.total, icon: Building2, color: 'text-gray-600', bg: 'bg-gray-50' },
-    { label: 'Aktif', val: stats.active, icon: CircleCheck, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Nonaktif', val: stats.inactive, icon: PowerOff, color: 'text-red-600', bg: 'bg-red-50' },
-    { label: 'Total Luas', val: formatArea(stats.totalArea), icon: Map, color: 'text-purple-600', bg: 'bg-purple-50' },
-  ].map((s, i) => (
-    <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
-      <div className={`p-3 rounded-xl ${s.bg} ${s.color}`}><s.icon size={24} /></div>
-      <div className="min-w-0">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{s.label}</p>
-        <p className="text-2xl font-black text-gray-900 mt-0.5 truncate">{s.val}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Total', val: stats.total, icon: Building2, color: 'text-gray-600', bg: 'bg-gray-50' },
+          { label: 'Aktif', val: stats.active, icon: CircleCheck, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Nonaktif', val: stats.inactive, icon: PowerOff, color: 'text-red-600', bg: 'bg-red-50' },
+          { label: 'Total Luas', val: formatArea(stats.totalArea), icon: Map, color: 'text-purple-600', bg: 'bg-purple-50' },
+        ].map((s, i) => (
+          <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+            <div className={`p-3 rounded-xl ${s.bg} ${s.color}`}><s.icon size={24} /></div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{s.label}</p>
+              <p className="text-2xl font-black text-gray-900 mt-0.5 truncate">{s.val}</p>
+            </div>
+          </div>
+        ))}
       </div>
-    </div>
-  ))}
-</div>
 
       <div className="flex justify-end">
         <button
@@ -447,7 +623,9 @@ return (
             setEditingWilayah(null);
             setFormAlert(null);
             setDuplicateWarning(null);
-            setFormData({ name: '', code: '', address: '', latitude: '-6.200000', longitude: '106.816666', radius: '5000', isActive: true });
+            setSearchQuery('');
+            setTomtomResults([]);
+            setFormData(emptyFormData());
             setShowModal(true);
           }}
           className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-[#4A6D55] text-white font-bold shadow-lg hover:bg-[#3a5643] transition-all flex items-center justify-center gap-2"
@@ -484,7 +662,7 @@ return (
           <thead>
             <tr className="bg-gray-50 text-gray-400 text-[12px] font-bold uppercase tracking-widest">
               <th className="px-6 py-4">Nama & Lokasi</th>
-              <th className="px-4 md:px-6 py-4">Radius</th>
+              <th className="px-4 md:px-6 py-4">Cakupan</th>
               <th className="hidden md:table-cell px-4 md:px-6 py-4">Luas Cakupan</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4 text-right">Aksi</th>
@@ -508,9 +686,15 @@ return (
                   </div>
                 </td>
                 <td className="px-4 md:px-6 py-4">
-                  <span className="text-xs md:text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
-                    {w.radius}m
-                  </span>
+                  {w.boundaryGeoJson ? (
+                    <span className="inline-flex items-center gap-1 text-xs md:text-sm font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-md">
+                      <Shapes size={12} /> Poligon
+                    </span>
+                  ) : (
+                    <span className="text-xs md:text-sm font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
+                      {w.radius}m
+                    </span>
+                  )}
                 </td>
                 <td className="hidden md:table-cell px-4 md:px-6 py-4">
                   <p className="text-sm font-bold text-blue-600">{formatArea(w.area || 0)}</p>
@@ -534,7 +718,10 @@ return (
                       ...w,
                       code: w.code || '',
                       address: w.address || '',
-                      radius: w.radius?.toString() || '5000'
+                      radius: w.radius?.toString() || '5000',
+                      boundaryGeoJson: w.boundaryGeoJson ?? null,
+                      boundaryQuery: '',
+                      includedVillages: [] as string[]
                     };
                     setEditingWilayah(w);
                     setOriginalData(editData);
@@ -589,18 +776,20 @@ return (
                   )}
                 </AnimatePresence>
 
+                {/* Search lokasi/pin — TomTom */}
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     <input placeholder="Cari nama lokasi/jalan di peta..." className="w-full pl-10 p-3 border rounded-xl outline-none text-sm focus:border-blue-500 transition-colors" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                   </div>
-                  <button type="button" onClick={handleSearchOSM} className="bg-blue-600 text-white px-6 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors shadow-md">Cari</button>
+                  <button type="button" onClick={handleSearchTomTom} className="bg-blue-600 text-white px-6 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors shadow-md">Cari</button>
                 </div>
 
                 <div className="h-56 border border-gray-100 rounded-2xl overflow-hidden bg-gray-50 relative group">
                   <WilayahMap
                     markerPos={[parseFloat(formData.latitude), parseFloat(formData.longitude)]}
                     radius={parseInt(formData.radius)}
+                    boundaryGeoJson={formData.boundaryGeoJson}
                     onMarkerDrag={(lat: number, lng: number) => setFormData(prev => ({ ...prev, latitude: lat.toString(), longitude: lng.toString() }))}
                   />
                   <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-[10px] font-mono text-gray-600 border border-gray-200 z-[1000]">
@@ -608,11 +797,34 @@ return (
                   </div>
                 </div>
 
+                {/* Hasil pencarian TomTom — di dalam modal, di bawah peta */}
+                <AnimatePresence>
+                  {tomtomResults.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="border border-gray-100 rounded-xl divide-y max-h-48 overflow-y-auto bg-white shadow-sm"
+                    >
+                      {tomtomResults.map((loc, i) => (
+                        <button
+                          type="button"
+                          key={i}
+                          onClick={() => selectTomTomResult(loc)}
+                          className="w-full text-left px-3 py-2 text-xs hover:bg-gray-50 transition-colors"
+                        >
+                          {loc.address?.freeformAddress || loc.poi?.name || 'Lokasi tanpa nama'}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Nama Wilayah</label>
                     <input
-                      placeholder="Contoh: Kantor Cabang Sudirman"
+                      placeholder="Contoh: Kecamatan Kebon Jeruk"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className={`w-full p-3 border rounded-xl outline-none text-sm focus:ring-1 transition-colors ${duplicateWarning?.includes('nama') ? 'border-yellow-400 focus:ring-yellow-400' : 'focus:ring-green-500'
@@ -620,21 +832,92 @@ return (
                       required
                     />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Kode Wilayah</label>
+
+                  {/* Batas Kecamatan — sekarang dari OpenStreetMap (Overpass), bukan TomTom */}
+                  <div className="md:col-span-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Batas Kecamatan (Opsional, Lebih Akurat)</label>
+                      {formData.boundaryGeoJson && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, boundaryGeoJson: null, includedVillages: [] }))}
+                          className="text-[10px] text-red-500 font-bold hover:underline"
+                        >
+                          Hapus Poligon
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Kata kunci pencarian batas kecamatan — auto terisi dari hasil pilihan TomTom,
+                        tapi bisa diedit manual kalau nama otomatis kurang tepat */}
                     <input
-                      value={formData.code}
-                      onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                      className={`w-full p-3 border rounded-xl bg-gray-50 font-mono text-blue-600 font-bold text-sm transition-colors ${duplicateWarning?.includes('Kode') ? 'border-yellow-400' : ''
-                        }`}
+                      value={formData.boundaryQuery}
+                      onChange={(e) => setFormData(prev => ({ ...prev, boundaryQuery: e.target.value }))}
+                      placeholder="Nama kecamatan resmi, mis: Porsea"
+                      className="w-full p-2.5 border rounded-xl text-xs mb-2"
                     />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Radius Operasional (Meter)</label>
-                    <input type="number" value={formData.radius} onChange={(e) => setFormData({ ...formData, radius: e.target.value })} className="w-full p-3 border rounded-xl text-sm" />
+
+                    <button
+                      type="button"
+                      onClick={() => fetchBoundaryFromOSM()}
+                      disabled={fetchingBoundary}
+                      className="w-full py-2.5 border border-dashed border-purple-300 text-purple-600 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-purple-50 transition-colors disabled:opacity-50"
+                    >
+                      {fetchingBoundary ? <Loader2 className="animate-spin" size={14} /> : <Shapes size={14} />}
+                      {formData.boundaryGeoJson ? 'Poligon Ditemukan ✓ (klik untuk ambil ulang)' : 'Ambil Batas Kecamatan dari OpenStreetMap'}
+                    </button>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Kalau ditemukan, sistem cek lokasi pakai bentuk asli kecamatan (bukan lingkaran) dan otomatis membaca desa/kelurahan di dalamnya — jadi tidak nyerempet ke kecamatan tetangga.
+                      Kalau tidak ditemukan, sistem otomatis pakai radius manual di bawah.
+                    </p>
+
+                    {/* Daftar desa yang otomatis kebaca dari Overpass */}
+                    {formData.includedVillages.length > 0 && (
+                      <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                        <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">
+                          {formData.includedVillages.length} Desa/Kelurahan Termasuk Kecamatan Ini
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {formData.includedVillages.map((v, i) => (
+                            <span key={i} className="text-[10px] bg-white border border-blue-200 text-blue-700 px-2 py-0.5 rounded-full">
+                              {v}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div>
+                  {/* Radius — kondisional, hanya tampil kalau belum ada poligon */}
+                  <div className="md:col-span-2">
+                    {formData.boundaryGeoJson ? (
+                      <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl border border-purple-200 bg-purple-50 text-purple-600 text-xs font-medium">
+                        <Shapes size={14} className="shrink-0 mt-0.5" />
+                        <span>Batas wilayah sudah memakai poligon asli dari OpenStreetMap, jadi radius manual tidak dipakai lagi untuk geofencing (hanya cadangan bila poligon dihapus).</span>
+                      </div>
+                    ) : (
+                      <>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
+                          Radius Operasional (Meter)
+                        </label>
+                        <input
+                          type="number"
+                          value={formData.radius}
+                          onChange={(e) => setFormData({ ...formData, radius: e.target.value })}
+                          className="w-full p-3 border rounded-xl text-sm"
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          Dipakai sebagai cara utama geofencing selama poligon belum diisi (minimal 5000 meter).
+                        </p>
+                        <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-[11px] mt-2">
+                          <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                          <span>Belum ada poligon — radius di atas dipakai sebagai lingkaran cadangan. Kalau wilayah ini bagian dari kecamatan yang sudah punya poligon sendiri, pertimbangkan untuk tidak membuat entry radius terpisah supaya tidak tumpang tindih.</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2">
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">
                       Status Wilayah
                     </label>
@@ -689,6 +972,7 @@ return (
                   <WilayahMap
                     markerPos={[parseFloat(viewingWilayah.latitude), parseFloat(viewingWilayah.longitude)]}
                     radius={viewingWilayah.radius || 0}
+                    boundaryGeoJson={viewingWilayah.boundaryGeoJson}
                     onMarkerDrag={() => { }}
                   />
                 </div>
@@ -715,10 +999,16 @@ return (
                     <p className="text-xs font-mono text-blue-600">{viewingWilayah.code}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Radius</p>
-                    <div className="flex items-center gap-2 text-emerald-600 font-bold">
-                      <Navigation size={14} /> <span>{viewingWilayah.radius} Meter</span>
-                    </div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Metode Cakupan</p>
+                    {viewingWilayah.boundaryGeoJson ? (
+                      <div className="flex items-center gap-2 text-purple-600 font-bold">
+                        <Shapes size={14} /> <span>Poligon Asli</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-emerald-600 font-bold">
+                        <Navigation size={14} /> <span>{viewingWilayah.radius} Meter</span>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Estimasi Luas</p>

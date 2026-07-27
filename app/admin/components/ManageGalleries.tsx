@@ -649,8 +649,7 @@ const openAlbumModal = (album: Album | null = null) => {
       </div>
     );
   }
-
-  // --- RENDER VIEW 2: ALBUM DETAIL ---
+// --- RENDER VIEW 2: ALBUM DETAIL ---
   if (view === "album-detail" && selectedAlbum) {
     const photos = selectedAlbum.photos || [];
     return (
@@ -660,7 +659,7 @@ const openAlbumModal = (album: Album | null = null) => {
         {renderAlbumModal()}
         {renderDeleteModal()}
 
-        <div className="bg-white rounded-3xl shadow-sm overflow-hidden border border-gray-100">
+        <div className="bg-white   rounded-3xl shadow-sm overflow-hidden border border-gray-100">
           <div className="relative w-full bg-gray-100 overflow-hidden" style={{ height: "360px" }}>
             {selectedAlbum.coverUrl ? <img src={resolveImageUrl(selectedAlbum.coverUrl)} alt={selectedAlbum.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-[#DDE9E1] to-[#E8F1EB] flex items-center justify-center"><Images size={80} className="text-[#4A6D55]/30" /></div>}
             <div className="absolute inset-0 bg-gradient-to-t from-[#1A2E35]/90 via-[#1A2E35]/40 to-transparent" />

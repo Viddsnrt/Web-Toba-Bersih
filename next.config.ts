@@ -6,8 +6,6 @@ const API_PROXY_TARGET = (process.env.API_PROXY_TARGET || "http://localhost:5000
 // const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
 // const API_URL = '/api';
 
-
-
 console.log(`📡 Next.js Proxy Target: ${API_PROXY_TARGET}`);
 
 const nextConfig: NextConfig = {
@@ -25,20 +23,23 @@ const nextConfig: NextConfig = {
   experimental: {},
   turbopack: {},
 
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: '/api/:path*',
-          destination: `${API_PROXY_TARGET}/api/:path*`,
-        },
-        {
-          source: '/uploads/:path*',
-          destination: `${API_PROXY_TARGET}/uploads/:path*`,
-        },
-      ],
-    };
-  },
+async rewrites() {
+  return {
+    // afterFiles: dicek SETELAH Next.js coba cocokkan file/route sendiri dulu
+    // (termasuk app/api/osm-boundary/route.ts). Jadi route Next.js custom
+    // selalu menang duluan, baru path /api/* lainnya diteruskan ke Express.
+    afterFiles: [
+      {
+        source: '/api/:path*',
+        destination: `${API_PROXY_TARGET}/api/:path*`,
+      },
+      {
+        source: '/uploads/:path*',
+        destination: `${API_PROXY_TARGET}/uploads/:path*`,
+      },
+    ],
+  };
+},
 
   reactStrictMode: true,
 };

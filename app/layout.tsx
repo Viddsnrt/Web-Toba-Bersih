@@ -42,7 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="id" data-scroll-behavior="smooth">
       <head>
         <meta name="theme-color" content="#16a34a" />
         <meta name="mobile-web-app-capable" content="yes" />

@@ -104,7 +104,7 @@ const staggerContainer: Variants = {
             <nav className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-slate-900/95 backdrop-blur-md border-b border-slate-800 py-3 shadow-md' : 'bg-transparent py-5'}`}>
                 <div className="max-w-7xl mx-auto px-6 lg:px-8 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-lg">
-                        <Image src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg" alt="Logo Toba" width={40} height={40} className="transition-transform group-hover:scale-105" unoptimized />
+                        <Image src="https://upload.wikimedia.org/wikipedia/commons/a/ae/Seal_of_Toba_Regency_%282020%29.svg" alt="Logo Toba" width={40} height={40} className="w-10 h-10 transition-transform group-hover:scale-105" unoptimized />
                         <div className="flex flex-col">
                             <h1 className="font-bold text-sm tracking-tight transition-colors text-white">Dinas Lingkungan Hidup</h1>
                             <p className="text-[10px] font-bold tracking-widest uppercase text-emerald-400">Kabupaten Toba</p>
@@ -119,16 +119,22 @@ const staggerContainer: Variants = {
                         ))}
                     </div>
 
-                    <div className="hidden md:flex items-center gap-3">
-                        <Link href="/login" className="text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 text-white hover:bg-white/10">Login</Link>
-                        <Link href="/Warga" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">
-                            <Leaf size={16} /> Lapor
-                        </Link>
-                    </div>
+                 <div className="flex items-center gap-2 md:gap-3">
+                    {/* Login tetap disembunyikan di mobile, sama seperti halaman Berita/Edukasi */}
+                    <Link href="/login" className="hidden md:inline-flex text-sm font-semibold px-4 py-2 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 text-white hover:bg-white/10">
+                        Login
+                    </Link>
 
+                    {/* Lapor sekarang selalu tampil, baik di mobile maupun desktop */}
+                    <Link href="/Warga" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2 md:px-5 md:py-2.5 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500">
+                        <Leaf size={16} /> Lapor
+                    </Link>
+
+                    {/* Hamburger tetap hanya untuk mobile */}
                     <button aria-label="Menu" className="md:hidden p-2 rounded-lg transition-colors text-white bg-white/10 backdrop-blur-sm hover:bg-white/20" onClick={() => setMobileMenuOpen(true)}>
                         <Menu size={24} />
                     </button>
+                </div>
                 </div>
             </nav>
 

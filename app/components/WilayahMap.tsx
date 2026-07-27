@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Circle, useMap, Polyline, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Circle, useMap, Polyline, Popup, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
@@ -49,14 +49,16 @@ export default function WilayahMap({
   radius,
   onMarkerDrag,
   wilayahData = [],
-  highlightAreas = []
+  highlightAreas = [],
+  boundaryGeoJson = null
 }: {
-  markerPos: any; // Diubah ke any untuk fleksibilitas interceptor data rute vs single marker
+  markerPos: any;
   radius: number;
-  onMarkerDrag?: (lat: number, lng: number) => void; // Dibuat opsional agar mode tinjauan rute tidak crash
+  onMarkerDrag?: (lat: number, lng: number) => void;
   wilayahData?: any[];
   highlightAreas?: AreaHighlight[];
-}) {
+  boundaryGeoJson?: any | null;
+})  {
   const [isCalculating, setIsCalculating] = useState(false);
 
   // ─── 1. INTERCEPTOR KOORDINAT AMAN (PENCEGAH CRASH LAT OF NULL) ───
@@ -151,24 +153,39 @@ export default function WilayahMap({
       ) : (
         /* MODE B: GEOFENCING WILAYAH (Render Draggable Marker Tunggal & Radius Circle) */
         <>
-          <Marker
+ <Marker
             draggable={onMarkerDrag ? true : false}
             eventHandlers={eventHandlers}
             position={safeCenter}
             icon={defaultIcon}
           />
 
-          <Circle
-            center={safeCenter}
-            radius={radius || 0}
-            pathOptions={{
-              color: '#10b981',
-              fillColor: '#10b981',
-              fillOpacity: 0.2,
-              weight: 2,
-              dashArray: '5, 10'
-            }}
-          />
+          {boundaryGeoJson ? (
+            // Poligon batas kecamatan asli dari OSM — prioritas utama kalau tersedia
+            <GeoJSON
+              key={JSON.stringify(boundaryGeoJson)} // paksa re-render kalau geometri berubah
+              data={boundaryGeoJson}
+              pathOptions={{
+                color: '#7c3aed',
+                fillColor: '#7c3aed',
+                fillOpacity: 0.15,
+                weight: 2
+              }}
+            />
+          ) : (
+            // Fallback lingkaran radius — hanya tampil kalau belum ada poligon
+            <Circle
+              center={safeCenter}
+              radius={radius || 0}
+              pathOptions={{
+                color: '#10b981',
+                fillColor: '#10b981',
+                fillOpacity: 0.2,
+                weight: 2,
+                dashArray: '5, 10'
+              }}
+            />
+          )}
         </>
       )}
 
