@@ -473,10 +473,10 @@
     { label: "Nonaktif", val: stats.inactive, icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
   ].map((s, i) => (
     <div key={i} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
-      <div className={`p-3 rounded-xl ${s.bg} ${s.color}`}>
+      <div className={`p-3 rounded-xl ${s.bg} ${s.color} shrink-0`}>
         <s.icon size={24} />
       </div>
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{s.label}</p>
         <p className="text-2xl font-black text-gray-900 mt-0.5">{s.val}</p>
       </div>
@@ -590,6 +590,7 @@
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right space-x-2">
+                          <div className="flex items-center justify-end gap-2 flex-nowrap"></div>
                           <button
                             type="button"
                             onClick={() => setViewingSupir(supir)}

@@ -15,8 +15,17 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Toba Bersih - Dinas Lingkungan Hidup Kabupaten Toba",
-  description: "Aplikasi PWA untuk melaporkan sampah liar dan menjaga kebersihan lingkungan",
+  description:
+    "Aplikasi PWA untuk melaporkan sampah liar dan menjaga kebersihan lingkungan",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/icons/icon-192x192.png",
+    apple: "/icons/icon-192x192.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -47,7 +56,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#16a34a" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
         <meta name="apple-mobile-web-app-title" content="CleanCity" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>

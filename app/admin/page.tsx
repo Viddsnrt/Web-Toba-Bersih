@@ -133,26 +133,24 @@ export default function AdminPage() {
     setLoading(prev => ({ ...prev, data: true }));
 
     try {
-      // Fetch laporan - coba berbagai endpoint
+      // Fetch laporan
       try {
-      const laporanRes = await axios.get(`${API_BASE_URL}/admin/laporan`, { headers, timeout: 5000 });
-        const laporanData = Array.isArray(laporanRes.data) ? laporanRes.data : (laporanRes.data?.data || []);
+        const laporanRes = await axios.get(`${API_BASE_URL}/laporan`, {
+          headers,
+          timeout: 5000
+        });
+
+        const laporanData = Array.isArray(laporanRes.data)
+          ? laporanRes.data
+          : (laporanRes.data?.data || []);
+
         setLaporanList(laporanData);
         setData(prev => ({ ...prev, laporan: laporanData }));
         console.log('✅ Laporan berhasil dimuat:', laporanData.length, 'item');
       } catch (err: any) {
-        console.warn('⚠️ Fetch laporan admin gagal, coba endpoint umum:', err.message);
-        try {
-          const laporanRes = await axios.get(`${API_BASE_URL}/laporan`, { headers, timeout: 5000 });
-          
-          const laporanData = Array.isArray(laporanRes.data) ? laporanRes.data : (laporanRes.data?.data || []);
-          setLaporanList(laporanData);
-          setData(prev => ({ ...prev, laporan: laporanData }));
-          console.log('✅ Laporan dari endpoint umum:', laporanData.length, 'item');
-        } catch {
-          console.error('❌ Gagal fetch laporan dari semua endpoint');
-          setLaporanList([]);
-        }
+        console.warn('⚠️ Fetch laporan gagal:', err.message);
+        setLaporanList([]);
+        setData(prev => ({ ...prev, laporan: [] }));
       }
 
       // Fetch posts/berita
@@ -196,7 +194,7 @@ export default function AdminPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(prev => ({ ...prev, login: true }));
-    
+
     try {
       const res = await api.post('/auth/login', {
         email: credentials.username,
@@ -217,7 +215,7 @@ export default function AdminPage() {
           localStorage.setItem('token', token);
           Cookies.set('token', token, { expires: 1, path: '/', sameSite: 'lax' });
         }
-        
+
         if (user) {
           localStorage.setItem('user', JSON.stringify({ ...user, role: normalizedRole }));
         }

@@ -671,15 +671,39 @@ const openAlbumModal = (album: Album | null = null) => {
           </div>
           <div className="p-6 md:p-10">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-              <div className="text-center sm:text-left"><h2 className="text-2xl font-extrabold text-gray-900">Koleksi Foto</h2><p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{photos.length} Media Tersimpan</p></div>
-            </div>
-            {photos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-3xl border-2 border-gray-200 border-dashed">
-                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 text-gray-300"><Camera size={32} /></div>
-                <h3 className="text-xl font-bold text-gray-700 mb-2">Album Masih Kosong</h3>
-                <p className="text-gray-500 text-sm text-center max-w-sm">Belum ada foto yang tersimpan pada album ini.</p>
-              </div>
-            ) : (
+    <div className="text-center sm:text-left">
+      <h2 className="text-2xl font-extrabold text-gray-900">Koleksi Foto</h2>
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{photos.length} Media Tersimpan</p>
+    </div>
+    {photos.length > 0 && (
+      <button
+        type="button"
+        onClick={() => setView("upload-photos")}
+        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-[#4A6D55] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#3a5643] transition-colors hover:-translate-y-0.5"
+      >
+        <Plus size={18} /> Tambah Foto
+      </button>
+    )}
+</div>
+{photos.length === 0 ? (
+  <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-3xl border-2 border-gray-200 border-dashed">
+    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 relative text-gray-300">
+      <Camera size={32} />
+      <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-[#4A6D55] rounded-full flex items-center justify-center shadow-md border-2 border-white">
+        <Plus size={16} className="text-white" />
+      </div>
+    </div>
+    <h3 className="text-xl font-bold text-gray-700 mb-2">Album Masih Kosong</h3>
+    <p className="text-gray-500 text-sm text-center max-w-sm mb-6">Mulai tambahkan foto untuk mendokumentasikan kegiatan ke dalam album ini.</p>
+    <button
+      type="button"
+      onClick={() => setView("upload-photos")}
+      className="flex items-center justify-center gap-2 bg-[#4A6D55] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg hover:bg-[#3a5643] transition-all hover:-translate-y-0.5"
+    >
+      <Upload size={18} /> Upload Foto Pertama
+    </button>
+  </div>
+) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {photos.map((photo, index) => (
                   <div key={photo.id} className={`group relative overflow-hidden rounded-2xl bg-gray-100 aspect-square shadow-sm hover:shadow-lg transition-all ${index === 0 ? "col-span-2 row-span-2" : ""}`}>
@@ -692,7 +716,16 @@ const openAlbumModal = (album: Album | null = null) => {
                     </div>
                   </div>
                 ))}
-              </div>
+  <div
+    className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#4A6D55] hover:text-[#4A6D55] hover:bg-[#DDE9E1]/30 transition-all cursor-pointer group bg-gray-50"
+    onClick={() => setView("upload-photos")}
+  >
+    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+      <Plus size={20} />
+    </div>
+    <span className="text-xs font-bold mt-1">Tambah Foto</span>
+  </div>
+</div>
             )}
           </div>
 

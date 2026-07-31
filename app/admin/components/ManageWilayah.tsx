@@ -318,7 +318,7 @@ const queryOverpass = async (query: string) => {
   return json;
 };
 
-  const fetchBoundaryFromOSM = async (queryOverride?: string) => {
+const fetchBoundaryFromOSM = async (queryOverride?: string) => {
     const name = typeof queryOverride === 'string' ? queryOverride : (formData.boundaryQuery || formData.name);
 
     if (!name) {
@@ -327,10 +327,11 @@ const queryOverpass = async (query: string) => {
     }
     setFetchingBoundary(true);
     try {
-      // Step 1: cari relation KECAMATAN
+      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const kecamatanQuery = `
         [out:json][timeout:25];
-        relation["name"~"${name}",i]["admin_level"="7"]["boundary"="administrative"];
+        area["ISO3166-1"="ID"][admin_level=2]->.indonesia;
+        relation(area.indonesia)["name"~"${escapedName}",i]["admin_level"="7"]["boundary"="administrative"];
         out geom;
       `;
       const kecamatanJson = await queryOverpass(kecamatanQuery);
@@ -404,10 +405,6 @@ const queryOverpass = async (query: string) => {
       showAlert('error', 'Gagal Mengubah Status', 'Status wilayah tidak berhasil diperbarui.', 'Silakan coba lagi beberapa saat.');
     }
   };
-
-  // Larangan hapus berdasarkan radius kecil HANYA relevan untuk wilayah yang masih murni
-  // radius (tidak punya poligon). Kalau wilayah sudah punya poligon asli, angka radius
-  // cuma fallback dan tidak boleh menghalangi operasional (hapus/edit) wilayah itu.
   const handleDeleteClick = (wilayah: Wilayah) => {
     const isRadiusOnly = !wilayah.boundaryGeoJson;
     if (isRadiusOnly && wilayah.radius && wilayah.radius < 5000) {
@@ -728,14 +725,13 @@ const queryOverpass = async (query: string) => {
                     setFormData(editData);
                     setShowModal(true);
                   }} className="p-2 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition-colors inline-flex"><Edit size={14} /></button>
-                  <button onClick={() => handleDeleteClick(w)} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors inline-flex"><Trash2 size={14} /></button>
+                  <button onClick={() =>  handleDeleteClick(w)} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors inline-flex"><Trash2 size={14} /></button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
       {/* Modal Form */}
       <AnimatePresence>
         {showModal && (
