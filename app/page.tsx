@@ -262,27 +262,8 @@ const BentoSection = () => (
 export default function HomePage() {
     const { posts, albums, educations, loading } = useHomeData();
 
-    const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
-    const [lightbox, setLightbox] = useState<{ photos: GalleryPhoto[]; index: number; } | null>(null);
-
     const beritaPosts = posts.filter(p => !isPengumuman(p.category)).slice(0, 3);
     const pengumumanPosts = posts.filter(p => isPengumuman(p.category)).slice(0, 4);
-
-    // Handlers
-    const nextPhoto = () => lightbox && setLightbox({ ...lightbox, index: (lightbox.index + 1) % lightbox.photos.length });
-    const prevPhoto = () => lightbox && setLightbox({ ...lightbox, index: (lightbox.index - 1 + lightbox.photos.length) % lightbox.photos.length });
-
-    useEffect(() => {
-        const handleKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") lightbox ? setLightbox(null) : setSelectedAlbum(null);
-            if (lightbox) {
-                if (e.key === "ArrowRight") nextPhoto();
-                if (e.key === "ArrowLeft") prevPhoto();
-            }
-        };
-        window.addEventListener("keydown", handleKey);
-        return () => window.removeEventListener("keydown", handleKey);
-    }, [lightbox]);
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-emerald-500 selection:text-white overflow-x-hidden">
@@ -438,34 +419,36 @@ export default function HomePage() {
                             [1, 2, 3].map(i => <div key={i} className="h-[350px] bg-slate-100 animate-pulse rounded-2xl" />)
                         ) : albums.slice(0, 3).length > 0 ? (
                             albums.slice(0, 3).map((album, i) => (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 15 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    viewport={{ once: true }}
-                                    transition={{ delay: i * 0.08 }}
+                                <Link
+                                    href={`/galeri?album=${album.id}`}
                                     key={album.id}
-                                    onClick={() => setSelectedAlbum(album)}
-                                    className="bg-white rounded-2xl border border-slate-200 overflow-hidden group hover:shadow-lg transition-shadow duration-300 flex flex-col h-full cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus:outline-none"
-                                    tabIndex={0}
-                                    role="button"
+                                    className="block h-full focus-visible:ring-2 focus-visible:ring-emerald-500 focus:outline-none rounded-2xl"
                                     aria-label={`Buka album ${album.title}`}
                                 >
-                                    <div className="aspect-video relative overflow-hidden bg-slate-100">
-                                        <Image src={album.coverUrl || FALLBACK_IMG} alt={album.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" unoptimized />
-                                        <div className="absolute top-4 left-4 bg-slate-900/80 backdrop-blur text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                                            <Images size={12} /> {album.photos?.length || 0} Foto
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 15 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: i * 0.08 }}
+                                        className="bg-white rounded-2xl border border-slate-200 overflow-hidden group hover:shadow-lg transition-shadow duration-300 flex flex-col h-full cursor-pointer"
+                                    >
+                                        <div className="aspect-video relative overflow-hidden bg-slate-100">
+                                            <Image src={album.coverUrl || FALLBACK_IMG} alt={album.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" unoptimized />
+                                            <div className="absolute top-4 left-4 bg-slate-900/80 backdrop-blur text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                                                <Images size={12} /> {album.photos?.length || 0} Foto
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="p-6 flex flex-col flex-1">
-                                        <h3 className="font-bold text-lg text-slate-900 mb-2 line-clamp-2 group-hover:text-emerald-600 transition-colors leading-snug">{album.title}</h3>
-                                        {album.description && (
-                                            <p className="text-slate-500 text-sm line-clamp-2 mb-4 flex-1 leading-relaxed">{album.description}</p>
-                                        )}
-                                        <div className="inline-flex items-center gap-2 text-emerald-600 font-semibold text-sm transition-colors mt-auto group-hover:gap-3">
-                                            Lihat Album <ArrowRight size={14} />
+                                        <div className="p-6 flex flex-col flex-1">
+                                            <h3 className="font-bold text-lg text-slate-900 mb-2 line-clamp-2 group-hover:text-emerald-600 transition-colors leading-snug">{album.title}</h3>
+                                            {album.description && (
+                                                <p className="text-slate-500 text-sm line-clamp-2 mb-4 flex-1 leading-relaxed">{album.description}</p>
+                                            )}
+                                            <div className="inline-flex items-center gap-2 text-emerald-600 font-semibold text-sm transition-colors mt-auto group-hover:gap-3">
+                                                Lihat Album <ArrowRight size={14} />
+                                            </div>
                                         </div>
-                                    </div>
-                                </motion.div>
+                                    </motion.div>
+                                </Link>
                             ))
                         ) : (
                             <p className="text-slate-500 italic col-span-3 text-center py-12">Belum ada album galeri.</p>
@@ -568,72 +551,6 @@ export default function HomePage() {
                     </div>
                 </div>
             </footer>
-
-            {/* --- LIGHTBOX & MODALS --- */}
-            <AnimatePresence>
-                {selectedAlbum && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="fixed inset-0 z-[100] bg-slate-50 overflow-y-auto">
-                        <div className="sticky top-0 z-[110] bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
-                            <button onClick={() => setSelectedAlbum(null)} className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 px-4 py-2 rounded-lg font-semibold text-sm transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500">
-                                <ChevronLeft size={18} /> Kembali
-                            </button>
-                            <div className="text-center hidden sm:block">
-                                <h2 className="font-bold text-slate-900">{selectedAlbum.title}</h2>
-                                <p className="text-xs text-slate-500 font-medium">{selectedAlbum.photos?.length || 0} foto</p>
-                            </div>
-                            <div className="w-[100px] hidden sm:block" />
-                            <div className="sm:hidden">
-                                <h2 className="font-bold text-slate-900 text-sm truncate max-w-[140px]">{selectedAlbum.title}</h2>
-                            </div>
-                        </div>
-
-                        <div className="max-w-7xl mx-auto px-6 py-12">
-                            {selectedAlbum.description && (
-                                <div className="bg-white p-6 rounded-xl border border-slate-200 mb-10 max-w-3xl mx-auto text-center">
-                                    <p className="text-slate-600 leading-relaxed text-sm">{selectedAlbum.description}</p>
-                                </div>
-                            )}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                {selectedAlbum.photos?.map((photo, idx) => (
-                                    <div key={photo.id} onClick={() => setLightbox({ photos: selectedAlbum.photos!, index: idx })} className="aspect-square rounded-xl overflow-hidden relative group cursor-pointer border border-slate-200 bg-slate-100 focus-visible:ring-2 focus-visible:ring-emerald-500" tabIndex={0} role="button">
-                                        <Image src={photo.imageUrl} alt={photo.caption || ''} fill className="object-cover transition-transform duration-300 group-hover:scale-105" unoptimized />
-                                        <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 transition-colors flex items-center justify-center">
-                                            <div className="w-10 h-10 bg-white shadow-sm rounded-full text-slate-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                                <Eye size={18} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {lightbox && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="fixed inset-0 z-[200] bg-slate-900/95 flex items-center justify-center p-4">
-                        <button aria-label="Tutup" onClick={() => setLightbox(null)} className="absolute top-6 right-6 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors focus-visible:ring-2 focus-visible:ring-white z-10">
-                            <X size={20} />
-                        </button>
-                        {lightbox.photos.length > 1 && (
-                            <>
-                                <button aria-label="Sebelumnya" onClick={(e) => { e.stopPropagation(); prevPhoto(); }} className="absolute left-4 md:left-10 top-1/2 -translate-y-1/2 w-10 h-10 md:w-14 md:h-14 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors focus-visible:ring-2 focus-visible:ring-white z-10"><ChevronLeft size={24} /></button>
-                                <button aria-label="Selanjutnya" onClick={(e) => { e.stopPropagation(); nextPhoto(); }} className="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 w-10 h-10 md:w-14 md:h-14 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors focus-visible:ring-2 focus-visible:ring-white z-10"><ChevronRight size={24} /></button>
-                            </>
-                        )}
-                        <div className="flex flex-col items-center max-w-5xl w-full">
-                            <div className="relative w-full max-h-[80vh] flex justify-center">
-                                <img src={lightbox.photos[lightbox.index].imageUrl} className="max-h-[80vh] object-contain rounded-lg" alt={lightbox.photos[lightbox.index].caption || 'Foto Galeri'} onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMG; }} />
-                            </div>
-                            <div className="mt-4 text-center text-white">
-                                {lightbox.photos[lightbox.index].caption && <p className="text-base font-medium mb-1">{lightbox.photos[lightbox.index].caption}</p>}
-                                <p className="text-slate-400 font-semibold text-xs tracking-widest">{lightbox.index + 1} / {lightbox.photos.length}</p>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 }

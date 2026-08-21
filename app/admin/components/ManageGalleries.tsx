@@ -704,13 +704,30 @@ export default function ManageGalleries({ galleries, onGalleriesUpdate }: Manage
           <div className="relative w-full bg-gray-100 overflow-hidden" style={{ height: "360px" }}>
             {selectedAlbum.coverUrl ? <img src={resolveImageUrl(selectedAlbum.coverUrl)} alt={selectedAlbum.title} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-[#DDE9E1] to-[#E8F1EB] flex items-center justify-center"><Images size={80} className="text-[#4A6D55]/30" /></div>}
             <div className="absolute inset-0 bg-gradient-to-t from-[#1A2E35]/90 via-[#1A2E35]/40 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-8 md:p-10">
-              <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider uppercase inline-block mb-3 border border-white/20">Detail Album</span>
-              <h1 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-md tracking-tight">{selectedAlbum.title}</h1>
-              {selectedAlbum.description && <p className="text-white/80 font-medium text-sm md:text-base mt-4 max-w-3xl leading-relaxed">{selectedAlbum.description}</p>}
-            </div>
-          </div>
-          <div className="p-6 md:p-10">
+<div className="absolute bottom-0 left-0 right-0 p-8 md:p-10">
+  <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider uppercase inline-block mb-3 border border-white/20">
+    Detail Album
+  </span>
+  <h1 className="text-3xl md:text-5xl font-extrabold text-white drop-shadow-md tracking-tight line-clamp-2">
+    {selectedAlbum.title}
+  </h1>
+</div>
+</div>
+
+{selectedAlbum.description && (
+  <div className="px-6 md:px-10 pt-6 md:pt-8">
+    <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5 md:p-6">
+      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+        Deskripsi Album
+      </p>
+      <p className="text-gray-600 font-medium text-sm md:text-base leading-relaxed whitespace-pre-line">
+        {selectedAlbum.description}
+      </p>
+    </div>
+  </div>
+)}
+
+<div className="p-6 md:p-10">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
               <div className="text-center sm:text-left"><h2 className="text-2xl font-extrabold text-gray-900">Koleksi Foto</h2><p className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{photos.length} Media Tersimpan</p></div>
               {photos.length > 0 && (<button type="button" onClick={() => setView("upload-photos")} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-[#4A6D55] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#3a5643] transition-colors hover:-translate-y-0.5"><Plus size={18} /> Tambah Foto</button>)}

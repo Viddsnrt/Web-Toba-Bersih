@@ -2,8 +2,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import Footer from "../components/Footer";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import axios from "axios";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -65,7 +66,7 @@ const fmtDate = (v?: string) => {
   }
 };
 
-export default function GaleriPage() {
+function GaleriPageContent() {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -80,6 +81,9 @@ export default function GaleriPage() {
     photos: GalleryPhoto[];
     index: number;
   } | null>(null);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   // ── SCROLL NAVBAR ──
   useEffect(() => {
@@ -105,7 +109,32 @@ export default function GaleriPage() {
     fetchAlbums();
   }, []);
 
-  // ── FETCH ALBUM DETAIL ──
+  // ── AUTO OPEN ALBUM DARI QUERY PARAM (?album=ID) ──
+  useEffect(() => {
+    const albumId = searchParams.get("album");
+    if (!albumId) return;
+
+    const fetchAndOpen = async () => {
+      setLoadingDetail(true);
+      // placeholder agar langsung masuk ke tampilan detail sambil menunggu data lengkap
+      setSelectedAlbum((prev) => prev ?? { id: Number(albumId), title: "" });
+      try {
+        const res = await axios.get(`/api/galleries/albums/${albumId}`);
+        const raw = res.data;
+        setSelectedAlbum(raw?.data ?? raw);
+      } catch (err) {
+        console.error("[galeri] FETCH ALBUM FROM QUERY ERROR:", err);
+        setSelectedAlbum(null); // gagal → fallback ke tampilan daftar album
+      } finally {
+        setLoadingDetail(false);
+      }
+    };
+
+    fetchAndOpen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // ── FETCH ALBUM DETAIL (klik manual dari list) ──
   const openAlbum = async (album: Album) => {
     setLoadingDetail(true);
     setSelectedAlbum(album);
@@ -119,12 +148,18 @@ export default function GaleriPage() {
     setLoadingDetail(false);
   };
 
+  // ── TUTUP DETAIL & BERSIHKAN QUERY PARAM ──
+  const closeAlbum = () => {
+    setSelectedAlbum(null);
+    router.push("/galeri");
+  };
+
   // ── KEYBOARD SHORTCUT ──
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (lightbox) return setLightbox(null);
-        if (selectedAlbum) return setSelectedAlbum(null);
+        if (selectedAlbum) return closeAlbum();
       }
       if (lightbox) {
         if (e.key === "ArrowRight") nextPhoto();
@@ -133,6 +168,7 @@ export default function GaleriPage() {
     };
     window.addEventListener("keydown", fn);
     return () => window.removeEventListener("keydown", fn);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lightbox, selectedAlbum]);
 
   const nextPhoto = () => {
@@ -636,7 +672,7 @@ export default function GaleriPage() {
                 <p>Kabupaten Toba</p>
               </div>
             </Link>
-            <button onClick={() => setSelectedAlbum(null)} className="btn-back">
+            <button onClick={closeAlbum} className="btn-back">
               <ArrowLeft size={16} /> Kembali ke Galeri
             </button>
           </div>
@@ -654,7 +690,7 @@ export default function GaleriPage() {
               <ChevronRightIcon size={12} />
               <span className="text-white/80">{selectedAlbum.title}</span>
             </div>
-            <h1 className="hero-detail-title">{selectedAlbum.title}</h1>
+            <h1 className="hero-detail-title">{selectedAlbum.title || "Memuat album..."}</h1>
             <div className="hero-detail-meta">
               <span>
                 <Calendar size={16} />
@@ -1453,5 +1489,14 @@ export default function GaleriPage() {
 
       <Footer />
     </>
+  );
+}
+
+// ── EXPORT DIBUNGKUS SUSPENSE (wajib untuk useSearchParams di Next.js) ──
+export default function GaleriPage() {
+  return (
+    <Suspense fallback={null}>
+      <GaleriPageContent />
+    </Suspense>
   );
 }
