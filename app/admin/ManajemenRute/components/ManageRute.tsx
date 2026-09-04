@@ -39,7 +39,7 @@ import {
   Ruler,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import AlertDialog, { type AlertType } from "../components/AlertDialog";
+import AlertDialog, { type AlertType } from "../../components/AlertDialog";
 
 /* ════════════════════════════════════════════════════════════════════════
  * 1. TYPES

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import AlertDialog, { type AlertType } from "./AlertDialog";
+import AlertDialog, { type AlertType } from "../../components/AlertDialog";
 import {
   Plus,
   Search,

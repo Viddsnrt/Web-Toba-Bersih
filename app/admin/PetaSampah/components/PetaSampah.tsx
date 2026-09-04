@@ -1210,14 +1210,15 @@ function ProgressBar({ value, color }: { value: number; color: string }) {
 }
 
 function TabLaporan({ addAlert }: { addAlert: (type: AlertType, title: string, msg: string) => void }) {
-  const mapElRef      = useRef<HTMLDivElement>(null);
-  const leafletMapRef = useRef<any>(null);
-  const markersRef    = useRef<any[]>([]);
-  const LRef          = useRef<any>(null);
-  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+const mapElRef      = useRef<HTMLDivElement>(null);
+const leafletMapRef = useRef<any>(null);
+const markersRef    = useRef<any[]>([]);
+const LRef          = useRef<any>(null);
+const resizeObserverRef  = useRef<ResizeObserver | null>(null);
+const fitToMarkersRef    = useRef<() => void>(() => {}); 
 
 
-  const [mapElReady, setMapElReady]           = useState(false);       // ← TAMBAH INI
+  const [mapElReady, setMapElReady]           = useState(false);      
   const [mapInitialized, setMapInitialized]   = useState(false);
   const [laporanList, setLaporanList]               = useState<any[]>([]);
   const [loading, setLoading]                       = useState(true);
@@ -1281,15 +1282,13 @@ useEffect(() => {
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
         leafletMapRef.current = map;
-        setMapInitialized(true); // ← ini yang membuat loading overlay hilang
-
-        // ✅ FIX: pantau perubahan ukuran container secara otomatis.
-        // Ini yang menyelesaikan masalah peta blank/lama muncul saat
-        // container di-init dalam kondisi display:none (ukuran 0x0),
-        // lalu baru terlihat ketika user pindah tab.
+        setMapInitialized(true); 
         if (typeof ResizeObserver !== 'undefined') {
           const ro = new ResizeObserver(() => {
-            map.invalidateSize();
+            if (node.offsetWidth > 0 && node.offsetHeight > 0) {
+              map.invalidateSize();
+              fitToMarkersRef.current(); 
+            }
           });
           ro.observe(node);
           resizeObserverRef.current = ro;
@@ -1317,23 +1316,21 @@ return () => {
   };
 }, [mapElReady]);
 
-// ── Invalidate size saat tab peta aktif ──
+// ── Refresh peta (invalidateSize + fit ke laporan) saat tab peta aktif ──
 useEffect(() => {
-  if (activeView === 'map' && leafletMapRef.current && mapInitialized) {
-    // Delay lebih panjang agar DOM benar-benar visible
-    setTimeout(() => leafletMapRef.current?.invalidateSize(), 300);
-  }
-}, [activeView, mapInitialized]);
+  if (activeView !== 'map' || !leafletMapRef.current || !mapInitialized) return;
 
+  const t = setTimeout(() => {
+    const node = (mapCallbackRef as any)._node as HTMLDivElement | null;
+    // ✅ FIX: cek dulu container benar-benar visible (ukuran > 0)
+    // sebelum invalidateSize — mencegah IndexSizeError pada heatmap
+    if (node && node.offsetWidth > 0 && node.offsetHeight > 0) {
+      leafletMapRef.current.invalidateSize();
+      fitToMarkersRef.current(); // ✅ auto-fokus ke area laporan setiap kali peta terlihat lagi
+    }
+  }, 300);
 
-
-// ── Invalidate size saat activeView berubah ke 'map' ──
-useEffect(() => {
-  if (activeView === 'map' && leafletMapRef.current && mapInitialized) {
-    setTimeout(() => {
-      leafletMapRef.current?.invalidateSize();
-    }, 100);
-  }
+  return () => clearTimeout(t);
 }, [activeView, mapInitialized]);
 
 
@@ -1407,17 +1404,23 @@ if (heatPoints.length > 0 && (L as any).heatLayer) {
     console.warn('Heatmap skip (container not ready):', e);
   }
 }
+  const latLngs = fil
+    .map((l) => [parseFloat(l.latitude), parseFloat(l.longitude)] as [number, number])
+    .filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0);
 
-  if (markersRef.current.length > 0) {
-  try {
-    const latLngs = fil
-      .map((l) => [parseFloat(l.latitude), parseFloat(l.longitude)] as [number, number])
-      .filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0);
-    if (latLngs.length > 0) {
+  fitToMarkersRef.current = () => {
+    try {
+      if (latLngs.length > 0) {
+        map.fitBounds(L.latLngBounds(latLngs), { padding: [40, 40], maxZoom: 14 });
+      }
+    } catch {}
+  };
+
+  if (markersRef.current.length > 0 && latLngs.length > 0) {
+    try {
       map.fitBounds(L.latLngBounds(latLngs), { padding: [40, 40], maxZoom: 14 });
-    }
-  } catch {}
-}
+    } catch {}
+  }
   }, [laporanList, selectedStatus, selectedKecamatan, selectedLaporan]); // eslint-disable-line
 
   // ── Stats ────────────────────────────────────────────────

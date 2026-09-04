@@ -10,7 +10,7 @@ import {
   ChevronDown, Loader2, User, Tag, Building2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import AlertDialog, { type AlertType } from "./AlertDialog";
+import AlertDialog, { type AlertType } from "../../components/AlertDialog";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

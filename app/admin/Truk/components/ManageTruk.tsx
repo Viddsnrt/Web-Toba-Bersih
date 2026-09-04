@@ -7,7 +7,7 @@ import {
   ChevronDown, RefreshCw, Layers, CheckCircle2, AlertCircle,
   Loader2, User, Eye, MapPin, Calendar, Mail,
 } from "lucide-react";
-import AlertDialog, { type AlertType } from "../components/AlertDialog";
+import AlertDialog, { type AlertType } from "../../components/AlertDialog";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* =========================

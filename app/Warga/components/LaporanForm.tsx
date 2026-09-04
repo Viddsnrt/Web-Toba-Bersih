@@ -238,7 +238,8 @@ export default function LaporanForm({
     );
   };
 
-  const isSubmitDisabled = loading || !!qualityError;
+  const hasValidLocation = form.latitude !== 0 || form.longitude !== 0;
+  const isSubmitDisabled = loading || !!qualityError || !hasValidLocation;
 
   return (
     <section className="overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-slate-200/70">

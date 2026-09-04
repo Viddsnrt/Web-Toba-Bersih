@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PenugasanDetail from "./PenugasanDetail";
-import AlertDialog, { type AlertType } from "./AlertDialog";
+import AlertDialog, { type AlertType } from "../../components/AlertDialog";
 
 // ============================================================
 // KONSTANTA & UTILITY

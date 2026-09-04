@@ -8,14 +8,7 @@ import Cookies from 'js-cookie';
 import Dashboard from './components/Dashboard';
 import LoginForm from './components/LoginForm';
 import ManagePosts from './components/ManagePosts';
-import ManageSupir from './components/ManageSupir';
-import ManageTruk from './components/ManageTruk';
-import PetaSampah from './components/PetaSampah';
-import ManageWilayah from './components/ManageWilayah';
-import ManagePenugasan from './components/ManageLayananAduan';
-import ManageLaporan from './components/ManageLaporan';
 import ManageGalleries from './components/ManageGalleries';
-import ManageEdukasi from './components/ManageEdukasi';
 import { getRoleRoute, normalizeRole } from '@/lib/authRole';
 
 // --- API Instance ---
@@ -260,27 +253,10 @@ export default function AdminPage() {
     switch (activeMenu) {
       case 'dashboard':
         return <Dashboard laporanList={data.laporan} posts={data.posts} />;
-      case 'peta-sampah':
-        return <PetaSampah />;
-      case 'tugas-harian':
-        // Tugas harian sudah digabung dengan tugas aduan
-        return <ManagePenugasan />;
-      case 'tugas-aduan':
-        return <ManagePenugasan />;
-      case 'daftar':
-        return <ManageLaporan />;
-      case 'data-supir':
-        return <ManageSupir />;
-      case 'data-truk':
-        return <ManageTruk />;
-      case 'data-wilayah':
-        return <ManageWilayah />;
       case 'berita':
         return <ManagePosts posts={data.posts} onPostsUpdate={fetchAllData} />;
       case 'galeri':
         return <ManageGalleries galleries={data.galleries || []} onGalleriesUpdate={fetchAllData} />;
-      case 'edukasi':
-        return <ManageEdukasi />;
       default:
         return <Dashboard laporanList={data.laporan} posts={data.posts} />;
     }

@@ -1,4 +1,4 @@
-import ManageEdukasi from "../components/ManageEdukasi";
+import ManageEdukasi from "./components/ManageEdukasi";
 
 export default function EdukasiPage() {
   return <ManageEdukasi />;

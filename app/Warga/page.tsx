@@ -188,10 +188,10 @@ function ambilLokasiOtomatis() {
       newErrors.email = "Email maksimal 150 karakter.";
     }
 
-    // if (!isValidCoordinate(form.latitude, form.longitude)) {
-    //   newErrors.lokasi =
-    //     "Lokasi otomatis wajib terdeteksi sebelum laporan dikirim. Izinkan akses lokasi pada browser.";
-    // }
+    if (!isValidCoordinate(form.latitude, form.longitude)) {
+      newErrors.lokasi =
+        "Lokasi otomatis wajib terdeteksi sebelum laporan dikirim. Izinkan akses lokasi pada browser.";
+    }
 
     if (!selectedImage) {
       newErrors.photo = "Lampiran foto wajib diisi.";

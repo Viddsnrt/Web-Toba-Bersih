@@ -26,7 +26,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-import AlertDialog, { type AlertType } from "./AlertDialog";
+import AlertDialog, { type AlertType } from "../../components/AlertDialog";
 
 /* =========================
   TYPES
