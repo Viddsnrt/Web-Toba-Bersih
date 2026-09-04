@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Circle, useMap, Polyline, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Circle, useMap, Polyline, Popup, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
@@ -47,13 +47,15 @@ interface AreaHighlight {
 export default function WilayahMap({
   markerPos,
   radius,
+  boundaryGeoJson,
   onMarkerDrag,
   wilayahData = [],
   highlightAreas = []
 }: {
-  markerPos: any; // Diubah ke any untuk fleksibilitas interceptor data rute vs single marker
+  markerPos: any;
   radius: number;
-  onMarkerDrag?: (lat: number, lng: number) => void; // Dibuat opsional agar mode tinjauan rute tidak crash
+  boundaryGeoJson?: any;
+  onMarkerDrag?: (lat: number, lng: number) => void;
   wilayahData?: any[];
   highlightAreas?: AreaHighlight[];
 }) {

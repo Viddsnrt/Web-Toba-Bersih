@@ -784,7 +784,14 @@ const handleSelectTruck = useCallback((truk: TrukAktif) => {
         }));
         setRiwayatSelesai(data);
       }
-    } catch (error) { console.warn('fetchRiwayatSelesai:', error); }
+    } catch (error: any) {
+      console.warn('fetchRiwayatSelesai:', error);
+      if (error?.code === 'ECONNABORTED') {
+        addAlert('warning', 'Riwayat Lambat Dimuat', 'Server tidak merespons dalam waktu wajar. Coba refresh beberapa saat lagi.');
+      } else {
+        addAlert('error', 'Gagal Memuat Riwayat', 'Tidak dapat memuat riwayat armada selesai.');
+      }
+    }
   };
 
   const fetchAllHistory = async () => {
