@@ -20,11 +20,11 @@
 
   // Import Komponen Manajemen Berdasarkan Code Anda Sebelumnya
   // Sesuaikan path import ini dengan struktur folder project Anda
-import ManageWilayah  from '../../admin/components/ManageWilayah';
-import ManageTruk     from '../../admin/components/ManageTruk';
-import ManageSupir    from '../../admin/components/ManageSupir';
-import ManajemenRute  from '../../admin/components/ManageRute';
-import ManagePenugasan from '../../admin/components/ManageLayananAduan';
+import ManageWilayah  from '../../admin/Wilayah/components/ManageWilayah';
+import ManageTruk     from '../../admin/Truk/components/ManageTruk';
+import ManageSupir    from '../../admin/Supir/components/ManageSupir';
+import ManajemenRute  from '../../admin/ManajemenRute/components/ManageRute';
+import ManagePenugasan from '../../admin/LayananAduan/components/ManageLayananAduan';
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL 
   ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '') 
@@ -275,7 +275,6 @@ import ManagePenugasan from '../../admin/components/ManageLayananAduan';
 
           {/* TAB 6: MONITORING & DISTRIBUSI PENUGASAN ADUAN WARGA */}
           {activeTab === 'penugasan' && <ManagePenugasan />}
-
         </div>
       </div>
     );
