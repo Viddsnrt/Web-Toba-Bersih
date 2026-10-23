@@ -232,14 +232,14 @@ export default function LaporanForm({
     if (!message) return null;
     return (
       <div className="mt-2 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-        <AlertCircle size={15} className="mt-0.5 shrink-0" />
+        <AlertCircle   size={15} className="mt-0.5 shrink-0" />
         <span className="leading-relaxed">{message}</span>
       </div>
     );
   };
 
   const hasValidLocation = form.latitude !== 0 || form.longitude !== 0;
-  const isSubmitDisabled = loading || !!qualityError || !hasValidLocation;
+  const isSubmitDisabled = loading || !!qualityError;
 
   return (
     <section className="overflow-hidden rounded-3xl bg-white shadow-xl ring-1 ring-slate-200/70">
