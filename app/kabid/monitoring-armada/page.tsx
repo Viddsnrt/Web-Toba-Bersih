@@ -46,7 +46,9 @@ interface RiwayatSelesai {
 const rawBase = process.env.NEXT_PUBLIC_API_URL
   ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
   : '';
-const SOCKET_URL = rawBase;
+// Socket.IO tidak lewat proxy Next (next.config hanya rewrite /api),
+// jadi tanpa NEXT_PUBLIC_API_URL kita perlu target langsung backend dev.
+const SOCKET_URL = rawBase || 'http://localhost:5000';
 const API_URL = rawBase ? rawBase + '/api' : '/api';
 const WAYPOINT_PASSED_RADIUS_M = 80;
 

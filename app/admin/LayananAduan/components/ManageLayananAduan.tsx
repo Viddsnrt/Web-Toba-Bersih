@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import axios from "axios";
+import { io, type Socket } from "socket.io-client";
 import {
   Trash2,
   Search,
@@ -56,6 +57,12 @@ api.interceptors.request.use((config) => {
 });
 
 const ITEMS_PER_PAGE = 12;
+
+// Socket.IO tidak melewati proxy Next (rewrite hanya /api), jadi pakai
+// target backend langsung; NEXT_PUBLIC_API_URL bila di-set, else fallback dev.
+const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL
+  ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, "")
+  : "http://localhost:5000";
 
 // ============================================================
 // KONSTANTA OPERASIONAL
@@ -200,6 +207,78 @@ function usePenugasan() {
     }
   }, [showAlert]);
 
+
+  // ── Real-time: aduan baru & perubahan status laporan via Socket.IO ──
+  const socketRef = useRef<Socket | null>(null);
+  useEffect(() => {
+    const socket = io(SOCKET_URL, {
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+    });
+    socketRef.current = socket;
+
+    socket.on(
+      "laporan_baru",
+      (data: {
+        reportId?: string | number;
+        description?: string | null;
+        photoUrl?: string | null;
+        latitude?: number;
+        longitude?: number;
+        pelapor?: string | null;
+        createdAt?: string | Date;
+      }) => {
+        if (!data?.reportId) return;
+        const id = data.reportId.toString();
+        setItemList((prev) => {
+          if (prev.some((i) => i.id === id || i.report?.id === id)) return prev;
+          const item = {
+            id,
+            status: "LAPORAN_BARU",
+            isLaporanBaru: true,
+            taskNumber: null,
+            location: data.description || "Lokasi tidak tersedia",
+            latitude: data.latitude,
+            longitude: data.longitude,
+            district: null,
+            description: data.description,
+            pelapor: data.pelapor,
+            createdAt: data.createdAt ?? new Date().toISOString(),
+            photoUrl: data.photoUrl || null,
+            report: {
+              id,
+              description: data.description,
+              pelapor: data.pelapor,
+              latitude: data.latitude,
+              longitude: data.longitude,
+            },
+          };
+          return [item, ...prev];
+        });
+        showAlert("info", "Laporan baru masuk", "Ada aduan sampah baru dari pelapor.");
+      }
+    );
+
+    socket.on(
+      "status_laporan_berubah",
+      (data: { reportId?: string | number; newStatus?: string }) => {
+        if (!data?.reportId || !data?.newStatus) return;
+        const id = data.reportId.toString();
+        const newStatus = data.newStatus;
+        setItemList((prev) =>
+          prev.map((i) =>
+            i.id === id || i.report?.id === id ? { ...i, status: newStatus } : i
+          )
+        );
+      }
+    );
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [showAlert]);
   useEffect(() => {
     fetchData();
   }, [fetchData]);

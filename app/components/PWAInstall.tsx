@@ -1,51 +1,61 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { Download, X } from 'lucide-react';
+import { Download, Smartphone, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+const APK_URL = '/downloads/toba-bersih.apk';
+const DISMISS_KEY = 'tobabersih:install-banner-dismissed';
+
+type Platform = 'android' | 'ios' | 'desktop' | 'unknown';
+
+function detectPlatform(): Platform {
+  if (typeof navigator === 'undefined') return 'unknown';
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) return 'android';
+  if (/iPad|iPhone|iPod/i.test(ua)) return 'ios';
+  if (!/Mobile|Android/i.test(ua)) return 'desktop';
+  return 'unknown';
+}
+
 export default function PWAInstall() {
+  const [dismissed, setDismissed] = useState(false);
+  const [platform, setPlatform] = useState<Platform>('unknown');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
+    setPlatform(detectPlatform());
+    if (sessionStorage.getItem(DISMISS_KEY) === '1') {
+      setDismissed(true);
+      return;
+    }
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
       return;
     }
 
-    // ✅ PERBAIKAN: Unregister semua service worker lama untuk clear cache
+    // Unregister all old service workers to clear stale cache, then re-register.
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then((registrations) => {
-        registrations.forEach((reg) => {
-          reg.unregister();
-          console.log('🗑️ Service worker lama dihapus');
-        });
+        registrations.forEach((reg) => reg.unregister());
       });
     }
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setTimeout(() => setShowPrompt(true), 3000);
     };
-
     const handleAppInstalled = () => {
       setIsInstalled(true);
-      setShowPrompt(false);
-      toast.success('CleanCity berhasil dipasang! 🎉');
-      setDeferredPrompt(null);
+      toast.success('Toba Bersih berhasil dipasang! 🎉');
     };
-
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // ✅ PERBAIKAN: Hanya daftarkan SW di production
-    // Di development next-pwa tidak generate sw.js, jadi skip agar tidak 404
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' })
-        .then((reg) => console.log('✅ SW terdaftar:', reg))
-        .catch((err) => console.error('❌ SW gagal:', err));
+      navigator.serviceWorker
+        .register('/sw.js', { scope: '/' })
+        .catch((err) => console.error('SW register gagal:', err));
     }
 
     return () => {
@@ -54,7 +64,12 @@ export default function PWAInstall() {
     };
   }, []);
 
-  const handleInstall = async () => {
+  const handleDownloadApk = () => {
+    window.location.href = APK_URL;
+    toast.success('Download dimulai. Buka file .apk lalu instal.');
+  };
+
+  const handlePwaInstall = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
@@ -63,11 +78,19 @@ export default function PWAInstall() {
     } else {
       toast.error('Instalasi dibatalkan');
     }
-    setShowPrompt(false);
     setDeferredPrompt(null);
   };
 
-  if (isInstalled || !showPrompt) return null;
+  const handleDismiss = () => {
+    sessionStorage.setItem(DISMISS_KEY, '1');
+    setDismissed(true);
+  };
+
+  if (isInstalled || dismissed) return null;
+  // Only show on mobile (iOS PWA fallback, Android APK). Desktop uses web.
+  if (platform === 'desktop' || platform === 'unknown') return null;
+
+  const isAndroid = platform === 'android';
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-40 max-w-sm mx-auto">
@@ -75,31 +98,59 @@ export default function PWAInstall() {
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="bg-green-100 p-2 rounded-lg">
-              <Download className="text-green-600" size={20} />
+              {isAndroid ? (
+                <Smartphone className="text-green-600" size={20} />
+              ) : (
+                <Download className="text-green-600" size={20} />
+              )}
             </div>
             <div>
-              <h3 className="font-bold text-slate-800">Pasang CleanCity</h3>
-              <p className="text-xs text-slate-500">Akses lebih cepat dari home screen</p>
+              <h3 className="font-bold text-slate-800">
+                {isAndroid ? 'Unduh Aplikasi Toba Bersih' : 'Pasang Toba Bersih'}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {isAndroid
+                  ? 'Aplikasi mobile dengan notifikasi & tracking real-time'
+                  : 'Akses lebih cepat dari home screen'}
+              </p>
             </div>
           </div>
-          <button onClick={() => setShowPrompt(false)} className="text-slate-400 hover:text-slate-600">
+          <button onClick={handleDismiss} className="text-slate-400 hover:text-slate-600">
             <X size={18} />
           </button>
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setShowPrompt(false)}
+            onClick={handleDismiss}
             className="flex-1 px-3 py-2 rounded-lg bg-slate-100 text-slate-700 font-semibold text-sm hover:bg-slate-200"
           >
             Nanti
           </button>
-          <button
-            onClick={handleInstall}
-            className="flex-1 px-3 py-2 rounded-lg bg-green-600 text-white font-semibold text-sm hover:bg-green-700"
-          >
-            Pasang Sekarang
-          </button>
+          {isAndroid ? (
+            <button
+              onClick={handleDownloadApk}
+              className="flex-1 px-3 py-2 rounded-lg bg-green-600 text-white font-semibold text-sm hover:bg-green-700"
+            >
+              <span className="inline-flex items-center gap-1">
+                <Download size={14} />
+                Download
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={handlePwaInstall}
+              disabled={!deferredPrompt}
+              className="flex-1 px-3 py-2 rounded-lg bg-green-600 text-white font-semibold text-sm hover:bg-green-700 disabled:bg-slate-200 disabled:text-slate-400"
+            >
+              Pasang Sekarang
+            </button>
+          )}
         </div>
+        {isAndroid && (
+          <p className="text-[10px] text-slate-400 mt-2">
+            Android: buka file .apk setelah download, izinkan &ldquo;install dari sumber tidak dikenal&rdquo;
+          </p>
+        )}
       </div>
       <style>{`
         @keyframes slide-up {
